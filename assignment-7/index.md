@@ -66,7 +66,7 @@ void LP_CORE_ISR_ATTR ulp_lp_core_lp_io_intr_handler(void)
     wakeup_count++;
 }
 
-int main (void):
+int main (void)
 {
     /* Register interrupt for the wakeup pin */
     ulp_lp_core_intr_enable();
