@@ -23,7 +23,7 @@ You see, our `CONFIG_OPTION` has two default values: one having a condition, one
 
 Easily. We will go from top to bottom and check whether the condition for given default value is true (if there is no condition, we assume we can use that default value if we reach its line): 
 
-First default value is 1 if OTHER_CONFIG_OPTION is true. The default value of `OTHER_CONFIG_OPTION` is y (which, in configuration system context equals to "true") -> condition is met and the default value for our `CONFIG_OPTION` should be 1.
+First default value is 1 if `OTHER_CONFIG_OPTION` is true. The default value of `OTHER_CONFIG_OPTION` is y (which, in configuration system context equals to "true") -> condition is met and the default value for our `CONFIG_OPTION` should be 1.
 
 Will the configuration system agree? 
 
