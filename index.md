@@ -4,6 +4,7 @@ date: 2024-09-30T00:00:00+01:00
 tags: ["Workshop", "ESP-IDF", "ESP32-C6", "Espressif IDE"]
 
 ---
+[UNRELATED: new esp-idf-config](sp-idf-kconfig-v3-article.md)
 
 Vítejte na workshopu o Espressif IoT Development frameworku (ESP-IDF)!
 
