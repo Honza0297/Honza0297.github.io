@@ -42,10 +42,8 @@ CONFIG_CONFIG_OPTION=1
 
 > **_NOTE:_** you see our `CONFIG_OPTION` got a `CONFIG_` prefix. This helps to distinguish between config option and other type of variable when using there information e.g. in your C code. 
 
-
+![first run image](./first_run.png)
 <div align="center">
-
-   ![first run image](https://github.com/user-attachments/assets/c6613c5a-0c80-4c86-bf6c-78ef7f338a6f)
 
   *Figure 1: Default values during the first run*
 
@@ -67,12 +65,9 @@ CONFIG_CONFIG_OPTION=1
 (...)
 ```
 
-<div align="center">
-
-   ![first run image](https://github.com/user-attachments/assets/ca5449c6-d4a2-4389-9ff1-267f797f3784)
-
+![first run image](./menuconfig.png)
+<div align="center">   
   *Figure 2: How menuconfig loads and saves values*
-
 </div>
 
 
@@ -102,9 +97,8 @@ See the difference?
 
 All config options with default values are now marked with `# default:` mark right above them. Configuration system now knows which config options should be re-evaluated during the menuconfig session, because their default values may change. 
 
+![first run image](./new_first_run.png)
 <div align="center">
-
-   ![first run image](https://github.com/user-attachments/assets/4f34f71b-dde3-4d93-a588-ce5c2cdc014a)
 
   *Figure 3: New first run*
 
@@ -125,9 +119,8 @@ That's different!
 You see, `OTHER_CONFIG_OPTION` now lost its `# default:` mark - that's correct, we manually set it to other than default value.
 What is interesting that `CONFIG_OPTION` **registered this change**. Now, the condition for the first default value is not valid, so we need to use the second one. 
 
+![first run image](./new_menuconfig.png)
 <div align="center">
-
-   ![first run image](https://github.com/user-attachments/assets/b669b6c1-248a-4180-a209-060cebaf1e93)
 
   *Figure 4: How new menuconfig works*
 
@@ -173,11 +166,10 @@ No worries, we can do exactly that. ESP-IDF introduced new command: `idf.py relo
 * `kconfig`: default values from Kconfig file will be used. That means our `CONFIG_OPTIN` would have the value 99.
 * `interactive`: this option allows you to choose the source of default value for each affected config option manually. 
 
+![first run image](./reload-default-values.png)
 <div align="center">
 
-   ![first run image](https://github.com/user-attachments/assets/96d5a732-6e86-4226-9f87-9fd2a60bc9e2)
-
-  *Figure 4: How idf.py reload-default-values works based on defaults policy chosen*
+  *Figure 5: How idf.py reload-default-values works based on defaults policy chosen*
 
 </div>
 
