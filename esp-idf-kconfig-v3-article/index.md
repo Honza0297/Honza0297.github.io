@@ -176,12 +176,3 @@ No worries, we can do exactly that. ESP-IDF introduced new command: `idf.py relo
 Running this command will eliminate any discrepancies which may arise when Kconfig definition of config option will change and will no longer be the same as stored in sdkconfig.  
 
 With all that being said, you know how default values work in new ESP-IDF configuration system!
-
-Otázky pro vážené čtenářstvo: 
-
-* Očekáváte, že po `idf.py reload-default-values --defaults-policy sdkconfig` budete dostávat warning tom, že se default values liší mezi sdkconfigem a kconfigem?
-* Co říkáte na název `idf.py reload-default-values`? Jsou tu lidé, kteří by raději viděli jméno `idf.py load-defconfig` jako opačnou operaci k `idf.py save-defconfig`. 
-
-
-
-
