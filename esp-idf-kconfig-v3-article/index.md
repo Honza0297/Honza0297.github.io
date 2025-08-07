@@ -1,8 +1,11 @@
-# esp-idf-kconfig v3: default values
+# Configuration System in ESP-IDF v6: Default Values
+
+Summary: In ESP-IDF v5 and older, configuration system did not recognize whether the value for a config option was default or manually set by the user. Instead, it "locked" the config option's value to that in sdkconfig unless manually changed by the user.
+Configuration system in ESP-IDF v6 recognizes which values are default and automatically adjusts them based on the default value's condition in Kconfig files. 
 
 Lately, we have released a new ESP-IDF configuration system (esp-idf-kconfig v3), which comes with many exciting features. Today, we are going to have a look at default values.
 
-First, let's briefly explain how configuration has worked in ESP-IDF so far. There are two important files: **Kconfig** and **sdkconfig**. 
+First, let's briefly explain how configuration has worked in ESP-IDF v5.5 and older. There are two important files: **Kconfig** and **sdkconfig**. 
 
 **Kconfig** contains the definition of config options: their name, prompt, type, help text and may also contain default values for our config options, which will be of particular interest to us:
 
@@ -29,15 +32,11 @@ Will the configuration system agree?
 
 While we first build the project, configuration system collects all the Kconfig files relevant for our project and assigns default value to every config option in the same way we did above.
 
-Because this process is resource-heavy, we want to store this information somewhere, so we do not need to re-evaluate all the config options every time we need to look up a value of some config option.
-
-For that reason, we save which config option has which value. The name of the file we save this information to is **sdkconfig**:
+I.  The name of the file we save this information to is **sdkconfig**:
 
 ```
-(...)
-CONFIG_OTHER_CONFIG_OPTION=y # OTHER_CONFIG_OPTION is evaluated as truly, so our CONFIG_OPTION will have default value equal to 1
+CONFIG_OTHER_CONFIG_OPTION=y
 CONFIG_CONFIG_OPTION=1
-(...)
 ```
 
 > **_NOTE:_** you see our `CONFIG_OPTION` got a `CONFIG_` prefix. This helps distinguish between a config option and other types of variables when using them e.g. in your C code. 
@@ -49,7 +48,6 @@ CONFIG_CONFIG_OPTION=1
 
 </div>
 
-
 Nice! The configuration system did what we expected it would do. 
 
 However, we are often not happy with the default values and want to change them manually through e.g. menuconfig.
@@ -59,10 +57,8 @@ Now, let's disable `OTHER_CONFIG_OPTION` in menuconfig and save the configuratio
 Let's check the sdkconfig:
 
 ```
-(...)
-# CONFIG_OTHER_CONFIG_OPTION is not set # this is the same as CONFIG_OTHER_CONFIG_OPTION=n
+# CONFIG_OTHER_CONFIG_OPTION is not set
 CONFIG_CONFIG_OPTION=1
-(...)
 ```
 
 ![first run image](./menuconfig.png)
@@ -78,19 +74,19 @@ Great question.
 As we said before, configuration system saves the values for all config options in sdkconfig file.
 However, when it loads those values back, it "locks" config options on those values -- meaning their default values (as we saw them in Kconfig file) will no longer be in use. This can lead to confusing situations, like the one we just saw.
 
-## Solution? New configuration system!
+## Solution? Recognize default values!
+
+Summary: Section explains how configuration system in ESP-IDF v6 handles default values and how their behavior differ when idf.py menuconfig is executed. 
 
 So, how does the new configuration system do the things differently? Let's go through the process again.
 
 When we firstly build the project, configuration system loads the relevant Kconfig files and saves default values to sdkconfig file like before. Let's see the sdkconfig file again:
 
 ```
-(...)
 # default:
 CONFIG_OTHER_CONFIG_OPTION=y
 # default:
 CONFIG_CONFIG_OPTION=1
-(...)
 ```
 
 See the difference? 
@@ -107,11 +103,9 @@ All config options with default values are now marked with `# default:` mark rig
 Let's run menuconfig once again, disable `OTHER_CONFIG_OPTION` and save it:
 
 ```
-(...)
 # CONFIG_OTHER_CONFIG_OPTION is not set
 # default:
 CONFIG_CONFIG_OPTION=0
-(...)
 ```
 
 That's different!
@@ -129,6 +123,8 @@ What is interesting that `CONFIG_OPTION` **registered this change**. Now, the co
 Great! Now, the default values work as expected. 
 
 ## New problems arise
+
+Summary: Default value between sdkconfig and Kconfig can be different in certain situations. This section describes how to resolve that. 
 
 Now, let's suppose `CONFIG_OPTION` was a part of a component. In the new version of the component, its definition (especially the default value) has changed:
 
@@ -176,3 +172,9 @@ No worries, we can do exactly that. ESP-IDF introduced new command: `idf.py relo
 Running this command will eliminate any discrepancies which may arise when Kconfig definition of config option will change and will no longer be the same as stored in sdkconfig.  
 
 With all that being said, you know how default values work in new ESP-IDF configuration system!
+
+## Further reading
+
+* Migration guide for the configuration system (esp-idf-kconfig): https://docs.espressif.com/projects/esp-idf-kconfig/en/latest/developer-guide/migration-guide.html
+* Project Configuration Guide: https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/kconfig/index.html
+
