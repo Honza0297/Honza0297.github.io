@@ -22,7 +22,7 @@ V obou případech budeme postupovat podle návodu na [githubových stránkách 
 2. Ve VS Code otevřete **Extensions** (Ctrl + Shift + X nebo ⇧ + ⌘ + X)
 3. Najděte [ESP-IDF plugin](https://marketplace.visualstudio.com/items?itemName=espressif.esp-idf-extension) a nainstalujte ho
 4. Otevřete *View -> Command Pallete* (Ctrl + Shift + P nebo ⇧ + ⌘ + P) a do nově otevřené řádky napište *Configure ESP-IDF Extension*
-5. Vyberte možnost **Express** a následně vyberte Github jako download server a release/v5.3 jako ESP-IDF version
+5. Vyberte možnost **Express** a následně vyberte Github jako download server a release/v5.5 jako ESP-IDF version
 6. Klikněte na "Install"
 
 ### Instalace pro Linux a Mac
@@ -32,7 +32,7 @@ V obou případech budeme postupovat podle návodu na [githubových stránkách 
 3. Ve VS Code otevřete **Extensions** (Ctrl + Shift + X nebo ⇧ + ⌘ + X)
 4. Najděte [ESP-IDF plugin](https://marketplace.visualstudio.com/items?itemName=espressif.esp-idf-extension) a nainstalujte ho
 5. Otevřete *View -> Command Pallete* (Ctrl + Shift + P nebo ⇧ + ⌘ + P) a do nově otevřené řádky napište *Configure ESP-IDF Extension*
-6. Vyberte možnost **Express** a následně vyberte Github jako download server a release/v5.3 jako *ESP-IDF version*
+6. Vyberte možnost **Express** a následně vyberte Github jako download server a release/v5.5 jako *ESP-IDF version*
 7. Klikněte na "Install"
 
 
