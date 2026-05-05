@@ -28,8 +28,9 @@ for working with the low-power core that is part of the ESP32-C5 SoC.
 ## Companion reference projects
 
 This workshop has companion ESP-IDF projects following the same assignment numbering (plus an
-optional protocols/TLS parity example). See the
-[ESP32-C5 workshop examples README](https://github.com/espressif/developer-portal/tree/master/workshop-examples/esp-idf-with-esp32-c5).
+optional protocols/TLS parity example). They are included in this repository under
+[examples/C5/](../../examples/C5/) — browse them directly on GitHub or clone the repo to build
+locally. See [examples/C5/README.md](../../examples/C5/README.md) for usage instructions.
 
 ## Agenda
 

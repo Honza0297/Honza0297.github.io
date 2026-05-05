@@ -15,6 +15,12 @@ Konkrétně si v tomto workshopu projdeme instalaci frameworku ESP-IDF a ESP-IDF
 
 > Tento workshop jistě přinese mnoho zajímavých informací i těm, kteří využívají ostatní čipy z rodiny ESP32. Mějte ovšem na paměti, že ne všechny čipy podporují všechno, co podporuje ESP32-C6!
 
+## Doprovodné referenční projekty
+
+Kompletní ESP-IDF projekty pro každý úkol jsou součástí tohoto repozitáře ve složce
+[examples/C6/](../examples/C6/). Viz [examples/C6/README.md](../examples/C6/README.md) a
+`build-all.sh` pro sestavení všech projektů najednou.
+
 ## Agenda
 
 Pokud jste splnili [prerekvizity](#prerekvizity) můžeme se pustit do jednotlivých kapitol:

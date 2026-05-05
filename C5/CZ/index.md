@@ -14,9 +14,9 @@ Konkrétně si v tomto workshopu projdeme instalaci frameworku ESP-IDF a ESP-IDF
 
 > Tento workshop jistě přinese mnoho zajímavých informací i těm, kteří využívají ostatní čipy z rodiny ESP32. Mějte ovšem na paměti, že ne všechny čipy podporují všechno, co podporuje ESP32-C5!
 
-## Doprovodné referenční projekty
+## Doprovodné referenční projekty / Companion reference projects
 
-V repozitáři jsou i malé ESP-IDF projekty se stejným číslováním úkolů jako tento workshop (plus volitelný příklad protokolů/TLS ve stylu workshopu pro ESP32-C6). Po aktivaci ESP-IDF (např. `idfinstall && idfexport`, pokud tyto příkazy používáte) spusťte `build-all.sh` ve složce s příklady. Popis je v [README příkladů pro ESP32-C5](https://github.com/espressif/developer-portal/tree/master/workshop-examples/esp-idf-with-esp32-c5).
+V repozitáři jsou i malé ESP-IDF projekty se stejným číslováním úkolů jako tento workshop (plus volitelný příklad protokolů/TLS). Jsou součástí tohoto repozitáře ve složce [examples/C5/](../../examples/C5/) — procházejte je přímo na GitHubu nebo naklonujte repozitář a spusťte `build-all.sh`. Popis je v [examples/C5/README.md](../../examples/C5/README.md).
 
 ## Agenda
 

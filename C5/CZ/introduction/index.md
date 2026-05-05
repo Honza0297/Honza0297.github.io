@@ -161,9 +161,8 @@ Níže jsou uvedené základní vlastnosti vývojého kitu:
 ### Zdroje
 
 - [ESP32-C5 Datasheet](https://www.espressif.com/sites/default/files/documentation/esp32-c5_datasheet_en.pdf)
-- [ESP32-C5 Documentation](https://docs.espressif.com/projects/esp-idf/en/release-v5.3/esp32c5/index.html)
+- [ESP32-C5 Documentation](https://docs.espressif.com/projects/esp-idf/en/release-v5.5/esp32c5/index.html)
 - [ESP32-C5-DevKit-C Documentation](https://docs.espressif.com/projects/espressif-esp-dev-kits/en/latest/esp32c5/esp32-c5-devkitc-1/user_guide.html)
-- [ESP32-C5-DevKit-C Schematic](https://docs.espressif.com/projects/espressif-esp-dev-kits/en/latest/_static/esp32-c5-devkitc-1/schematics/esp32-c5-devkitc-1-schematics_v1.2.pdf)
 
 ## Další krok
 

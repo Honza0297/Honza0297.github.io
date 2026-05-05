@@ -15,6 +15,12 @@ Specifically, in this workshop we will go through the installation of the ESP-ID
 
 > This workshop will certainly bring a lot of interesting information even to those who use other chips from the ESP32 family. However, keep in mind that not all chips support everything that ESP32-C6 supports!
 
+## Companion reference projects
+
+Complete ESP-IDF projects for each assignment are included in this repository under
+[examples/C6/](../examples/C6/). See [examples/C6/README.md](../examples/C6/README.md) for
+usage instructions and `build-all.sh` to build everything in one go.
+
 ## Agenda
 
 If you have met the [prerequisites](#prerequisites), we can start with the individual chapters:

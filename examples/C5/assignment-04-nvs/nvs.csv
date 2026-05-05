@@ -1,0 +1,4 @@
+key,type,encoding,value
+storage,namespace,,
+ssid,data,string,"network-ssid"
+password,data,string,"network-password"
