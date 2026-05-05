@@ -11,9 +11,9 @@ showAuthor: false
 
 ---
 
-V tomto úkolu si ukážeme, jak pracovat s koponenty (**Components**) a jak je používat ke zrychlení vývoje vašich projektů. 
+V tomto úkolu si ukážeme, jak pracovat s koponenty (**Components**) a jak je používat ke zrychlení vývoje vašich projektů.
 
-Komponenty jsou podobné knihovnám (třeba těm z Arduino IDE); také obsahují různou přídavnou funkcionalitu, kterou byste v základním ESP-IDF nenašli. Pro příklad uveďme třeba různé drivery pro senzory, protokolové komponenty, nebo třeba BSP, *board support package*, o kterém ještě bude řeč. Některé komponenty jsou již přímou součástí některých ESP-IDF příkladů, je ale možné používat i externí komponenty díky modulární struktuře ESP-IDF. 
+Komponenty jsou podobné knihovnám (třeba těm z Arduino IDE); také obsahují různou přídavnou funkcionalitu, kterou byste v základním ESP-IDF nenašli. Pro příklad uveďme třeba různé drivery pro senzory, protokolové komponenty, nebo třeba BSP, *board support package*, o kterém ještě bude řeč. Některé komponenty jsou již přímou součástí některých ESP-IDF příkladů, je ale možné používat i externí komponenty díky modulární struktuře ESP-IDF.
 
 Díky využívání komponent se nejen zjednododušuje udržovatelnost projektu, také se výrazně zrychluje jeho vývoj. Díky komponentám také lze znovupoužít stejnou funkcionalitu napříč různými projekty.
 
@@ -21,7 +21,7 @@ Pokud chcete vytvořit a publikovat vlastní komponentu (třeba pro váš specif
 
 Komponenty můžete prohledávat například přes platformu [ESP Registry](https://components.espressif.com).
 
-Využívání komponentů si ukážeme na novém projektu, kde si od základů napíšeme jednoduchou aplikaci, která rozbliká vestavěnou RGB LED s využitím komponenty pro LED pásky. Později si ukážeme, jak k tomu samému můžeme použít i komponentu BSP (*board support package*), která už byla zmíněná výše. 
+Využívání komponentů si ukážeme na novém projektu, kde si od základů napíšeme jednoduchou aplikaci, která rozbliká vestavěnou RGB LED s využitím komponenty pro LED pásky. Později si ukážeme, jak k tomu samému můžeme použít i komponentu BSP (*board support package*), která už byla zmíněná výše.
 
 ### Pracujeme s komponenty
 
@@ -32,7 +32,7 @@ Budeme používat následující dvě komponenty:
 
 1. **Vytvoření nového projektu**
 
-Nový projekt lze vytvořit přes GUI i přes příkazovou řádku. Pro ty, kdo s terminálem (CLI) příliš nepracují, to může být poněkud děsivé, v budoucnu vám to ale pomůže například v situacích, kdy budete ESP-IDF používat s jiným IDE než VSCode (nebo úplně samostatně). Níže ale budou uvedené oba příklady. 
+Nový projekt lze vytvořit přes GUI i přes příkazovou řádku. Pro ty, kdo s terminálem (CLI) příliš nepracují, to může být poněkud děsivé, v budoucnu vám to ale pomůže například v situacích, kdy budete ESP-IDF používat s jiným IDE než VSCode (nebo úplně samostatně). Níže ale budou uvedené oba příklady.
 
 **GUI**
 
@@ -40,7 +40,7 @@ Otevřeme ESP-IDF Explorer (ikonka Espressifu v taskbaru nebo přes *View -> Ope
 
 ![První krok tvorby nového projektu](./wizard0.png "Vytvoření nového projektu. Seriový port není podstatný, půjde změnit později.")
 
-![Druhý krok tvorby nového projektu](./wizard1.png "V dalším kroku vybereme, na jaké šabloně náš projekt založíme. Zvolíme *get-started/hello_worldS* a vytvoříme projekt")
+![Druhý krok tvorby nového projektu](./wizard1.png "V dalším kroku vybereme, na jaké šabloně náš projekt založíme. Zvolíme *get-started/hello_world* a vytvoříme projekt")
 
 Po vytvoření projektu se vpravo dole objeví nenápadné okénko, které se vás zeptá, zda chcete otevřít nově vytvořený projekt v novém okně. Kliněte na "Yes".
 
@@ -53,8 +53,8 @@ V ESP-IDF Exploreru v záložce *commands* vybereme ESP-IDF Terminal, který se 
 * Přejdeme do něj
 
 ```bash
-mkdir ~/my-workshop-folder 
-cd ~/my-workshop-folder 
+mkdir ~/my-workshop-folder
+cd ~/my-workshop-folder
 idf.py create-project my-workshop-project
 cd my-workshop-project
 ```
@@ -121,7 +121,7 @@ Otevřeme si soubor ``hello_world_main.c``. Nejdříve musíme importovat knihov
 #define LED_STRIP_RMT_RES_HZ  (10 * 1000 * 1000)
 ```
 
-...a vytvořit kostru funkce pro konfiguraci: 
+...a vytvořit kostru funkce pro konfiguraci:
 
 ```c
 led_strip_handle_t led_strip;
@@ -186,8 +186,8 @@ configure_led();
 K nastavení barvy použijeme funkci `led_strip_set_pixel` s následujícími parametry:
 - `led_strip`: námi nakonfigurovaný objekt LED "pásku"
 - `0`: index diody v pásku (jelikož máme pouze jednu, index bude vždy 0)
-- `20`: červená (RED) složka s hodnotami mezi 0 a 255 
-- `0`: zelená (GREEN) složka s hodnotami mezi 0 a 255 
+- `20`: červená (RED) složka s hodnotami mezi 0 a 255
+- `0`: zelená (GREEN) složka s hodnotami mezi 0 a 255
 - `0`: modrá (BLUE) složka s hodnotami mezi 0 a 255
 
 ```c
@@ -277,7 +277,7 @@ Vestavěná LED by se měla rozsvítit červeně.
 
 V předchozí části jsme se naučili, jak přidávat do projektu komponenty. Teď si povíme něco o BSP - *board support package*. 
 
-BSP je komponenta, který umožňuje jednoduše konfigurovat periferie (LED, tlačítko...) nějaké specifické vývojové desky. Konkrétně náš **ESP32-C6-DevKit** má jedno tlačítko připojené na **GPIO9** a jednu adresovatelnou LED na pinu **GPIO8**. V BSP pro tuhle konkrétní desku tedy budou tyhle dvě periferie nakonfigurované a pokud BSP použijeme, nemusíme se starat o konfiguraci pinů ani přidávat žádné další komponenty, které by se o dané periferie staraly. 
+BSP je komponenta, který umožňuje jednoduše konfigurovat periferie (LED, tlačítko...) nějaké specifické vývojové desky. Konkrétně náš **ESP32-C6-DevKit** má jedno tlačítko připojené na **GPIO9** a jednu adresovatelnou LED na pinu **GPIO8**. V BSP pro tuhle konkrétní desku tedy budou tyhle dvě periferie nakonfigurované a pokud BSP použijeme, nemusíme se starat o konfiguraci pinů ani přidávat žádné další komponenty, které by se o dané periferie staraly.
 
 Příklad s naším kitem je pro BSP poměrně jednoduchý, ale existují i složitější vývojové desky, třeba **ESP32-S3-BOX-3**. BSP pro tento kit si tedy poradí se všemi periferiemi, jako jsou například displej, senzory, LED, ale také např. audio kodeky. Všechno v jediném balíčku a bez žádných dodatečných komponent.
 
@@ -288,7 +288,7 @@ Výhody použití BSP jsou například:
 - Snižuje množství chyb při konfiguraci desky
 - Zajišťuje, že všechny potřebné závislosti budou součástí projektu
 
-Kromě práce s BSP si také ukážeme, jak vytvořit projekt z nějakého příkladu, který je součásti komponenty, v našem případě komponenty [espressif/esp_bsp_generic](https://components.espressif.com/components/espressif/esp_bsp_generic/) a příkladu [examples/generic_button_led](https://components.espressif.com/components/espressif/esp_bsp_generic/versions/1.2.0/examples/generic_button_led?language=en). Některé komponenty totiž obsahují i demonstrační projekty, které ukazují, jak takovou komponentu správně používat. 
+Kromě práce s BSP si také ukážeme, jak vytvořit projekt z nějakého příkladu, který je součásti komponenty, v našem případě komponenty [espressif/esp_bsp_generic](https://components.espressif.com/components/espressif/esp_bsp_generic/) a příkladu [examples/generic_button_led](https://components.espressif.com/components/espressif/esp_bsp_generic/versions/1.2.0/examples/generic_button_led?language=en). Některé komponenty totiž obsahují i demonstrační projekty, které ukazují, jak takovou komponentu správně používat.
 
 Níže si popíšeme, jak na to:
 
@@ -310,16 +310,16 @@ dependencies:
 description: BSP Display example
 ```
 
-Pokud například nsedí verze BSP, změníme ji na `^1.2.0`, jak je na ukázce výše. 
+Pokud například nsedí verze BSP, změníme ji na `^1.2.0`, jak je na ukázce výše.
 
 2. **Nastavení periferií**
 
-Jelikož používáme generické BSP, konfiguraci se přece jenom nevyhneme. Opět budeme pracovat s LED, musíme tedy nastavit, že naše deska disponuje jednou LED na pinu **GPIO8** (a ovládat ji budeme pomocí RMT). 
+Jelikož používáme generické BSP, konfiguraci se přece jenom nevyhneme. Opět budeme pracovat s LED, musíme tedy nastavit, že naše deska disponuje jednou LED na pinu **GPIO8** (a ovládat ji budeme pomocí RMT).
 
-ESP-IDF používá ke knfiguraci projektů jazyk Kconfig a knihovnu kconfiglib. Konfigurační menu vyvoláme pomocí: 
+ESP-IDF používá ke knfiguraci projektů jazyk Kconfig a knihovnu kconfiglib. Konfigurační menu vyvoláme pomocí:
 - Příkazu *SDK Configuration Editor (menuconfig)* v *ESP-IDF: Explorer*-u
 - Vyhledáním tohoto příkazu v *Command Pallete* (Ctrl + Shift + P)
-- V CLI pomocí příkazu ``idf.py menuconfig``, zavolaného v kořenové složce projektu. 
+- V CLI pomocí příkazu ``idf.py menuconfig``, zavolaného v kořenové složce projektu.
 
 V konfiguračním menu přejděte do  `Component config` -> `Board Support Package (generic)` a nastavte:
 
@@ -337,7 +337,7 @@ Na závěr nezapomeňte vše uložit tlačítkem **Save** vpravo nahoře.
 
 3. **Sestavení a nahrání: Build and flash**
 
-Do souboru `main.c` našeho BSP projektu zkopírujte kód níže: 
+Do souboru `main.c` našeho BSP projektu zkopírujte kód níže:
 
 ```c
 #include <stdio.h>
@@ -353,7 +353,7 @@ void app_main(void)
 }
 ```
 
-Nyní můžete projekt sestavit a nahrát do vaší vývojové desky. 
+Nyní můžete projekt sestavit a nahrát do vaší vývojové desky.
 
 > Pokud se během sestavení vyskytl problém, zkuste vymazat build files:
 >

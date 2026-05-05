@@ -37,7 +37,7 @@ ULP jádro používá specifický set pinů. Pokud budete potřebovat vědět de
 
 V této ukázce si napíšeme kód, který rozbliká LED. Jednou se o řízení bude starat "velké" HP jádro, podruhé tutéž práci zastane ULP jádro. Zkusíme přitom porovnat spotřebu. 
 
-**Pro tento úkol vytvoříme nový prázdný projekt.** Pro podrobnější instrukce navštivte 1. kapitolu (vytváření projektu z příkladu `hello world`).  
+**Pro tento úkol vytvoříme nový prázdný projekt.** Pro podrobnější instrukce navštivte 1. kapitolu (vytváření projektu z příkladu `hello world`).
 
 1. **Vytvořte složku `main/ulp` a uvnitř soubor `main.c`**
 
@@ -50,7 +50,7 @@ V této ukázce si napíšeme kód, který rozbliká LED. Jednou se o řízení 
 #include "ulp_lp_core_interrupts.h"
 
 #define WAKEUP_PIN LP_IO_NUM_0
-#define RED_PIN    LP_IO_NUM_4
+#define BLUE_PIN    LP_IO_NUM_4
 #define GREEN_PIN  LP_IO_NUM_5
 
 static uint32_t wakeup_count;
@@ -72,13 +72,13 @@ int main (void)
     while (1) {
         /* Toggle the Red LED GPIO */
         ulp_lp_core_gpio_set_level(GREEN_PIN, 0);
-        ulp_lp_core_gpio_set_level(RED_PIN, level);
+        ulp_lp_core_gpio_set_level(BLUE_PIN, level);
         level = level ? 0 : 1;
         ulp_lp_core_delay_us(1000000);
 
         /* Wakeup the main processor after 4 toggles of the button */
         if (wakeup_count >= 4) {
-            ulp_lp_core_gpio_set_level(RED_PIN, 0);
+            ulp_lp_core_gpio_set_level(BLUE_PIN, 0);
             ulp_lp_core_wakeup_main_processor();
             wakeup_count = 0;
         }
@@ -141,7 +141,7 @@ extern const uint8_t ulp_main_bin_end[]   asm("_binary_ulp_main_bin_end");
 static void init_ulp_program(void);
 
 #define WAKEUP_PIN  GPIO_NUM_0
-#define RED_PIN     GPIO_NUM_4
+#define BLUE_PIN    GPIO_NUM_4
 #define GREEN_PIN   GPIO_NUM_5
 
 void app_main(void)
@@ -169,10 +169,10 @@ void app_main(void)
     rtc_gpio_pulldown_dis(WAKEUP_PIN);
     rtc_gpio_pullup_dis(WAKEUP_PIN);
 
-    rtc_gpio_init(RED_PIN);
-    rtc_gpio_set_direction(RED_PIN, RTC_GPIO_MODE_OUTPUT_ONLY);
-    rtc_gpio_pulldown_dis(RED_PIN);
-    rtc_gpio_pullup_dis(RED_PIN);
+    rtc_gpio_init(BLUE_PIN);
+    rtc_gpio_set_direction(BLUE_PIN, RTC_GPIO_MODE_OUTPUT_ONLY);
+    rtc_gpio_pulldown_dis(BLUE_PIN);
+    rtc_gpio_pullup_dis(BLUE_PIN);
 
     rtc_gpio_init(GREEN_PIN);
     rtc_gpio_set_direction(GREEN_PIN, RTC_GPIO_MODE_OUTPUT_ONLY);
@@ -185,7 +185,7 @@ void app_main(void)
 
     while (1) {
         /* Toggle the Green LED GPIO */
-        rtc_gpio_set_level(RED_PIN, 0);
+        rtc_gpio_set_level(BLUE_PIN, 0);
         rtc_gpio_set_level(GREEN_PIN, 1);
         vTaskDelay(pdMS_TO_TICKS(1000));
         rtc_gpio_set_level(GREEN_PIN, 0);
@@ -254,7 +254,7 @@ CONFIG_LOG_DEFAULT_LEVEL=2
 
 Na tenhle příklad budete navíc potřebovat 2 LED a jedno tlačítko připojené na následující piny: 
 
-- Červená LED -> **GPIO4**
+- Modrá LED -> **GPIO4**
 - Zelená LED -> **GPIO5**
 - Čudlík (pull-down, active high) -> **GPIO0**. Jinak řečeno, jednu "stranu" tlačítka připojíme na **3.3V** a druhou na **GPIO0**. Navíc ještě mezi **GPIO0** a **GND** připojíme rezistor. 
 
@@ -273,7 +273,7 @@ In active mode
 Long press the wake button to put the chip to sleep and run the ULP
 ```
 
-Pokud dlouze stiskneme tlačítko, mělo by dojít k aktivaci LP jádra a přepnutí HP jádra do *deep sleep mode*. Červená LED začne blikat s frekvení jedné vteřiny s následujícím výstupem:
+Pokud dlouze stiskneme tlačítko, mělo by dojít k aktivaci LP jádra a přepnutí HP jádra do *deep sleep mode*. Modrá LED začne blikat s frekvení jedné vteřiny s následujícím výstupem:
 
 ```text
 Entering in deep sleep

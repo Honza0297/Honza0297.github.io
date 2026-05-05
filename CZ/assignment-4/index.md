@@ -9,13 +9,13 @@ showAuthor: false
 
 ## Úkol 4: Totéž, ale s NVS
 
-V minulém úkolu jsme použili tu nejjednoduší možnost uložení SSID a hesla; definovali jsme si konstanty přímo v kódu. Nejen, že tenhle postup není ideální z hlediska změn, kdy každou změnu v SSID nebo heslu musíme aplikovat přímo v kódu a přeflashovat naši aplikaci. Tento způsob také přináší nemalá bezpečnostní rizika. 
+V minulém úkolu jsme použili tu nejjednoduší možnost uložení SSID a hesla; definovali jsme si konstanty přímo v kódu. Nejen, že tenhle postup není ideální z hlediska změn, kdy každou změnu v SSID nebo heslu musíme aplikovat přímo v kódu a přeflashovat naši aplikaci. Tento způsob také přináší nemalá bezpečnostní rizika.
 
-V tomhle úkolu se podíváme, jak pracovat s [Non-Volatile-Storage (NVS)](https://docs.espressif.com/projects/esp-idf/en/release-v5.2/esp32/api-reference/storage/nvs_flash.html). Často se NVS říká "emulovaná EEPROM". ESP32 ale žádnou EEPROM vestavěnou nemá, takže NVS používá paměť flash (tu samou, kam ukládáme i naši aplikaci). 
+V tomhle úkolu se podíváme, jak pracovat s [Non-Volatile-Storage (NVS)](https://docs.espressif.com/projects/esp-idf/en/release-v5.2/esp32/api-reference/storage/nvs_flash.html). Často se NVS říká "emulovaná EEPROM". ESP32 ale žádnou EEPROM vestavěnou nemá, takže NVS používá paměť flash (tu samou, kam ukládáme i naši aplikaci).
 
 V tomhle úkolu použijeme ten samý projekt, který jsme používali v minulých dvou úkolech.
 
-Princip ukládání dat v knihovně NVS je založený na párech klíč-hodnota (podobně jako slovník v Pythonu), mimo jiné typu `integer`, `string`, a `blob` (binární data proměnlivé délky). 
+Princip ukládání dat v knihovně NVS je založený na párech klíč-hodnota (podobně jako slovník v Pythonu), mimo jiné typu `integer`, `string`, a `blob` (binární data proměnlivé délky).
 
 > Velikost řetězců (včetně nulového ukončovacího znaku) je v současné době omezená na 4000 bytů. Bloby jsou omezené na 508,000 bytů nebo 97.6% velikosti oddílu (partition size, 4000 bytů v našem případě), podle toho, co je menší.
 
@@ -23,7 +23,7 @@ NVS je užitečné zejména v případě, kdy potřebujeme ukládat jednu nebo v
 
 ### Praktická ukázka NVS
 
-V ukázce si předvedeme, jak připravit *partition table*, NVS datový soubor a změníme kód z předcházejícího úkolu tak, aby se WI-Fi jméno a heslo četly z NVS. 
+V ukázce si předvedeme, jak připravit *partition table*, NVS datový soubor a změníme kód z předcházejícího úkolu tak, aby se WI-Fi jméno a heslo četly z NVS.
 
 
 1. **Vytvoření partition tabulky**
@@ -45,15 +45,15 @@ phy_init, data, phy,     0xf000,  0x1000,
 factory,  app,  factory, 0x10000, 1M,
 ```
 
-Hodnoty jsou editovatelné i přímo a jednotlivé oddíly lze upravit podle vlastní potřeby. 
+Hodnoty jsou editovatelné i přímo a jednotlivé oddíly lze upravit podle vlastní potřeby.
 
 2. **Vytvoření NVS souboru**
 
-NVS editor otevřeme podobně: opět pomocí Ctrl + Shift + P otevřeme *Command Palette* a vybereme možnost *Open NVS partition editor*. Následně zadáme jméno souboru (``nvs.csv``) a stiskneme Enter. Otevře se nám okno podobné tomu níže:  
+NVS editor otevřeme podobně: opět pomocí Ctrl + Shift + P otevřeme *Command Palette* a vybereme možnost *Open NVS partition editor*. Následně zadáme jméno souboru (``nvs.csv``) a stiskneme Enter. Otevře se nám okno podobné tomu níže:
 
 ![Obsah NVS tabulky](./nvs1.png "Obsah NVS tabulky")
 
-Změníme hodnotu `Size of partition (bytes)` na `0x6000` (stejná hodnota jako v partition table), přidáme řádky pomocí "Add New Row" a vyplníme je podle obrázku výše. Následně zmáčkneme "Save". 
+Změníme hodnotu `Size of partition (bytes)` na `0x6000` (stejná hodnota jako v partition table), přidáme řádky pomocí "Add New Row" a vyplníme je podle obrázku výše. Následně zmáčkneme "Save".
 
 Nakonec můžeme otevřít soubor `nvs.csv` a ověřit, že vypadá stejně jako ten níže:
 
@@ -175,7 +175,7 @@ CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
 CONFIG_PARTITION_TABLE_FILENAME="partitions.csv"
 ```
 
-Nyní můžeme měnit SSID a heslo bez nutnosti zasahovat přímo do zdrojového kódu aplikace. 
+Nyní můžeme měnit SSID a heslo bez nutnosti zasahovat přímo do zdrojového kódu aplikace.
 
 #### Kompletní kód
 
