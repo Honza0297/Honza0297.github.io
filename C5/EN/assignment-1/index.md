@@ -4,35 +4,50 @@ date: 2024-06-30T00:00:00+01:00
 layout: default
 ---
 
-## Assignment 1: Install Visual Studio Code and ESP-IDF plugin
+## Assignment 1: Install ESP-IDF and VSCode with ESP-IDF plugin
 
 ---
 
 You will need [Visual Studio Code](https://code.visualstudio.com/) and the installed ESP-IDF
 framework for this workshop. The first task will therefore be to install all the necessary tools.
 
-In both cases, we will follow the instructions on the
-[GitHub pages of the ESP-IDF plugin for VS Code](https://github.com/espressif/vscode-esp-idf-extension?tab=readme-ov-file#how-to-use).
+
+To install ESP-IDF, we will use our new [EIM](https://docs.espressif.com/projects/idf-im-ui/en/latest/) installer and install the VSCode extension according to the instructions on the [GitHub pages of the ESP-IDF plugin for VS Code](https://github.com/espressif/vscode-esp-idf-extension?tab=readme-ov-file#how-to-use).
 
 **Windows:**
 
-1. Install [Visual Studio Code](https://code.visualstudio.com/download)
-2. Install the necessary [drivers](https://www.silabs.com/documents/public/software/CP210x_Universal_Windows_Driver.zip)
-3. In VS Code, open **Extensions** (Ctrl + Shift + X or ⇧ + ⌘ + X)
-4. Find the [ESP-IDF plugin](https://marketplace.visualstudio.com/items?itemName=espressif.esp-idf-extension) and install it
-5. Open *View -> Command Palette* (Ctrl + Shift + P or ⇧ + ⌘ + P) and type *Configure ESP-IDF Extension* in the newly opened line
-6. Select the **Express** option and then select Github as download server and release/v5.5 as ESP-IDF version
-7. Click "Install"
+### Windows Installation
+
+1. Install [EIM](https://dl.espressif.com/dl/eim/index.html)
+    * Press Windows key + R and type powershell in the dialog box that appears
+    * After the terminal appears, enter: `winget install Espressif.eim`
+2. Install ESP-IDF using EIM
+    * Run EIM from the start menu or desktop icon
+    * On the welcome screen, click `Start Installation` and then `Custom installation` and follow the wizard. On the version selection page, choose IDF version 5.5.4
+    * During installation, the installer will also offer to install git or python if they are not already on your computer.
+    * After installation is complete, return to the installer's version manager page and use the `Install Drivers` button in the bottom of the screen to install the necessary drivers.
+
+3. Install [Visual Studio Code](https://code.visualstudio.com/download)
+4. In VS Code, open **Extensions** (Ctrl + Shift + X or ⇧ + ⌘ + X)
+5. Find the [ESP-IDF plugin](https://marketplace.visualstudio.com/items?itemName=espressif.esp-idf-extension) and install it
+5. Wait for the espressif icon to appear in the left panel and click on it.
+6. The extension will automatically find the installed ESP-IDF
 
 **Linux and Mac:**
 
-1. Install [Visual Studio Code](https://code.visualstudio.com/download)
-2. Install [prerequisites according to your distribution](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/linux-macos-setup.html#step-1-install-prerequisites) (**Only step 1**, the entire guide deals with installing standalone ESP-IDF, which we don't need right now)
+### Linux and Mac Installation
+
+1. Install [EIM](https://dl.espressif.com/dl/eim/index.html)
+    * If you choose installation via package manager (brew, apt, rpm), it will handle all [prerequisites](https://docs.espressif.com/projects/idf-im-ui/en/latest/prerequisites.html) for you.
+    * If we choose the CLI version, we just need to call `eim install -i v5.5.4` now
+    * If we chose the GUI version, we click on the `Start Installation` button on the welcome screen and then `Custom installation` and follow the wizard. On the version selection page, we choose IDF version 5.5.4
+
+
+2. Install [Visual Studio Code](https://code.visualstudio.com/download)
 3. In VS Code, open **Extensions** (Ctrl + Shift + X or ⇧ + ⌘ + X)
 4. Find the [ESP-IDF plugin](https://marketplace.visualstudio.com/items?itemName=espressif.esp-idf-extension) and install it
-5. Open *View -> Command Palette* (Ctrl + Shift + P or ⇧ + ⌘ + P) and type *Configure ESP-IDF Extension* in the newly opened line
-6. Select the **Express** option and then select Github as download server and release/v5.5 as *ESP-IDF version*
-7. Click "Install"
+5. Wait for the espressif icon to appear in the left panel and click on it.
+6. The extension will automatically find the installed ESP-IDF
 
 ### Installing ESP BLE Prov
 
@@ -48,8 +63,7 @@ below:
 ### VSCode, ESP-IDF plugin and ESP-IDF itself
 
 You may have noticed that during the ESP-IDF plugin installation, you also selected the version of
-ESP-IDF itself and had the option to choose a local ESP-IDF installation. So how do the ESP-IDF
-plugin and ESP-IDF itself relate?
+ESP-IDF itself. So how do the ESP-IDF plugin and ESP-IDF itself relate?
 
 ESP-IDF is a **standalone framework** that can be used without VSCode and plugin. It is controlled
 from the command line (so it has no GUI) and contains all the logic for building, flashing and
