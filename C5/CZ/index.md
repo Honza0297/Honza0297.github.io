@@ -23,10 +23,10 @@ V repozitáři jsou i malé ESP-IDF projekty se stejným číslováním úkolů 
 Pokud jste splnili [prerekvizity](#prerekvizity) můžeme se pustit do jednotlivých kapitol:
 
 - [Úvod: Představení ESP-IDF](introduction/): Úvodní představení našeho frameworku ESP-IDF, následované základními informacemi o čipu ESP32-C5 a devkitu, na kterém bude tento tutoriál demonstrovaný.
-- [Úkol 1: Instalace ESP-IDF do VSCode](assignment-1): Instalace nezbytných nástrojů pro začátek vývoje.
+- [Úkol 1: Instalace ESP-IDF a VSCode](assignment-1): Instalace nezbytných nástrojů pro začátek vývoje.
 - [Úkol 2: Vytvoření nového projektu s Komponenty](assignment-2): Jak efektivně vytvořit, strukturovat a organizovat projekt.
 - [Úkol 3: Připojení k Wi-Fi](assignment-3): Naprostý základ pro většinu IoT projektů.
-- [Úkol 4: Zkouška NVS (Non-Voltaile Storage)](assignment-4): Ukládání perzistentních dat.
+- [Úkol 4: Zkouška NVS (Non-Volatile Storage)](assignment-4): Ukládání perzistentních dat.
 - [Úkol 5: Wi-Fi provisioning](assignment-5): Podrobnější práce s Wi-Fi: nastavování a konfigurace Wi-Fi sítí.
 - [Úkol 6: Experimenty s low-power core](assignment-6): Ukázka práce s low-power core pro aplikace, kde je spotřeba energie důležitým faktorem.
 
