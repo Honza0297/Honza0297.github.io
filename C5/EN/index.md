@@ -39,7 +39,7 @@ If you have met the [prerequisites](#prerequisites), we can start with the indiv
 - [Introduction: ESP-IDF Presentation](introduction/): Initial introduction to our ESP-IDF
   framework, followed by basic information about the ESP32-C5 chip and the devkit on which this
   tutorial will be demonstrated.
-- [Assignment 1: Install ESP-IDF in VSCode](assignment-1/): Installing the necessary tools to
+- [Assignment 1: Install ESP-IDF and VSCode](assignment-1/): Installing the necessary tools to
   start development.
 - [Assignment 2: Create a New Project with Components](assignment-2/): How to efficiently create,
   structure and organize a project.
