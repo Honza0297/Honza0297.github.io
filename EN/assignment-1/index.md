@@ -47,7 +47,7 @@ You can either search for the app in the app store of the respective system, or 
 
 ### VSCode, ESP-IDF plugin and ESP-IDF itself
 
-You may have noticed that during the ESP-IDF plugin installation, you also selected the version of ESP-IDF itself and had the option to choose a local ESP-IDF installation. So how do the ESP-IDF plugin and ESP-IDF itself relate?
+You now have both the ESP-IDF plugin and ESP-IDF itself installed. How do these two things actually relate?
 
 ESP-IDF is a **standalone framework** that can be used without VSCode and plugin. It is controlled from the command line (so it has no GUI) and contains all the logic for building, flashing and monitoring the application. So when you press e.g. the *Build* button in *ESP-IDF Explorer* (don't worry, we'll explain what that means in the next lessons), the `idf.py build` command is called in the end.
 

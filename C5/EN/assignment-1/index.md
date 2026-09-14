@@ -62,8 +62,7 @@ below:
 
 ### VSCode, ESP-IDF plugin and ESP-IDF itself
 
-You may have noticed that during the ESP-IDF plugin installation, you also selected the version of
-ESP-IDF itself. So how do the ESP-IDF plugin and ESP-IDF itself relate?
+You now have both the ESP-IDF plugin and ESP-IDF itself installed. How do these two things actually relate?
 
 ESP-IDF is a **standalone framework** that can be used without VSCode and plugin. It is controlled
 from the command line (so it has no GUI) and contains all the logic for building, flashing and

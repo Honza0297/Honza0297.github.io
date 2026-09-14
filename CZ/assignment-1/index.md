@@ -47,7 +47,7 @@ Aplikaci buď vyhledáte v appstoru příslušného systému, nebo přes odkazy 
 
 ### VSCode, ESP-IDF plugin a samotné ESP-IDF
 
-Možná jste si všimli, že během instalace ESP-IDF pluginu jste vybírali i verzi samotného ESP-IDF a měli jste mj. i možnost zvolit lokální instalaci ESP-IDF. Jak spolu tedy souvisí ESP-IDF plugin a samotné ESP-IDF?
+Nyní máte nainstalovaný ESP-IDF plugin i samotné ESP-IDF. Jak spolu tyto dvě věci vlastně souvisí?
 
 ESP-IDF je **samostatný framework**, který lze používat i bez VSCode a pluginu. Ovládá se z příkazové řádky (nemá tedy žádné GUI) a obsahuje všechnu logiku pro build, flashování i monitorování aplikace. Když tedy zmáčknete např. tlačítko *Build* v *ESP-IDF Exploreru* (nebojte, v dalších lekcích si vysvětlíme, co to znamená), nakonec se stejně zavolá příkaz `idf.py build`. 
 
