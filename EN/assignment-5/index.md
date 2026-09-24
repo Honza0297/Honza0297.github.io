@@ -1,85 +1,122 @@
 ---
-title: "Workshop: ESP-IDF and ESP32-C6 - Assignment 5"
-date: 2024-09-30T00:00:00+01:00
-showTableOfContents: false
-series: ["WS001EN"]
-series_order: 6
-showAuthor: false
+title: "ESP-IDF and ESP32-C6 Workshop - Assignment 5: ESP-NOW Chat Room"
+date: 2024-06-30T00:00:00+01:00
+layout: default
 ---
 
-## Assignment 5: Wi-Fi provisioning
+## Assignment 5: ESP-NOW Chat Room
 
-Wi-Fi *provisioning* is one of the most important aspects of any IoT device. When you bring home a smart socket, for example, you don't have to download code from the manufacturer and manually change SSID and password, but everything is usually handled through some application that provides all this data to the socket. We usually go through Wi-Fi provisioning only once during the initial setup of our device, but it can also come in handy in situations where, for example, a factory reset occurs.
+---
 
-There are several methods to ensure Wi-Fi provisioning. Some devices can be switched to so-called provisioning mode by pressing a button, others work through the mentioned application or web page, and some support automatic provisioning using another technology, such as Bluetooth Low Energy (BLE).
+While Wi-Fi is great for connecting to the Internet, it requires an Access Point (router) and has overhead due to the connection process. What if you just want multiple ESP32 boards to talk directly to each other?
 
-ESP32 of course also supports this option. You can encounter it in projects such as our [ESP RainMaker](https://rainmaker.espressif.com/).
+**ESP-NOW** is a connectionless, low-overhead wireless communication protocol defined by Espressif. It allows multiple devices to communicate with each other peer-to-peer (P2P) without a router.
 
-### Practical demonstration: How to do Wi-Fi provisioning
+In this assignment, we will turn our workshop room into a giant ESP-NOW Chat Room! Every participant's board will broadcast commands, and when another board receives a specific command, it will change its LED color.
 
-In chapter 3, we wrote SSID and password directly into the code, which is the fastest, but also the most complicated variant (with every change we have to compile and upload the entire project).
+### 1. Initializing ESP-NOW
 
-Storing data in NVS in chapter 4 shows a somewhat more practical version, where the code reads the data from memory itself, but we still have to write it there manually, which is definitely not ideal.
+ESP-NOW requires the Wi-Fi peripheral to be turned on in Station or SoftAP mode, even though we aren't connecting to a router.
 
-Now we will show how to set Wi-Fi data via BLE (Bluetooth Low Energy) using an Android or iOS mobile phone.
-
-1. **Installing the mobile application**
-
-First you need to download the application for BLE provisioning:
-
-- Android: [ESP BLE Provisioning](https://play.google.com/store/apps/details?id=com.espressif.provble&pcampaignid=web_share)
-- iOS: [ESP BLE Provisioning](https://apps.apple.com/us/app/esp-ble-provisioning/id1473590141)
-
-2. **Creating a new project**
-
-We will create a new project using the `provisioning` -> `wifi_prov_mgr` example. It can be created either using the command below:
-
-```bash
-idf.py create-project-from-example "espressif/network_provisioning^1.2.0:wifi_prov"
+```c
+ESP_ERROR_CHECK(esp_netif_init());
+ESP_ERROR_CHECK(esp_event_loop_create_default());
+wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+ESP_ERROR_CHECK(esp_wifi_start());
 ```
 
-...or via GUI:
+Then we initialize ESP-NOW itself:
 
-1. Open ESP-IDF Component Registry
-2. Search for `espressif/network_provisioning`
-3. Go to the *Examples* tab
-4. Select `wifi_prov`
-5. And choose `Create Project from this Example`. In the following window, just choose where to save the project.
+```c
+ESP_ERROR_CHECK(esp_now_init());
+```
 
-> For your existing projects, you can use the [espressif/network_provisioning](https://components.espressif.com/components/espressif/network_provisioning) component.
->
-> ```bash
-> idf.py add-dependency "espressif/network_provisioning^0.2.0"
-> ```
+### 2. Adding Peers
 
-3. **Build, flash, and monitor**
+To broadcast to everyone in the room, we add a peer with the broadcast MAC address `FF:FF:FF:FF:FF:FF`.
 
-We won't change anything in the example, just verify that we have the correct target, **erase flash memory** (with the *Erase Flash* command), build the application and flash it.
+```c
+esp_now_peer_info_t peerInfo = {};
+memset(&peerInfo, 0, sizeof(peerInfo));
+// Broadcast MAC address
+for (int i = 0; i < 6; i++) {
+    peerInfo.peer_addr[i] = 0xFF;
+}
+peerInfo.channel = 0; // Use current channel
+peerInfo.encrypt = false; // No encryption for broadcast
 
-> If you added components manually (via CLI), you will need to clean the project first so that everything builds correctly:
->
-> `idf.py fullclean`
+ESP_ERROR_CHECK(esp_now_add_peer(&peerInfo));
+```
 
-After building and uploading the application, open `ESP-IDF Serial Monitor`.
+### 3. Receiving Commands
 
-4. **Provisioning**
+We register a callback function that executes whenever an ESP-NOW packet is received. This function will parse the incoming string and change our LED color!
 
-In the `ESP BLE provisioning` app on your mobile phone, follow the steps as shown below:
+```c
+void on_data_recv(const uint8_t *mac_addr, const uint8_t *data, int data_len)
+{
+    // data might not be null terminated, so let's copy it safely
+    char msg[32] = {0};
+    int len = data_len < 31 ? data_len : 31;
+    memcpy(msg, data, len);
 
-{{< gallery >}}
-  <img src="../assets/provisioning-app-1.webp" class="grid-w33" />
-  <img src="../assets/provisioning-app-2.webp" class="grid-w33" />
-  <img src="../assets/provisioning-app-3.webp" class="grid-w33" />
-  <img src="../assets/provisioning-app-4.webp" class="grid-w33" />
-  <img src="../assets/provisioning-app-5.webp" class="grid-w33" />
-{{< /gallery >}}
+    ESP_LOGI("ESP-NOW", "Received: %s", msg);
 
-The QR code will be printed by your development board to the serial line (open the serial monitor with the *Monitor* command in *ESP-IDF Explorer*).
+    if (strcmp(msg, "LED ON") == 0) {
+        led_strip_set_pixel(led_strip, 0, 20, 20, 20); // White
+        led_strip_refresh(led_strip);
+    } else if (strcmp(msg, "LED OFF") == 0) {
+        led_strip_clear(led_strip);
+    } else if (strcmp(msg, "COLOR RED") == 0) {
+        led_strip_set_pixel(led_strip, 0, 20, 0, 0); // Red
+        led_strip_refresh(led_strip);
+    } else if (strcmp(msg, "COLOR GREEN") == 0) {
+        led_strip_set_pixel(led_strip, 0, 0, 20, 0); // Green
+        led_strip_refresh(led_strip);
+    }
+}
 
-After the provisioning process is completed, the device will connect to the selected Wi-Fi network.
+// In app_main:
+ESP_ERROR_CHECK(esp_now_register_recv_cb(on_data_recv));
+```
+
+### 4. Sending Commands
+
+Let's periodically broadcast a command to the room! Alternatively, you could hook this up to a physical button on the board. For now, we will just send it in a loop.
+
+```c
+uint8_t broadcast_mac[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+char *msg = "COLOR GREEN";
+
+while(1) {
+    esp_err_t result = esp_now_send(broadcast_mac, (uint8_t *)msg, strlen(msg));
+    if (result == ESP_OK) {
+        ESP_LOGI("ESP-NOW", "Broadcast sent!");
+    } else {
+        ESP_LOGE("ESP-NOW", "Send error");
+    }
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
+}
+```
+
+### 5. Build, Flash, and Monitor
+
+Make sure you have the `led_strip` component added:
+```bash
+idf.py add-dependency "espressif/led_strip^3.0.3"
+```
+
+Then build and flash:
+```bash
+idf.py build flash monitor
+```
+
+Work with the person next to you: Have one person broadcast "COLOR RED" and the other broadcast "COLOR GREEN". See your LEDs sync up!
 
 ## Next step
 
-Now that we know how to easily connect to Wi-Fi, let's make it more secure!
+Let's look at one final feature of the ESP32-C6: The Low-Power core!
 
-[Assignment 6: Protocols](../assignment-6)
+[Assignment 6: LP-core](../assignment-6/)

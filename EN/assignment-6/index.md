@@ -1,327 +1,134 @@
 ---
-title: "Workshop: ESP-IDF and ESP32-C6 - Assignment 6"
+title: "ESP-IDF and ESP32-C6 Workshop - Assignment 6"
 date: 2024-09-30T00:00:00+01:00
-showTableOfContents: false
-series: ["WS001EN"]
-series_order: 7
-showAuthor: false
+layout: default
 ---
 
-## Assignment 6: Protocols
+## Assignment 6: Low Power core
 
-Currently, ESP-IDF supports a bunch of protocols, such as:
+---
 
-- HTTP and HTTPS
-- ICMP
-- CoAP
-- MQTT and MQTT5
-- PPP (Point-to-Point Protocol) including PPPoS
-- Sockets
-- Modbus
-- SMTP
-- SNTP
-- ...and many more
+The ESP32-C6 features two cores: a high-power (HP) core for standard use (networking, complex computations) and a low-power (LP) RISC-V core designed to minimize energy consumption.
 
-You can explore how to work with protocols directly based on examples in the [ESP-IDF examples](https://github.com/espressif/esp-idf/tree/master/examples), [esp-protocols](https://github.com/espressif/esp-protocols), or [ESP Registry](https://components.espressif.com) folders.
+The LP core (often called the **ULP - Ultra Low Power core**) is designed to handle simple tasks while the main HP core is in deep sleep mode. This significantly reduces battery consumption, making it perfect for battery-powered projects. The LP core can collect data from sensors, control GPIOs, or increment a counter, waking up the HP core only when a threshold is met.
 
-### Practical example with protocols
+### 1. The Sleep Cycle
 
-In this example, we will use *ESP x509 Certificate Bundle* to simplify our work with some protocols that require certificates, such as HTTPS.
+In this assignment, we will configure the HP core to go into Deep Sleep. The LP core will continue to run, perform a basic task, and eventually wake the HP core back up.
 
-[ESP x509 Certificate Bundle API](https://docs.espressif.com/projects/esp-idf/en/release-v5.2/esp32/api-reference/protocols/esp_crt_bundle.html?highlight=bundle#esp-x509-certificate-bundle) provides a collection of certificates for verification on a TLS server, which are automatically generated from [Mozilla's NSS root certificates](https://wiki.mozilla.org/CA/Included_Certificates). This bundle contains more than 130 certificates and is constantly updated.
+To use the LP core, we need to create a special sub-folder in our project called `main/ulp` and write the code that will run on the LP core there.
 
-By using this bundle, we don't have to manually upload any root certificates for secure HTTPS connection using TLS (ESP-TLS), nor do we have to renew them when they expire.
+### 2. Configuration via menuconfig
 
-1. **Verify that the previous steps work as they should**
-
-In this assignment, we will continue to modify the project we have been working on so far. It is therefore good to verify that at this point the project can be built, uploaded and that the board successfully connects to Wi-Fi.
-
-> During this assignment we will need an Internet connection.
-
-2. **Configuration modification**
-
-Open the configuration menu (Ctrl + Shift + P and search for *SDK Configuration Editor*) and in the configuration menu go to `Component config` -> `mbedTLS` -> `Certificate Bundle`. There check that:
-
-- `Enable trusted root certificate bundle` is checked
-- In the `Default certificate bundle options` menu, the `Use the full default certificate bundle` option is selected
-
-3. **Code for TLS connection**
-
-We add the necessary `#include`s...
-
-```c
-#include "lwip/err.h"
-#include "lwip/sockets.h"
-#include "lwip/sys.h"
-#include "lwip/netdb.h"
-#include "lwip/dns.h"
-#include "esp_tls.h"
-#include "esp_crt_bundle.h"
+Run:
+```bash
+idf.py menuconfig
 ```
 
-...and definitions of URL links that we will try to connect to using the certificate:
-```c
-#define MAX_URLS    4
+Navigate to:
+- **Component config ---> Ultra Low Power (ULP) Co-processor**
+  - **Enable Ultra Low Power (ULP) Coprocessor**: Select `LP-core`
+  - Leave other settings as default.
 
-static const char *web_urls[MAX_URLS] = {
-    "https://www.github.com",
-    "https://espressif.com",
-    "https://youtube.com",
-    "https://seznam.cz",
-};
-```
+Press `Q` to quit and `Y` to save.
 
-If you want, you can change the list and put your own pages there.
+### 3. Writing the LP Core Code
 
-4. **Creating a task that will try to connect to URLs from the previous step**
-
-This task will try to connect to each of the URLs from the list above.
+Create a file named `main/ulp/main.c`. This code runs *only* on the LP core!
 
 ```c
-static void event_handler(void* arg, esp_event_base_t event_base,
-                                int32_t event_id, void* event_data)
+#include <stdint.h>
+#include "ulp_lp_core.h"
+#include "ulp_lp_core_utils.h"
+
+// Variables shared between HP and LP core
+volatile uint32_t counter = 0;
+
+int main(void)
 {
-    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
-        esp_wifi_connect();
-    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
-        if (s_retry_num < 100) {
-            esp_wifi_connect();
-            s_retry_num++;
-            ESP_LOGW(TAG, "Trying to connect to WiFi");
-			led_indicator_set_rgb(leds[0], SET_IRGB(0, 0x0, 0x0, 0x20));
-        } else {
-            xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
-        }
-        ESP_LOGE(TAG, "Failed to connect to WiFi");
-		led_indicator_set_rgb(leds[0], SET_IRGB(0, 0x20, 0x0, 0x0));
-    } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
-        ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
-        ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
-		led_indicator_set_rgb(leds[0], SET_IRGB(0, 0x0, 0x20, 0x0));
-        s_retry_num = 0;
-        xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
+    // Increment our counter
+    counter++;
+
+    // Wake the main CPU once the counter reaches 5
+    if (counter >= 5) {
+        ulp_lp_core_wakeup_main_processor();
+        counter = 0;
     }
+
+    // Go back to sleep until the LP timer wakes us again
+    ulp_lp_core_halt();
+    return 0;
 }
 ```
 
-We create the task after calling the `wifi_init_sta` function:
+### 4. Writing the HP Core Code (app_main)
 
-```c
-xTaskCreate(&https_get_task, "https_get_task", 8192, NULL, 5, NULL);
-```
-
-#### Complete code
+In your `main/main.c`, initialize the LP core and then put the HP core to sleep:
 
 ```c
 #include <stdio.h>
-#include "bsp/esp-bsp.h"
-#include "led_indicator_blink_default.h"
 #include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/event_groups.h"
-#include "esp_system.h"
-#include "esp_wifi.h"
-#include "esp_event.h"
 #include "esp_log.h"
-#include "nvs.h"
-#include "nvs_flash.h"
-#include "lwip/err.h"
-#include "lwip/sys.h"
+#include "esp_sleep.h"
+#include "ulp_lp_core.h"
 
-#include "lwip/err.h"
-#include "lwip/sockets.h"
-#include "lwip/sys.h"
-#include "lwip/netdb.h"
-#include "lwip/dns.h"
+extern const uint8_t ulp_main_bin_start[] asm("_binary_ulp_main_bin_start");
+extern const uint8_t ulp_main_bin_end[]   asm("_binary_ulp_main_bin_end");
 
-#include "esp_tls.h"
-#include "esp_crt_bundle.h"
+// This variable is mapped to the one in the LP core code!
+extern uint32_t ulp_counter;
 
-#define WIFI_CONNECTED_BIT BIT0
-#define WIFI_FAIL_BIT      BIT1
-
-#define MAX_URLS    4
-
-static const char *web_urls[MAX_URLS] = {
-    "https://www.github.com",
-    "https://espressif.com",
-    "https://youtube.com",
-    "https://acesso.gov.br",
-};
-
-char ssid[32];
-char password[64];
-
-static led_indicator_handle_t leds[BSP_LED_NUM];
-
-static EventGroupHandle_t s_wifi_event_group;
-static int s_retry_num = 0;
-
-static const char *TAG = "workshop";
-
-static void event_handler(void* arg, esp_event_base_t event_base,
-                                int32_t event_id, void* event_data)
-{
-    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
-        esp_wifi_connect();
-    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
-        if (s_retry_num < 100) {
-            esp_wifi_connect();
-            s_retry_num++;
-            ESP_LOGW(TAG, "Trying to connect to WiFi");
-			led_indicator_set_rgb(leds[0], SET_IRGB(0, 0x0, 0x0, 0x20));
-        } else {
-            xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
-        }
-        ESP_LOGE(TAG, "Failed to connect to WiFi");
-		led_indicator_set_rgb(leds[0], SET_IRGB(0, 0x20, 0x0, 0x0));
-    } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
-        ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
-        ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
-		led_indicator_set_rgb(leds[0], SET_IRGB(0, 0x0, 0x20, 0x0));
-        s_retry_num = 0;
-        xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
-    }
-}
-
-void wifi_init_sta(void)
-{
-    s_wifi_event_group = xEventGroupCreate();
-
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-    esp_netif_create_default_wifi_sta();
-
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-
-    esp_event_handler_instance_t instance_any_id;
-    esp_event_handler_instance_t instance_got_ip;
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
-            ESP_EVENT_ANY_ID,
-            &event_handler,
-            NULL,
-            &instance_any_id));
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
-            IP_EVENT_STA_GOT_IP,
-            &event_handler,
-            NULL,
-            &instance_got_ip));
-
-	wifi_config_t wifi_config = {
-        .sta = {
-            .ssid = "",
-            .password = "",
-            .threshold.authmode = WIFI_AUTH_WPA2_WPA3_PSK,
-            .sae_pwe_h2e = WPA3_SAE_PWE_BOTH,
-            .sae_h2e_identifier = "",
-        },
-    };
-
-    strncpy((char*)wifi_config.sta.ssid, ssid, sizeof(wifi_config.sta.ssid));
-    strncpy((char*)wifi_config.sta.password, password, sizeof(wifi_config.sta.password));
-
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
-    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config) );
-    ESP_ERROR_CHECK(esp_wifi_start() );
-
-    EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
-            WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
-            pdFALSE,
-            pdFALSE,
-            portMAX_DELAY);
-
-    if (bits & WIFI_CONNECTED_BIT) {
-        ESP_LOGI(TAG, "Connected!");
-    } else if (bits & WIFI_FAIL_BIT) {
-        ESP_LOGE(TAG, "Failed to connect!");
-    }
-}
-
-esp_err_t get_wifi_credentials(void){
-
-	esp_err_t err;
-
-	ESP_LOGI(TAG, "Opening Non-Volatile Storage (NVS) handle");
-    nvs_handle_t nvs_mem_handle;
-    err = nvs_open_from_partition("nvs", "storage", NVS_READWRITE, &nvs_mem_handle);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Error (%s) opening NVS handle!\n", esp_err_to_name(err));
-        return err;
-    }
-
-    ESP_LOGI(TAG, "The NVS handle successfully opened");
-
-	size_t ssid_len = sizeof(ssid);
-	size_t pass_len = sizeof(password);
-
-    err = nvs_get_str(nvs_mem_handle, "ssid", ssid, &ssid_len);
-    ESP_ERROR_CHECK(err);
-
-    err = nvs_get_str(nvs_mem_handle, "password", password, &pass_len);
-    ESP_ERROR_CHECK(err);
-
-    nvs_close(nvs_mem_handle);
-    return ESP_OK;
-}
-
-static void https_get_task(void *pvParameters)
-{
-    while (1) {
-        int conn_count = 0;
-        ESP_LOGI(TAG, "Connecting to %d URLs", MAX_URLS);
-
-        for (int i = 0; i < MAX_URLS; i++) {
-            esp_tls_cfg_t cfg = {
-                .crt_bundle_attach = esp_crt_bundle_attach,
-            };
-
-            esp_tls_t *tls = esp_tls_init();
-            if (!tls) {
-                ESP_LOGE(TAG, "Failed to allocate esp_tls handle!");
-                goto end;
-            }
-
-            if (esp_tls_conn_http_new_sync(web_urls[i], &cfg, tls) == 1) {
-                ESP_LOGI(TAG, "Connection established to %s", web_urls[i]);
-                conn_count++;
-            } else {
-                ESP_LOGE(TAG, "Could not connect to %s", web_urls[i]);
-            }
-
-            esp_tls_conn_destroy(tls);
-end:
-            vTaskDelay(1000 / portTICK_PERIOD_MS);
-        }
-
-        ESP_LOGI(TAG, "Completed %d connections", conn_count);
-        ESP_LOGI(TAG, "Starting over again...");
-    }
-}
+static const char *TAG = "lp_core";
 
 void app_main(void)
 {
+    esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
 
-    esp_err_t ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-      ESP_ERROR_CHECK(nvs_flash_erase());
-      ret = nvs_flash_init();
+    if (cause == ESP_SLEEP_WAKEUP_ULP) {
+        ESP_LOGI(TAG, "Woken up by LP core! LP Counter: %lu", ulp_counter);
+    } else {
+        ESP_LOGI(TAG, "Regular boot. Starting LP core...");
+
+        // Load the LP core binary
+        ESP_ERROR_CHECK(ulp_lp_core_load_binary(ulp_main_bin_start,
+                                                (ulp_main_bin_end - ulp_main_bin_start)));
+
+        // Configure the LP core to wake up every 1 second
+        ulp_lp_core_cfg_t cfg = {
+            .wakeup_source = ULP_LP_CORE_WAKEUP_SOURCE_HP_TIMER,
+            .hp_timer_sleep_duration_us = 1000000,
+        };
+        ESP_ERROR_CHECK(ulp_lp_core_run(&cfg));
     }
-    ESP_ERROR_CHECK(ret);
 
-    ESP_ERROR_CHECK(bsp_led_indicator_create(leds, NULL, BSP_LED_NUM));
-    led_indicator_set_rgb(leds[0], SET_IRGB(0, 0x0, 0x0, 0x20));
-
-	ESP_ERROR_CHECK(get_wifi_credentials());
-
-    wifi_init_sta();
-
-    xTaskCreate(&https_get_task, "https_get_task", 8192, NULL, 5, NULL);
+    ESP_LOGI(TAG, "HP Core going to deep sleep for 10 seconds, but ULP might wake us sooner...");
+    
+    // Allow ULP to wake the main processor
+    ESP_ERROR_CHECK(esp_sleep_enable_ulp_wakeup());
+    
+    // Go to deep sleep
+    esp_deep_sleep_start();
 }
 ```
 
-## Next step
+### 5. CMake Configuration
 
-Have you exhausted all your energy? Let's save some!
+The build system needs to know about the LP core code. Open `main/CMakeLists.txt` and add the following lines at the end:
 
-[Assignment 7: Low Power Core](../assignment-7)
+```cmake
+ulp_embed_binary(ulp_main "ulp/main.c")
+```
+
+### 6. Build, Flash, and Monitor
+
+```bash
+idf.py build flash monitor
+```
+
+You should see the HP core boot, start the LP core, and go to sleep. After 5 seconds, the LP core will wake the HP core back up, and you'll see the message: `Woken up by LP core!`
+
+## Conclusion
+
+Congratulations! You have completed the ESP32-C6 workshop. You've learned how to connect to Wi-Fi, perform OTA updates, use ESP-NOW for peer-to-peer communication, and utilize the LP core to save battery life. 
+
+Thank you for participating!
