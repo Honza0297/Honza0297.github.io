@@ -1,11 +1,12 @@
 #include <stdio.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "led_strip.h"
 #include "esp_log.h"
 #include "esp_err.h"
 
 #define LED_STRIP_RMT_RES_HZ  (10 * 1000 * 1000)
-
-static const char *TAG = "led_strip";
+static const char *TAG = "workshop";
 
 led_strip_handle_t configure_led(void)
 {
@@ -32,8 +33,16 @@ led_strip_handle_t configure_led(void)
 
 void app_main(void)
 {
+    ESP_LOGI(TAG, "Hello ESP32-C5!");
+    
     led_strip_handle_t led_strip = configure_led();
+    
+    // Set color to Red
     ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, 0, 20, 0, 0));
     ESP_ERROR_CHECK(led_strip_refresh(led_strip));
-    ESP_LOGI(TAG, "LED strip set to red and refreshed");
+    ESP_LOGI(TAG, "LED set to Red");
+    
+    while(1) {
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
 }
