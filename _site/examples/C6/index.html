@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/assets/css/style.css?v=2244da98f21a89a4a6f49a27d5ca89d075a17535">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup theme-color -->
+<!-- start theme color meta headers -->
+<meta name="theme-color" content="#151515">
+<meta name="msapplication-navbutton-color" content="#151515">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- end theme color meta headers -->
+
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+
+<!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>ESP-IDF workshop examples — ESP32-C6 | Honza0297.github.io</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="ESP-IDF workshop examples — ESP32-C6" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="http://localhost:4000/examples/C6/" />
+<meta property="og:url" content="http://localhost:4000/examples/C6/" />
+<meta property="og:site_name" content="Honza0297.github.io" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="ESP-IDF workshop examples — ESP32-C6" />
+<script type="application/ld+json">
+{"@type":"WebPage","headline":"ESP-IDF workshop examples — ESP32-C6","url":"http://localhost:4000/examples/C6/","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <a id="a-title" href="/">
+          <h1>Honza0297.github.io</h1>
+        </a>
+        <h2></h2>
+
+        <section id="downloads">
+          
+          <a href="https://github.com/Honza0297/Honza0297.github.io" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <h1 id="esp-idf-workshop-examples--esp32-c6">ESP-IDF workshop examples — ESP32-C6</h1>
+
+<p>Reference ESP-IDF projects aligned with the <a href="../../content/workshops/esp-idf-with-esp32-c6/_index.md">ESP32-C6 workshop</a>: introduction + assignments <strong>1–7</strong>.</p>
+
+<h2 id="environment">Environment</h2>
+
+<p>You need <code class="language-plaintext highlighter-rouge">idf.py</code> on your <code class="language-plaintext highlighter-rouge">PATH</code>. With the Espressif installer helpers, a typical sequence is:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>idfinstall <span class="o">&amp;&amp;</span> idfexport
+</code></pre></div></div>
+
+<p>Then:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>./build-all.sh
+</code></pre></div></div>
+
+<p>This sets the target to <strong>esp32c6</strong> and builds every project under <code class="language-plaintext highlighter-rouge">c6-workshop/</code>.</p>
+
+<h2 id="layout">Layout</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Workshop chapter</th>
+      <th>Directory</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>(env check)</td>
+      <td><code class="language-plaintext highlighter-rouge">c6-workshop/assignment-01-install-verify</code></td>
+    </tr>
+    <tr>
+      <td>Assignment 2</td>
+      <td><code class="language-plaintext highlighter-rouge">c6-workshop/assignment-02-led-components</code></td>
+    </tr>
+    <tr>
+      <td>Assignment 3</td>
+      <td><code class="language-plaintext highlighter-rouge">c6-workshop/assignment-03-wifi-station</code></td>
+    </tr>
+    <tr>
+      <td>Assignment 4</td>
+      <td><code class="language-plaintext highlighter-rouge">c6-workshop/assignment-04-nvs</code></td>
+    </tr>
+    <tr>
+      <td>Assignment 5</td>
+      <td><code class="language-plaintext highlighter-rouge">c6-workshop/assignment-05-wifi-provisioning</code></td>
+    </tr>
+    <tr>
+      <td>Assignment 6 (protocols + TLS)</td>
+      <td><code class="language-plaintext highlighter-rouge">c6-workshop/assignment-06-protocols-tls</code></td>
+    </tr>
+    <tr>
+      <td>Assignment 7 (LP core)</td>
+      <td><code class="language-plaintext highlighter-rouge">c6-workshop/assignment-07-low-power</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>For <strong>Assignment 6</strong>, set Wi-Fi credentials in <code class="language-plaintext highlighter-rouge">idf.py menuconfig</code> → <strong>Workshop example: Wi-Fi</strong> before flashing.</p>
+
+<hr />
+
+<h2 id="příklady-k-workshopu-esp32-c6-cz">Příklady k workshopu ESP32-C6 (CZ)</h2>
+
+<p>Struktura <code class="language-plaintext highlighter-rouge">c6-workshop/</code> odpovídá kapitolám workshopu <strong>1–7</strong> na webu. U <strong>úkolu 6 (Protokoly)</strong> nastavte Wi-Fi v menuconfig (<strong>Workshop example: Wi-Fi</strong>) před flashnutím.</p>
+
+      </section>
+    </div>
+  </body>
+</html>

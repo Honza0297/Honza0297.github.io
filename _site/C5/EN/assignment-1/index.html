@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/assets/css/style.css?v=2244da98f21a89a4a6f49a27d5ca89d075a17535">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup theme-color -->
+<!-- start theme color meta headers -->
+<meta name="theme-color" content="#151515">
+<meta name="msapplication-navbutton-color" content="#151515">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- end theme color meta headers -->
+
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+
+<!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>ESP-IDF and ESP32-C5 Workshop - Assignment 1: Install ESP-IDF | Honza0297.github.io</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="ESP-IDF and ESP32-C5 Workshop - Assignment 1: Install ESP-IDF" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="http://localhost:4000/C5/EN/assignment-1/" />
+<meta property="og:url" content="http://localhost:4000/C5/EN/assignment-1/" />
+<meta property="og:site_name" content="Honza0297.github.io" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2024-06-30T01:00:00+02:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="ESP-IDF and ESP32-C5 Workshop - Assignment 1: Install ESP-IDF" />
+<script type="application/ld+json">
+{"datePublished":"2024-06-30T01:00:00+02:00","@type":"BlogPosting","headline":"ESP-IDF and ESP32-C5 Workshop - Assignment 1: Install ESP-IDF","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/C5/EN/assignment-1/"},"url":"http://localhost:4000/C5/EN/assignment-1/","dateModified":"2024-06-30T01:00:00+02:00","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <a id="a-title" href="/">
+          <h1>Honza0297.github.io</h1>
+        </a>
+        <h2></h2>
+
+        <section id="downloads">
+          
+          <a href="https://github.com/Honza0297/Honza0297.github.io" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <h2 id="assignment-1-install-esp-idf-and-vscode">Assignment 1: Install ESP-IDF and VSCode</h2>
+
+<hr />
+
+<p>You will need <a href="https://code.visualstudio.com/">Visual Studio Code</a> and the installed ESP-IDF framework for this workshop. The first task will therefore be to install all the necessary tools.</p>
+
+<p>To install ESP-IDF, we will use the <a href="https://docs.espressif.com/projects/idf-im-ui/en/latest/">EIM</a> (Espressif Installation Manager).</p>
+
+<h3 id="windows-installation">Windows Installation</h3>
+
+<ol>
+  <li>Install <a href="https://dl.espressif.com/dl/eim/index.html">EIM</a>
+    <ul>
+      <li>Press Windows key + R and type powershell in the dialog box that appears</li>
+      <li>After the terminal appears, enter: <code class="language-plaintext highlighter-rouge">winget install Espressif.eim</code></li>
+    </ul>
+  </li>
+  <li>Install ESP-IDF using EIM
+    <ul>
+      <li>Run EIM from the start menu or desktop icon</li>
+      <li>On the welcome screen, click <code class="language-plaintext highlighter-rouge">Start Installation</code> and then <code class="language-plaintext highlighter-rouge">Custom installation</code> and follow the wizard. On the version selection page, choose IDF version 5.5.x</li>
+      <li>During installation, the installer will also offer to install git or python if they are not already on your computer.</li>
+      <li>After installation is complete, return to the installer’s version manager page and use the <code class="language-plaintext highlighter-rouge">Install Drivers</code> button in the bottom of the screen to install the necessary drivers.</li>
+    </ul>
+  </li>
+  <li>Install <a href="https://code.visualstudio.com/download">Visual Studio Code</a></li>
+  <li>We recommend installing the ESP-IDF extension in VS Code for code completion, but we will strictly use the <strong>ESP-IDF Terminal</strong> for building and flashing in this workshop.</li>
+</ol>
+
+<h3 id="linux-and-mac-installation">Linux and Mac Installation</h3>
+
+<ol>
+  <li>Install <a href="https://dl.espressif.com/dl/eim/index.html">EIM</a>
+    <ul>
+      <li>If you choose installation via a package manager (brew, apt, rpm), it will handle all <a href="https://docs.espressif.com/projects/idf-im-ui/en/latest/prerequisites.html">prerequisites</a> for you.</li>
+      <li>If you choose the CLI version, call <code class="language-plaintext highlighter-rouge">eim install -i v5.5.4</code></li>
+      <li>If you choose the GUI version, click the <code class="language-plaintext highlighter-rouge">Start Installation</code> button on the welcome screen and then <code class="language-plaintext highlighter-rouge">Custom installation</code> and follow the wizard. On the version selection page, choose IDF version 5.5.x</li>
+    </ul>
+  </li>
+  <li>Install <a href="https://code.visualstudio.com/download">Visual Studio Code</a></li>
+</ol>
+
+<h3 id="installing-esp-ble-prov">Installing ESP BLE Prov</h3>
+
+<p>During one of the tasks, we will also try Wi-Fi provisioning. For this we will need an application
+through which we will tell our ESP chip the SSID and password for the network via Bluetooth.</p>
+
+<p>You can either search for the app in the app store of the respective system, or through the links
+below:</p>
+
+<ul>
+  <li>Android: <a href="https://play.google.com/store/apps/details?id=com.espressif.provble&amp;pcampaignid=web_share">ESP BLE Provisioning</a></li>
+  <li>iOS: <a href="https://apps.apple.com/us/app/esp-ble-provisioning/id1473590141">ESP BLE Provisioning</a></li>
+</ul>
+
+<h3 id="the-esp-idf-terminal">The ESP-IDF Terminal</h3>
+
+<p>In this workshop, we will interact with ESP-IDF directly through the command line (CLI) rather than relying on GUI buttons. This gives you a better understanding of what happens under the hood and allows you to automate tasks in the future.</p>
+
+<p>Before you can use ESP-IDF tools such as <code class="language-plaintext highlighter-rouge">idf.py</code>, the ESP-IDF environment must be <em>activated</em> in your terminal. Pick whichever of the following methods suits you best.</p>
+
+<h4 id="option-1-eim-dashboard-all-systems">Option 1: EIM dashboard (all systems)</h4>
+
+<ol>
+  <li>Open the EIM application (<code class="language-plaintext highlighter-rouge">eim</code>) from the start menu / applications launcher, depending on your OS.</li>
+  <li>Click <code class="language-plaintext highlighter-rouge">Manage Installations</code> and then <code class="language-plaintext highlighter-rouge">Open Dashboard</code>.</li>
+  <li>Select the ESP-IDF version you want to use (v5.5.x) and click <code class="language-plaintext highlighter-rouge">Open IDF Terminal</code>.</li>
+  <li>A terminal with the activated ESP-IDF environment opens. Verify it by running <code class="language-plaintext highlighter-rouge">idf.py --version</code>.</li>
+</ol>
+
+<h4 id="option-2-desktop-shortcut-windows">Option 2: Desktop shortcut (Windows)</h4>
+
+<p>EIM creates a desktop shortcut for each installed version, e.g. <code class="language-plaintext highlighter-rouge">IDF_v5.5.4_Powershell</code>. Double-click it to open a PowerShell session with ESP-IDF already activated.</p>
+
+<h4 id="option-3-activation-script-linux-and-macos">Option 3: Activation script (Linux and macOS)</h4>
+
+<p>At the end of the installation, EIM CLI prints a command like the one below. Run it in any terminal to activate ESP-IDF in that terminal session (<strong>fill in your specific version instead of <code class="language-plaintext highlighter-rouge">&lt;version&gt;</code></strong>):</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>source "$HOME/.espressif/tools/activate_idf_v&lt;version&gt;.sh"
+</code></pre></div></div>
+
+<p>The exact path and version are printed by EIM at the end of the installation. You need to run this command in every new terminal.</p>
+
+<h4 id="option-4-esp-idf-extension-in-vs-code">Option 4: ESP-IDF extension in VS Code</h4>
+
+<p>If you installed the ESP-IDF extension, press <code class="language-plaintext highlighter-rouge">Ctrl + Shift + P</code> (or <code class="language-plaintext highlighter-rouge">Cmd + Shift + P</code>), type <strong>ESP-IDF: Open ESP-IDF Terminal</strong>, and press Enter.</p>
+
+<p>In every case, you can check that the environment works by running <code class="language-plaintext highlighter-rouge">idf.py --version</code> in the terminal. If the command is not found, the environment is not activated in that terminal.</p>
+
+<p>You should now have a working ESP-IDF environment. Let’s start with our first project!</p>
+
+<p><a href="../assignment-2/">Assignment 2: Basics: Hello World &amp; LED</a></p>
+
+      </section>
+    </div>
+  </body>
+</html>

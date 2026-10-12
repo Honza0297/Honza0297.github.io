@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/assets/css/style.css?v=2244da98f21a89a4a6f49a27d5ca89d075a17535">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup theme-color -->
+<!-- start theme color meta headers -->
+<meta name="theme-color" content="#151515">
+<meta name="msapplication-navbutton-color" content="#151515">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- end theme color meta headers -->
+
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+
+<!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>Workshop: ESP-IDF a ESP32-C5 - Úkol 1: Instalace ESP-IDF | Honza0297.github.io</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="Workshop: ESP-IDF a ESP32-C5 - Úkol 1: Instalace ESP-IDF" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="http://localhost:4000/C5/CZ/assignment-1/" />
+<meta property="og:url" content="http://localhost:4000/C5/CZ/assignment-1/" />
+<meta property="og:site_name" content="Honza0297.github.io" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2024-09-30T01:00:00+02:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Workshop: ESP-IDF a ESP32-C5 - Úkol 1: Instalace ESP-IDF" />
+<script type="application/ld+json">
+{"datePublished":"2024-09-30T01:00:00+02:00","@type":"BlogPosting","headline":"Workshop: ESP-IDF a ESP32-C5 - Úkol 1: Instalace ESP-IDF","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/C5/CZ/assignment-1/"},"url":"http://localhost:4000/C5/CZ/assignment-1/","dateModified":"2024-09-30T01:00:00+02:00","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <a id="a-title" href="/">
+          <h1>Honza0297.github.io</h1>
+        </a>
+        <h2></h2>
+
+        <section id="downloads">
+          
+          <a href="https://github.com/Honza0297/Honza0297.github.io" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <h2 id="úkol-1-instalace-esp-idf-a-vscode">Úkol 1: Instalace ESP-IDF a VSCode</h2>
+
+<hr />
+
+<p>Pro tento workshop budete potřebovat <a href="https://code.visualstudio.com/">Visual Studio Code</a> a nainstalovaný framework ESP-IDF. Prvním úkolem tedy bude nainstalovat si všechny potřebné nástroje.</p>
+
+<p>K instalaci ESP-IDF použijeme <a href="https://docs.espressif.com/projects/idf-im-ui/en/latest/">EIM</a> (Espressif Installation Manager).</p>
+
+<h3 id="instalace-pro-windows">Instalace pro Windows</h3>
+
+<ol>
+  <li>Nainstalujte <a href="https://dl.espressif.com/dl/eim/index.html">EIM</a>
+    <ul>
+      <li>Stiskněte klávesu Windows + R a do objevivšího se okénka napište powershell</li>
+      <li>Po zobrazení terminálu zadejte: <code class="language-plaintext highlighter-rouge">winget install Espressif.eim</code></li>
+    </ul>
+  </li>
+  <li>Nainstalujte ESP-IDF pomocí EIM
+    <ul>
+      <li>Spusťte EIM z nabídky start nebo pomocí ikony na ploše</li>
+      <li>Na uvítací obrazovce klikněte na tlačítko <code class="language-plaintext highlighter-rouge">Start Installation</code> a poté <code class="language-plaintext highlighter-rouge">Custom installation</code> a nechte se průvodcem vést. Na stránce s výběrem verze zvolte verzi IDF 5.5.x</li>
+      <li>Instalátor vám v průběhu nabídne i nainstalování gitu nebo pythonu, pokud vám v počítači zatím chybí.</li>
+      <li>Po dokončení instalace se vraťte na stránku instalátoru s přehledem verzí a použijte tlačítko <code class="language-plaintext highlighter-rouge">Install Drivers</code> ve spodní části obrazovky, které pro vás nainstaluje potřebné ovladače.</li>
+    </ul>
+  </li>
+  <li>Nainstalujte <a href="https://code.visualstudio.com/download">Visual Studio Code</a></li>
+  <li>Doporučujeme nainstalovat do VS Code rozšíření ESP-IDF kvůli našeptávání kódu, ale pro build a flashování budeme v tomto workshopu výhradně používat <strong>ESP-IDF Terminal</strong>.</li>
+</ol>
+
+<h3 id="instalace-pro-linux-a-mac">Instalace pro Linux a Mac</h3>
+
+<ol>
+  <li>Nainstalujte <a href="https://dl.espressif.com/dl/eim/index.html">EIM</a>
+    <ul>
+      <li>Pokud zvolíte instalaci pomocí balíčkovacího systému (brew, apt, rpm), vyřeší za vás i všechny <a href="https://docs.espressif.com/projects/idf-im-ui/en/latest/prerequisites.html">prerekvizity</a>.</li>
+      <li>Pokud zvolíte CLI verzi, zavolejte <code class="language-plaintext highlighter-rouge">eim install -i v5.5.4</code></li>
+      <li>Pokud zvolíte GUI verzi, klikněte na uvítací obrazovce na tlačítko <code class="language-plaintext highlighter-rouge">Start Installation</code> a poté <code class="language-plaintext highlighter-rouge">Custom installation</code> a nechte se průvodcem vést. Na stránce s výběrem verze zvolte verzi IDF 5.5.x</li>
+    </ul>
+  </li>
+  <li>Nainstalujte <a href="https://code.visualstudio.com/download">Visual Studio Code</a></li>
+</ol>
+
+<h3 id="instalace-esp-ble-prov">Instalace ESP BLE Prov</h3>
+
+<p>Během jednoho z úkolů vyzkoušíme také Wi-Fi provisioning. K tomu budeme potřebovat aplikaci, přes kterou našemu čipu ESP přes Bluetooth sdělíme SSID a heslo k síti.</p>
+
+<p>Aplikaci buď vyhledáte v obchodě s aplikacemi příslušného systému, nebo přes odkazy níže:</p>
+
+<ul>
+  <li>Android: <a href="https://play.google.com/store/apps/details?id=com.espressif.provble&amp;pcampaignid=web_share">ESP BLE Provisioning</a></li>
+  <li>iOS: <a href="https://apps.apple.com/us/app/esp-ble-provisioning/id1473590141">ESP BLE Provisioning</a></li>
+</ul>
+
+<h3 id="esp-idf-terminal">ESP-IDF Terminal</h3>
+
+<p>V tomto workshopu budeme s ESP-IDF pracovat přímo z příkazové řádky (CLI), a ne pomocí tlačítek v GUI. Díky tomu lépe pochopíte, co se děje „pod kapotou“, a v budoucnu si budete moci úlohy zautomatizovat.</p>
+
+<p>Než budete moci používat nástroje ESP-IDF, jako je <code class="language-plaintext highlighter-rouge">idf.py</code>, musí být prostředí ESP-IDF v terminálu <em>aktivováno</em>. Vyberte si kteroukoli z následujících metod.</p>
+
+<h4 id="možnost-1-dashboard-v-eim-všechny-systémy">Možnost 1: Dashboard v EIM (všechny systémy)</h4>
+
+<ol>
+  <li>Otevřete aplikaci EIM (<code class="language-plaintext highlighter-rouge">eim</code>) z nabídky start / spouštěče aplikací, podle vašeho systému.</li>
+  <li>Klikněte na <code class="language-plaintext highlighter-rouge">Manage Installations</code> a poté na <code class="language-plaintext highlighter-rouge">Open Dashboard</code>.</li>
+  <li>Vyberte verzi ESP-IDF, kterou chcete používat (v5.5.x), a klikněte na <code class="language-plaintext highlighter-rouge">Open IDF Terminal</code>.</li>
+  <li>Otevře se terminál s aktivovaným prostředím ESP-IDF. Ověřte to příkazem <code class="language-plaintext highlighter-rouge">idf.py --version</code>.</li>
+</ol>
+
+<h4 id="možnost-2-zástupce-na-ploše-windows">Možnost 2: Zástupce na ploše (Windows)</h4>
+
+<p>EIM vytvoří na ploše zástupce pro každou nainstalovanou verzi, např. <code class="language-plaintext highlighter-rouge">IDF_v5.5.4_Powershell</code>. Dvojklikem na něj otevřete PowerShell s již aktivovaným ESP-IDF.</p>
+
+<h4 id="možnost-3-aktivační-skript-linux-a-macos">Možnost 3: Aktivační skript (Linux a macOS)</h4>
+
+<p>Na konci instalace vypíše EIM CLI příkaz podobný tomu níže. Spusťte ho v libovolném terminálu a ESP-IDF se v dané relaci terminálu aktivuje (<strong>místo <code class="language-plaintext highlighter-rouge">&lt;version&gt;</code> doplňte svou konkrétní verzi</strong>):</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>source "$HOME/.espressif/tools/activate_idf_v&lt;version&gt;.sh"
+</code></pre></div></div>
+
+<p>Přesnou cestu a verzi vypíše EIM na konci instalace. Tento příkaz je nutné spustit v každém novém terminálu.</p>
+
+<h4 id="možnost-4-rozšíření-esp-idf-ve-vs-code">Možnost 4: Rozšíření ESP-IDF ve VS Code</h4>
+
+<p>Pokud jste si nainstalovali rozšíření ESP-IDF, stiskněte <code class="language-plaintext highlighter-rouge">Ctrl + Shift + P</code> (nebo <code class="language-plaintext highlighter-rouge">Cmd + Shift + P</code>), napište <strong>ESP-IDF: Open ESP-IDF Terminal</strong> a stiskněte Enter.</p>
+
+<p>V každém případě můžete ověřit, že prostředí funguje, spuštěním <code class="language-plaintext highlighter-rouge">idf.py --version</code> v terminálu. Pokud se příkaz nenajde, prostředí v daném terminálu aktivované není.</p>
+
+<p>Nyní byste měli mít funkční prostředí ESP-IDF. Pojďme na náš první projekt!</p>
+
+<p><a href="../assignment-2/">Úkol 2: Základy: Hello World &amp; LED</a></p>
+
+      </section>
+    </div>
+  </body>
+</html>

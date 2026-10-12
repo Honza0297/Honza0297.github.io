@@ -1,427 +1,379 @@
 ---
-title: "Workshop: ESP-IDF a ESP32-C5 - Úkol 3"
+title: "Workshop: ESP-IDF a ESP32-C5 - Úkol 3: Wi-Fi a provisioning"
 date: 2024-09-30T00:00:00+01:00
 layout: default
 ---
 
-## Úkol 3: Připojení k Wi-Fi
+## Úkol 3: Wi-Fi a provisioning
 
 ---
 
-Nyní je konečně čas připojit naši ESP32-C5 k Wi-Fi síti. ESP32-C5 až Wi-Fi 6 na frekvencích 2.4 a 5 GHz.
+Wi-Fi je jednou z nejdůležitějších vlastností IoT zařízení. **ESP32-C5** je výjimečné tím, že je prvním SoC od Espressifu s podporou **dual-band Wi-Fi 6** (2.4 GHz i 5 GHz). Pásmo 5 GHz bývá méně vytížené, což přináší vyšší propustnost a menší rušení.
 
-[Wi-Fi konektivita](https://docs.espressif.com/projects/esp-idf/en/release-v5.5/esp32c5/api-reference/network/esp_wifi.html) je jednou z nejdůležitějších vlastností většiny čipů z rodiny ESP32 a je to jedna z podstatných součástí jejich úspěchu. Díky Wi-Fi je možné vaše IoT zařízení připojit k internetu a skutečně využít všechny jeho funkce. Tím se nutně nemyslí jen připojení ke cloudovým službám, ale také např. *over-the-air (OTA)* updaty, vzdálené ovládání, monitoring a mnohem víc.
+V reálném produktu nemůžete přihlašovací údaje k Wi-Fi (SSID a heslo) zadrátovat přímo do zdrojového kódu, protože každý uživatel má jinou domácí síť. Místo toho se používá **Wi-Fi provisioning**. Provisioning umožňuje uživateli poslat do zařízení přihlašovací údaje k Wi-Fi pomocí mobilní aplikace přes sekundární kanál, typicky Bluetooth Low Energy (BLE).
 
-ESP32 podporuje dva módy: *Station* a *SoftAP*:
+V tomto úkolu použijeme k provisioningu naší desky mobilní aplikaci **ESP BLE Prov**. Každá deska vypíše v terminálu **QR kód**; jeho naskenováním aplikace zjistí, ke kterému zařízení se má připojit (každá deska má unikátní jméno), i tajný klíč potřebný pro komunikaci s ním, takže nemusíte nic vypisovat ani vybírat ze seznamu desítek zařízení. Přihlašovací údaje se uloží do NVS (Non-Volatile Storage), takže se deska po restartu automaticky znovu připojí.
 
-* *Station mode*: ESP se připojuje k existující síti (třeba k domácímu routeru).
-* *SoftAP mode*: Ostatní zařízení (třeba laptop nebo mobil) se připojují přímo na ESP, kde může běžet např. webový server s ovládáním.
+> **Použijte projekt z Úkolu 2.** Otevřete stejnou složku `my_first_project`, kterou jste vytvořili v Úkolu 2, a nevytvářejte nový projekt. *Obsah* souboru `main/main.c` kompletně nahradíme logikou pro Wi-Fi a provisioning uvedenou níže. Kód pro LED z Úkolu 2 v tomto úkolu nepotřebujeme (nevadí, když ho z `main.c` smažete, závislost `led_strip` může v `idf_component.yml` klidně zůstat nepoužitá), LED vrátíme do hry až v Úkolu 5.
 
-Pro tento úkol navážeme na projekt z předchozího úkolu a připojíme se k existující Wi-Fi 4/Wi-Fi 6 síti (budeme tedy používat *station mode*).
+### 1. Zapnutí potřebných komponent
 
-#### Připojení k Wi-Fi
+Budeme potřebovat komponentu `wifi_provisioning`. Protože je součástí ESP-IDF, stačí jen zajistit, že náš kód includuje správné hlavičkové soubory a správně inicializuje NVS.
 
-Abychom mohli začít Wi-Fi používat, musíme frameowrku říct, že budeme používat Wi-Fi:
-do souboru `main/CMakeLists.txt`, specificky do funkce `idf_component_register` přidáme násleudjící řádek:
+Abychom mohli QR kód zobrazit v terminálu, přidáme ještě komponentu `espressif/qrcode` z component registry (stejně jako jsme v Úkolu 2 přidali `led_strip`):
 
-```text
-REQUIRES esp_wifi esp_netif esp_event nvs_flash
+```bash
+idf.py add-dependency "espressif/qrcode^0.1.0"
 ```
 
-Nyní potřebujeme nastavit ovladač Wi-Fi: musíme zadat **SSID** a **heslo**.
+### 2. Konfigurace pomocí menuconfig
 
-1. **Zkopírujeme si kostru**
+BLE transport, který se chystáme použít (`wifi_prov_scheme_ble`), se do `wifi_provisioning` zkompiluje pouze tehdy, je-li zapnutý samotný Bluetooth, což ve výchozím stavu není. Spusťte:
 
-Otevřeme projekt z úkolu 2 a rozšíříme `main.c` o níže uvedené dodatky, nebo zkopírujeme celou kostru do nového projektu.
+```bash
+idf.py menuconfig
+```
+
+Přejděte do:
+- **Component config ---> Bluetooth**
+  - **Bluetooth**: zapněte.
+  - **Host**: vyberte `NimBLE`. ESP32-C5 má pouze BLE rádio a NimBLE je odlehčený host pouze pro BLE (těžší stack Bluedroid zde nepotřebujeme).
+- **Partition Table**
+  - **Partition Table**: vyberte `Single factory app (large), no OTA`. Kód NimBLE a provisioningu se už nevejde do výchozí 1MB aplikační partition.
+
+Stiskněte `Q` pro ukončení a `Y` pro uložení.
+
+> Nechcete klikat v menuconfigu? Vložte místo toho následující řádky do souboru `sdkconfig.defaults` v kořenovém adresáři projektu a znovu spusťte `idf.py set-target esp32c5`, aby se načetly:
+> ```text
+> CONFIG_BT_ENABLED=y
+> CONFIG_BT_NIMBLE_ENABLED=y
+> CONFIG_PARTITION_TABLE_SINGLE_APP_LARGE=y
+> ```
+
+### 3. Psaní kódu
+
+Soubor `main/main.c` opět postavíme po částech, místo abychom na vás celý kód vysypali najednou.
+
+#### 3.1 Kostra
 
 ```c
 #include <stdio.h>
-#include "led_strip.h"
-#include "esp_log.h"
-#include "esp_err.h"
+#include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
-#include "esp_system.h"
+#include "esp_log.h"
 #include "esp_wifi.h"
 #include "esp_event.h"
+#include "esp_mac.h"
 #include "nvs_flash.h"
-#include "lwip/err.h"
-#include "lwip/sys.h"
+#include "qrcode.h"
+#include "wifi_provisioning/manager.h"
+#include "wifi_provisioning/scheme_ble.h"
 
-#define LED_STRIP_GPIO        27
-#define LED_STRIP_RMT_RES_HZ  (10 * 1000 * 1000)
+static const char *TAG = "provisioning";
 
-#define WIFI_SSID "network-ssid"
-#define WIFI_PASS "network-pass"
+// Proof-of-possession: the app gets it from the QR code, so the user never types it
+#define PROV_POP "abcd1234"
 
-#define WIFI_CONNECTED_BIT BIT0
-#define WIFI_FAIL_BIT      BIT1
-
-static led_strip_handle_t led_strip;
-
-static EventGroupHandle_t s_wifi_event_group;
-static int s_retry_num = 0;
-
-static const char *TAG = "workshop";
-
-led_strip_handle_t configure_led(void)
+// (A) One handler for every Wi-Fi / provisioning event we care about
+static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
 {
-    led_strip_handle_t strip;
-    led_strip_config_t strip_config = {
-        .strip_gpio_num = LED_STRIP_GPIO,
-        .max_leds = 1,
-        .color_component_format = LED_STRIP_COLOR_COMPONENT_FMT_GRB,
-        .led_model = LED_MODEL_WS2812,
-        .flags.invert_out = false,
-    };
-    led_strip_rmt_config_t rmt_config = {
-        .clk_src = RMT_CLK_SRC_DEFAULT,
-        .resolution_hz = LED_STRIP_RMT_RES_HZ,
-        .mem_block_symbols = 0,
-        .flags.with_dma = false,
-    };
-    ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &strip));
-    ESP_LOGI(TAG, "LED strip initialized successfully");
-    return strip;
-}
-
-static void led_set_color(uint8_t r, uint8_t g, uint8_t b)
-{
-    ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, 0, r, g, b));
-    ESP_ERROR_CHECK(led_strip_refresh(led_strip));
-}
-
-// TODO handler
-
-void wifi_init_sta(void)
-{
-    s_wifi_event_group = xEventGroupCreate();
-    //TODO
+    // ...
 }
 
 void app_main(void)
 {
-    esp_err_t ret = nvs_flash_init();
-
-    //TODO
-
-    led_strip = configure_led();
-    led_set_color(0x20, 0x0, 0x0);
-
-    wifi_init_sta();
+    // (B) NVS must work before Wi-Fi or provisioning can store anything
+    // (C) Bring up the networking stack
+    // (D) Hook our event_handler into the events we need
+    // (E) Start (or skip) provisioning, depending on whether we did it before
 }
 ```
 
-2. **Inicializace Wi-Fi**
+#### 3.2 Část (A): event handler
 
-Inicializace Wi-Fi se skládá z těchto kroků, které doplníme do funkce `wifi_init_sta()`:
-
-- Inicializace TCP/IP stacku:
+Provisioning i Wi-Fi hlásí, co se děje, přes systém událostí ESP-IDF (*events*), a ne přes návratové hodnoty. Díky tomu můžeme reagovat na věci jako „přišly přihlašovací údaje“ nebo „spojení bylo ztraceno“ kdykoli nastanou, a ne jen těsně po zavolání nějaké funkce.
 
 ```c
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-    esp_netif_create_default_wifi_sta();
-```
-
-- Vytvoření defaultní konfigurace pro Wi-Fi inicializaci a samotná inicializace:
-
-```c
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-```
-
-- Registrace *event handlerů* pro události `WIFI_EVENT` a `IP_EVENT`:
-
-```c
-    esp_event_handler_instance_t instance_any_id;
-    esp_event_handler_instance_t instance_got_ip;
-    esp_event_handler_instance_register(WIFI_EVENT,
-            ESP_EVENT_ANY_ID,
-            &event_handler,
-            NULL,
-            &instance_any_id);
-    esp_event_handler_instance_register(IP_EVENT,
-            IP_EVENT_STA_GOT_IP,
-            &event_handler,
-            NULL,
-            &instance_got_ip);
-```
-
-- Nastavení Wi-Fi módu na *station* pomocí `WIFI_MODE_STA`:
-
-```c
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-```
-
-- Nastavení samotných parametrů připojení pomocí struktury `wifi_config_t`:
-
-```c
-    wifi_config_t wifi_config = {
-        .sta = {
-            // Set the newtork name
-            .ssid = WIFI_SSID,
-            // Set the network pass key
-            .password = WIFI_PASS,
-            // Set WPA as the authentication mode
-            .threshold.authmode = WIFI_AUTH_WPA_PSK,
-            // Set Simultaneous Authentication (SAE) and Password Element (PWE) derivation method
-            .sae_pwe_h2e = WPA3_SAE_PWE_BOTH,
-            // Set the password identifier for H2E (Hash-to-Element)
-            .sae_h2e_identifier = "",
-        },
-    };
-```
-
-- Teď můžeme zavolat funkci `esp_wifi_set_config`.
-
-```c
-    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
-```
-
-- Nyní jsou už jak Wi-Fi řadič, tak samotné spojení nastavené, můžeme tak zapnout Wi-Fi:
-
-```c
-    ESP_ERROR_CHECK(esp_wifi_start());
-```
-
-- Teď už stačí počkat na `WIFI_CONNECTED_BIT` nebo `WIFI_FAIL_BIT` a ujistit se, že se všechno zdařilo:
-
-```c
-    EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
-            WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
-            pdFALSE,
-            pdFALSE,
-            portMAX_DELAY);
-
-    if (bits & WIFI_CONNECTED_BIT) {
-        ESP_LOGI(TAG, "Connected!");
-    } else if (bits & WIFI_FAIL_BIT) {
-        ESP_LOGE(TAG, "Failed to connect!");
-    }
-```
-
-3. **Vytvoření Wi-Fi event handler-u**
- 
-Ten nebude součástí ani `app_main` ani `wifi_init_sta`, ale bude na stejné úrovni jako tyto dvě funkce. Musí se nacházet před `wifi_init_sta`, na místě komentáře `//TODO event handler`. Pro aktualizaci LED při každé Wi-Fi události používáme pomocnou funkci `led_set_color()` z kostry:
-
-```c
-static void event_handler(void* arg, esp_event_base_t event_base,
-                                int32_t event_id, void* event_data)
+static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
 {
-    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
-        esp_wifi_connect();
-    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
-        if (s_retry_num < 30) {
-            esp_wifi_connect();
-            s_retry_num++;
-            ESP_LOGW(TAG, "Trying to connect to WiFi");
-            led_set_color(0x0, 0x0, 0x20);
-        } else {
-            xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
+    if (event_base == WIFI_PROV_EVENT) {
+        switch (event_id) {
+            case WIFI_PROV_START:
+                ESP_LOGI(TAG, "Provisioning started");
+                break;
+            case WIFI_PROV_CRED_RECV:
+                wifi_sta_config_t *wifi_sta_cfg = (wifi_sta_config_t *)event_data;
+                ESP_LOGI(TAG, "Received Wi-Fi credentials\n\tSSID     : %s\n\tPassword : %s",
+                         (const char *) wifi_sta_cfg->ssid,
+                         (const char *) wifi_sta_cfg->password);
+                break;
+            case WIFI_PROV_CRED_SUCCESS:
+                ESP_LOGI(TAG, "Provisioning successful");
+                break;
+            case WIFI_PROV_END:
+                ESP_LOGI(TAG, "Provisioning completed. Deinitializing manager.");
+                wifi_prov_mgr_deinit();
+                break;
+            default:
+                break;
         }
-        ESP_LOGE(TAG, "Failed to connect to WiFi");
-        led_set_color(0x20, 0x0, 0x0);
+    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
+        esp_wifi_connect();
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
-        ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
-        led_set_color(0x0, 0x20, 0x0);
-        s_retry_num = 0;
-        xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
+        ESP_LOGI(TAG, "Connected with IP Address:" IPSTR, IP2STR(&event->ip_info.ip));
+    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
+        ESP_LOGI(TAG, "Disconnected. Connecting to the AP again...");
+        esp_wifi_connect();
     }
 }
 ```
 
-4. **Kontrola inicializace NVS**
+Obsluhujeme čtyři situace: provisioning začal, přišly přihlašovací údaje (abychom mohli vypsat, co jsme dostali), provisioning úspěšně skončil (takže můžeme provisioning manager vypnout, už ho nepotřebujeme) a běžné připojení, odpojení a opětovné připojení k Wi-Fi.
 
-O NVS bude řeč v příštím úkolu, nyní to tedy bude trochu *blackbox*. Tento kód doplníme do `app_main`.
+#### 3.3 Části (B)-(C): NVS a síť
 
 ```c
+void app_main(void)
+{
+    // (B) Initialize NVS (needed for Wi-Fi and Provisioning to save data)
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-      ESP_ERROR_CHECK(nvs_flash_erase());
-      ret = nvs_flash_init();
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
 
-    led_strip = configure_led();
-    led_set_color(0x0, 0x0, 0x20);
-```
-
-5. **Inicializace Wi-Fi**
-
-Posledním krokem je zavolání naší funkce v `app_main`:
-
-```c
-wifi_init_sta();
-```
-
-Nyní již můžete svůj kód sestavit a nahrát. 
-
-Funkce `ESP_LOGI` a `ESP_LOGE` vypisují data do seriové linky. Poté, co nahrajeme program do vývojové desky, můžeme otevřít komunikaci s deskou pomocí příkazu *Monitor* v ESP-IDF Exploreru nebo pomocí *ESP-IDF: Monitor Device* přes *Command Pallete*.
-
-#### Kompletní kód
-
-Níže můžete najít kompletní kód pro tento úkol:
-
-```c
-#include <stdio.h>
-#include "led_strip.h"
-#include "esp_log.h"
-#include "esp_err.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/event_groups.h"
-#include "esp_system.h"
-#include "esp_wifi.h"
-#include "esp_event.h"
-#include "nvs_flash.h"
-#include "lwip/err.h"
-#include "lwip/sys.h"
-
-#define LED_STRIP_GPIO        27
-#define LED_STRIP_RMT_RES_HZ  (10 * 1000 * 1000)
-
-#define WIFI_SSID "network-ssid"
-#define WIFI_PASS "network-pass"
-
-#define WIFI_CONNECTED_BIT BIT0
-#define WIFI_FAIL_BIT      BIT1
-
-static led_strip_handle_t led_strip;
-
-static EventGroupHandle_t s_wifi_event_group;
-static int s_retry_num = 0;
-
-static const char *TAG = "workshop";
-
-led_strip_handle_t configure_led(void)
-{
-    led_strip_handle_t strip;
-    led_strip_config_t strip_config = {
-        .strip_gpio_num = LED_STRIP_GPIO,
-        .max_leds = 1,
-        .color_component_format = LED_STRIP_COLOR_COMPONENT_FMT_GRB,
-        .led_model = LED_MODEL_WS2812,
-        .flags.invert_out = false,
-    };
-    led_strip_rmt_config_t rmt_config = {
-        .clk_src = RMT_CLK_SRC_DEFAULT,
-        .resolution_hz = LED_STRIP_RMT_RES_HZ,
-        .mem_block_symbols = 0,
-        .flags.with_dma = false,
-    };
-    ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &strip));
-    ESP_LOGI(TAG, "LED strip initialized successfully");
-    return strip;
-}
-
-static void led_set_color(uint8_t r, uint8_t g, uint8_t b)
-{
-    ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, 0, r, g, b));
-    ESP_ERROR_CHECK(led_strip_refresh(led_strip));
-}
-
-static void event_handler(void* arg, esp_event_base_t event_base,
-                                int32_t event_id, void* event_data)
-{
-    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
-        esp_wifi_connect();
-    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
-        if (s_retry_num < 30) {
-            esp_wifi_connect();
-            s_retry_num++;
-            ESP_LOGW(TAG, "Trying to connect to WiFi");
-            led_set_color(0x0, 0x0, 0x20);
-        } else {
-            xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
-        }
-        ESP_LOGE(TAG, "Failed to connect to WiFi");
-        led_set_color(0x20, 0x0, 0x0);
-    } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
-        ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
-        ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
-        led_set_color(0x0, 0x20, 0x0);
-        s_retry_num = 0;
-        xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
-    }
-}
-
-void wifi_init_sta(void)
-{
-    s_wifi_event_group = xEventGroupCreate();
-
+    // (C) Initialize networking
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     esp_netif_create_default_wifi_sta();
-
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+```
 
-    esp_event_handler_instance_t instance_any_id;
-    esp_event_handler_instance_t instance_got_ip;
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
-            ESP_EVENT_ANY_ID,
-            &event_handler,
-            NULL,
-            &instance_any_id));
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
-            IP_EVENT_STA_GOT_IP,
-            &event_handler,
-            NULL,
-            &instance_got_ip));
+NVS musí být inicializované jako první, protože se na něj spoléhá jak Wi-Fi (kalibrační data), tak provisioning manager (uložené přihlašovací údaje).
 
-    wifi_config_t wifi_config = {
-        .sta = {
-            .ssid = WIFI_SSID,
-            .password = WIFI_PASS,
-            .threshold.authmode = WIFI_AUTH_WPA_PSK,
-            .sae_pwe_h2e = WPA3_SAE_PWE_BOTH,
-            .sae_h2e_identifier = "",
-        },
+#### 3.4 Části (D)-(E): zapojení událostí a spuštění provisioningu
+
+```c
+    // (D) Register event handlers
+    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_PROV_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL));
+
+    // (E) Start Wi-Fi Provisioning Manager
+    wifi_prov_mgr_config_t config = {
+        .scheme = wifi_prov_scheme_ble,
+        .scheme_event_handler = WIFI_PROV_SCHEME_BLE_EVENT_HANDLER_FREE_BTDM
     };
+    ESP_ERROR_CHECK(wifi_prov_mgr_init(config));
 
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
-    ESP_ERROR_CHECK(esp_wifi_start());
+    bool provisioned = false;
+    ESP_ERROR_CHECK(wifi_prov_mgr_is_provisioned(&provisioned));
 
-    EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
-            WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
-            pdFALSE,
-            pdFALSE,
-            portMAX_DELAY);
+    if (!provisioned) {
+        ESP_LOGI(TAG, "Starting provisioning");
+        // Unique name per board (last 3 bytes of the MAC), so many boards can be provisioned in one room
+        uint8_t mac[6];
+        ESP_ERROR_CHECK(esp_read_mac(mac, ESP_MAC_WIFI_STA));
+        char service_name[16];
+        snprintf(service_name, sizeof(service_name), "PROV_%02X%02X%02X", mac[3], mac[4], mac[5]);
 
-    if (bits & WIFI_CONNECTED_BIT) {
-        ESP_LOGI(TAG, "Connected!");
-    } else if (bits & WIFI_FAIL_BIT) {
-        ESP_LOGE(TAG, "Failed to connect!");
+        // Security 1: encrypted session, authenticated by the proof-of-possession from the QR code
+        ESP_ERROR_CHECK(wifi_prov_mgr_start_provisioning(WIFI_PROV_SECURITY_1, PROV_POP, service_name, NULL));
+        print_qr(service_name);
+    } else {
+        ESP_LOGI(TAG, "Already provisioned, starting Wi-Fi");
+        wifi_prov_mgr_deinit();
+        ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+        ESP_ERROR_CHECK(esp_wifi_start());
+    }
+}
+```
+
+Používáme **security 1**: spojení mezi telefonem a deskou je šifrované a telefon musí prokázat, že zná *proof-of-possession* (`PROV_POP`). Přesně to očekává aplikace ESP BLE Prov, když pracuje s QR kódem, proto security 0 končilo chybou „security does not match“.
+
+QR kód je jen krátký JSON text se jménem zařízení, PoP a transportem (`ble`). Jeho generování a vykreslení pro nás není zajímavé, takže tady je pomocná funkce, kterou vložte do `main.c` nad `app_main`:
+
+```c
+static void print_qr(const char *service_name)
+{
+    char payload[150];
+    snprintf(payload, sizeof(payload),
+             "{\"ver\":\"v1\",\"name\":\"%s\",\"pop\":\"%s\",\"transport\":\"ble\"}",
+             service_name, PROV_POP);
+    ESP_LOGI(TAG, "Scan this QR code with the ESP BLE Prov app:");
+    esp_qrcode_config_t qr_cfg = ESP_QRCODE_CONFIG_DEFAULT();
+    esp_qrcode_generate(&qr_cfg, payload);
+}
+```
+
+Příznak `provisioned` zajišťuje, že desku můžete flashovat opakovaně: manager zkontroluje, zda jsou v NVS uložené přihlašovací údaje, a pokud ano, provisioning úplně přeskočí a rovnou se připojí k Wi-Fi.
+
+#### 3.5 Kompletní kód
+
+Celý soubor (a odpovídající projekt, se kterým můžete svůj porovnat) najdete v [`examples/C5/assignment-03-wifi-provisioning`](../../../examples/C5/assignment-03-wifi-provisioning/):
+
+```c
+#include <stdio.h>
+#include <string.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/event_groups.h"
+#include "esp_log.h"
+#include "esp_wifi.h"
+#include "esp_event.h"
+#include "esp_mac.h"
+#include "nvs_flash.h"
+#include "qrcode.h"
+#include "wifi_provisioning/manager.h"
+#include "wifi_provisioning/scheme_ble.h"
+
+static const char *TAG = "provisioning";
+
+// Proof-of-possession: the app gets it from the QR code, so the user never types it
+#define PROV_POP "abcd1234"
+
+// Print the QR code the ESP BLE Prov app scans (device name, PoP and transport).
+// How the QR code is rendered is not important for this workshop.
+static void print_qr(const char *service_name)
+{
+    char payload[150];
+    snprintf(payload, sizeof(payload),
+             "{\"ver\":\"v1\",\"name\":\"%s\",\"pop\":\"%s\",\"transport\":\"ble\"}",
+             service_name, PROV_POP);
+    ESP_LOGI(TAG, "Scan this QR code with the ESP BLE Prov app:");
+    esp_qrcode_config_t qr_cfg = ESP_QRCODE_CONFIG_DEFAULT();
+    esp_qrcode_generate(&qr_cfg, payload);
+}
+
+// Event handler for Wi-Fi events
+static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
+{
+    if (event_base == WIFI_PROV_EVENT) {
+        switch (event_id) {
+            case WIFI_PROV_START:
+                ESP_LOGI(TAG, "Provisioning started");
+                break;
+            case WIFI_PROV_CRED_RECV:
+                wifi_sta_config_t *wifi_sta_cfg = (wifi_sta_config_t *)event_data;
+                ESP_LOGI(TAG, "Received Wi-Fi credentials\n\tSSID     : %s\n\tPassword : %s",
+                         (const char *) wifi_sta_cfg->ssid,
+                         (const char *) wifi_sta_cfg->password);
+                break;
+            case WIFI_PROV_CRED_SUCCESS:
+                ESP_LOGI(TAG, "Provisioning successful");
+                break;
+            case WIFI_PROV_END:
+                ESP_LOGI(TAG, "Provisioning completed. Deinitializing manager.");
+                wifi_prov_mgr_deinit();
+                break;
+            default:
+                break;
+        }
+    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
+        esp_wifi_connect();
+    } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+        ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
+        ESP_LOGI(TAG, "Connected with IP Address:" IPSTR, IP2STR(&event->ip_info.ip));
+    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
+        ESP_LOGI(TAG, "Disconnected. Connecting to the AP again...");
+        esp_wifi_connect();
     }
 }
 
 void app_main(void)
 {
+    // 1. Initialize NVS (needed for Wi-Fi and Provisioning to save data)
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-      ESP_ERROR_CHECK(nvs_flash_erase());
-      ret = nvs_flash_init();
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
 
-    led_strip = configure_led();
-    led_set_color(0x0, 0x0, 0x20);
+    // 2. Initialize networking
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    esp_netif_create_default_wifi_sta();
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
-    wifi_init_sta();
+    // 3. Register event handlers
+    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_PROV_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL));
+
+    // 4. Start Wi-Fi Provisioning Manager
+    wifi_prov_mgr_config_t config = {
+        .scheme = wifi_prov_scheme_ble,
+        .scheme_event_handler = WIFI_PROV_SCHEME_BLE_EVENT_HANDLER_FREE_BTDM
+    };
+    ESP_ERROR_CHECK(wifi_prov_mgr_init(config));
+
+    bool provisioned = false;
+    ESP_ERROR_CHECK(wifi_prov_mgr_is_provisioned(&provisioned));
+
+    if (!provisioned) {
+        ESP_LOGI(TAG, "Starting provisioning");
+        // Unique name per board (last 3 bytes of the MAC), so many boards can be provisioned in one room
+        uint8_t mac[6];
+        ESP_ERROR_CHECK(esp_read_mac(mac, ESP_MAC_WIFI_STA));
+        char service_name[16];
+        snprintf(service_name, sizeof(service_name), "PROV_%02X%02X%02X", mac[3], mac[4], mac[5]);
+
+        // Security 1: encrypted session, authenticated by the proof-of-possession from the QR code
+        ESP_ERROR_CHECK(wifi_prov_mgr_start_provisioning(WIFI_PROV_SECURITY_1, PROV_POP, service_name, NULL));
+        print_qr(service_name);
+    } else {
+        ESP_LOGI(TAG, "Already provisioned, starting Wi-Fi");
+        wifi_prov_mgr_deinit();
+        ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+        ESP_ERROR_CHECK(esp_wifi_start());
+    }
 }
 ```
 
-### Extra
+### 4. Build, flashování a monitorování
 
-1. Pokud budete chtít, můžete si například doma vyzkoušet připojení k Wi-Fi i pomocí komponenty [common_components/protocol_examples_common](https://github.com/espressif/esp-idf/tree/release/v5.2/examples/common_components/protocol_examples_common).
+```bash
+idf.py build flash monitor
+```
 
+### 5. Použití aplikace ESP BLE Prov
 
-## Next step
+Pokud na této desce spouštíte kód poprvé, přejde do provisioning režimu a začne se inzerovat přes BLE.
 
-Když už jsme se úspěšně připojili na Wi-Fi, přesuneme se na práci s pamětí!
+1. Podívejte se na výstup v terminálu (monitoru). Deska vypíše QR kód a své jméno (`PROV_xxxxxx`, unikátní pro každou desku). Dbejte na to, aby okno terminálu bylo dostatečně velké a používalo neproporcionální písmo, jinak se QR kód zdeformuje. U terminálů s tmavým motivem může být potřeba lehce přiblížit, aby telefon kód přečetl.
+2. Otevřete na telefonu aplikaci **ESP BLE Prov**. Uvidíte úvodní obrazovku s tlačítkem **Provision New Device**.
 
-[Úkol 4: NVS](../assignment-4)
+   ![Úvodní obrazovka aplikace ESP BLE Prov](assets/provisioning-app-1.webp)
+
+3. Klepněte na **Provision New Device** a namiřte fotoaparát na QR kód v terminálu. Aplikace se k desce připojí přes BLE sama, bez seznamu zařízení a bez zadávání PINu.
+
+   ![Obrazovka se skenerem QR kódu](assets/provisioning-app-2.webp)
+
+4. Ze seznamu vyberte svou Wi-Fi síť. ESP32-C5 podporuje sítě na 2.4 GHz i 5 GHz, takže se vám mohou zobrazit obě!
+
+   ![Výběr Wi-Fi sítě v aplikaci](assets/provisioning-app-3.webp)
+
+5. Zadejte heslo k Wi-Fi a klepněte na **Provision**.
+
+   ![Zadání hesla k Wi-Fi](assets/provisioning-app-4.webp)
+
+6. Aplikace zobrazí průběh jednotlivých kroků provisioningu a skončí potvrzovací obrazovkou.
+
+   ![Provisioning byl úspěšně dokončen](assets/provisioning-app-5.webp)
+
+> Pokud se QR kód nedaří naskenovat, volba **I don't have a QR code** v aplikaci umožňuje vybrat `PROV_xxxxxx` ze seznamu BLE zařízení; aplikace se pak zeptá na proof-of-possession, kterým je `abcd1234`.
+
+Podívejte se do terminálu! Měli byste vidět, jak deska přijímá přihlašovací údaje a připojuje se k vaší Wi-Fi síti. Pokud desku restartujete (stiskem tlačítka RESET), automaticky se znovu připojí, aniž by byla potřeba aplikace.
+
+## Další krok
+
+Když nám Wi-Fi funguje, můžeme prozkoumat vzdálené aktualizace!
+
+[Úkol 4: OTA aktualizace](../assignment-4/)

@@ -6,11 +6,29 @@
 #include "esp_log.h"
 #include "esp_wifi.h"
 #include "esp_event.h"
+#include "esp_mac.h"
 #include "nvs_flash.h"
+#include "qrcode.h"
 #include "wifi_provisioning/manager.h"
 #include "wifi_provisioning/scheme_ble.h"
 
 static const char *TAG = "provisioning";
+
+// Proof-of-possession: the app gets it from the QR code, so the user never types it
+#define PROV_POP "abcd1234"
+
+// Print the QR code the ESP BLE Prov app scans (device name, PoP and transport).
+// How the QR code is rendered is not important for this workshop.
+static void print_qr(const char *service_name)
+{
+    char payload[150];
+    snprintf(payload, sizeof(payload),
+             "{\"ver\":\"v1\",\"name\":\"%s\",\"pop\":\"%s\",\"transport\":\"ble\"}",
+             service_name, PROV_POP);
+    ESP_LOGI(TAG, "Scan this QR code with the ESP BLE Prov app:");
+    esp_qrcode_config_t qr_cfg = ESP_QRCODE_CONFIG_DEFAULT();
+    esp_qrcode_generate(&qr_cfg, payload);
+}
 
 // Event handler for Wi-Fi events
 static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
@@ -81,13 +99,15 @@ void app_main(void)
 
     if (!provisioned) {
         ESP_LOGI(TAG, "Starting provisioning");
-        // Name of the device you will see in the app
-        char service_name[] = "PROV_C5_WORKSHOP";
-        
-        // Disable security for simplicity in workshop, but in real products always use WIFI_PROV_SECURITY_1 or 2
-        wifi_prov_security_t security = WIFI_PROV_SECURITY_0;
-        
-        ESP_ERROR_CHECK(wifi_prov_mgr_start_provisioning(security, NULL, service_name, NULL));
+        // Unique name per board (last 3 bytes of the MAC), so many boards can be provisioned in one room
+        uint8_t mac[6];
+        ESP_ERROR_CHECK(esp_read_mac(mac, ESP_MAC_WIFI_STA));
+        char service_name[16];
+        snprintf(service_name, sizeof(service_name), "PROV_%02X%02X%02X", mac[3], mac[4], mac[5]);
+
+        // Security 1: encrypted session, authenticated by the proof-of-possession from the QR code
+        ESP_ERROR_CHECK(wifi_prov_mgr_start_provisioning(WIFI_PROV_SECURITY_1, PROV_POP, service_name, NULL));
+        print_qr(service_name);
     } else {
         ESP_LOGI(TAG, "Already provisioned, starting Wi-Fi");
         wifi_prov_mgr_deinit();

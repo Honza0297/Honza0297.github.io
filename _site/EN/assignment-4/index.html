@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/assets/css/style.css?v=2244da98f21a89a4a6f49a27d5ca89d075a17535">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup theme-color -->
+<!-- start theme color meta headers -->
+<meta name="theme-color" content="#151515">
+<meta name="msapplication-navbutton-color" content="#151515">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- end theme color meta headers -->
+
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+
+<!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>ESP-IDF and ESP32-C6 Workshop - Assignment 4: OTA Updates | Honza0297.github.io</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="ESP-IDF and ESP32-C6 Workshop - Assignment 4: OTA Updates" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="http://localhost:4000/EN/assignment-4/" />
+<meta property="og:url" content="http://localhost:4000/EN/assignment-4/" />
+<meta property="og:site_name" content="Honza0297.github.io" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2024-06-30T01:00:00+02:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="ESP-IDF and ESP32-C6 Workshop - Assignment 4: OTA Updates" />
+<script type="application/ld+json">
+{"datePublished":"2024-06-30T01:00:00+02:00","@type":"BlogPosting","headline":"ESP-IDF and ESP32-C6 Workshop - Assignment 4: OTA Updates","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/EN/assignment-4/"},"url":"http://localhost:4000/EN/assignment-4/","dateModified":"2024-06-30T01:00:00+02:00","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <a id="a-title" href="/">
+          <h1>Honza0297.github.io</h1>
+        </a>
+        <h2></h2>
+
+        <section id="downloads">
+          
+          <a href="https://github.com/Honza0297/Honza0297.github.io" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <h2 id="assignment-4-over-the-air-ota-updates">Assignment 4: Over-The-Air (OTA) Updates</h2>
+
+<hr />
+
+<blockquote>
+  <p><strong>Note:</strong> This is an optional chapter. If time is running short, you may skip directly to <a href="../assignment-5/">Assignment 5: ESP-NOW Chat Room</a>.</p>
+</blockquote>
+
+<p>In a real-world deployment, you won’t have physical access to a USB port to flash new firmware. Over-The-Air (OTA) updates allow you to download and install new firmware over a network connection like Wi-Fi.</p>
+
+<h3 id="1-partition-tables">1. Partition Tables</h3>
+
+<p>To support OTA, the flash memory of the ESP32-C6 must be divided into specific regions called partitions. A typical OTA partition table includes:</p>
+<ul>
+  <li><strong>nvs</strong>: Non-Volatile Storage for Wi-Fi credentials and calibration data.</li>
+  <li><strong>otadata</strong>: Stores information about which app partition is currently active.</li>
+  <li><strong>ota_0</strong>: The factory or primary app partition.</li>
+  <li><strong>ota_1</strong>: The secondary app partition where the new firmware will be downloaded.</li>
+</ul>
+
+<p>When an OTA update occurs, the device downloads the new firmware into the inactive partition (e.g., <code class="language-plaintext highlighter-rouge">ota_1</code>). If the download is successful, it updates the <code class="language-plaintext highlighter-rouge">otadata</code> partition to point to <code class="language-plaintext highlighter-rouge">ota_1</code> and reboots.</p>
+
+<p>We define this layout in a file named <code class="language-plaintext highlighter-rouge">partitions.csv</code> in our project root.</p>
+
+<h3 id="2-configuration-via-menuconfig">2. Configuration via menuconfig</h3>
+
+<p>To tell ESP-IDF to use our custom partition table, run:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>idf.py menuconfig
+</code></pre></div></div>
+
+<p>Navigate to:</p>
+<ul>
+  <li><strong>Partition Table</strong>
+    <ul>
+      <li><strong>Partition Table</strong>: Select <code class="language-plaintext highlighter-rouge">Custom partition table CSV</code></li>
+      <li><strong>Custom partition CSV file</strong>: Type <code class="language-plaintext highlighter-rouge">partitions.csv</code></li>
+      <li>Leave other settings as default.</li>
+    </ul>
+  </li>
+</ul>
+
+<p>Press <code class="language-plaintext highlighter-rouge">Q</code> to quit and <code class="language-plaintext highlighter-rouge">Y</code> to save.</p>
+
+<h3 id="3-writing-the-code">3. Writing the Code</h3>
+
+<p>The <code class="language-plaintext highlighter-rouge">esp_https_ota</code> component provides a simple API for performing secure updates over HTTPS.</p>
+
+<p>In your <code class="language-plaintext highlighter-rouge">main.c</code>, you can define a task that attempts to update the firmware:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include "esp_https_ota.h"
+</span>
+<span class="c1">// ... Wi-Fi connection code from previous assignment ...</span>
+
+<span class="kt">void</span> <span class="nf">ota_task</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">pvParameter</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Starting OTA update task"</span><span class="p">);</span>
+
+    <span class="n">esp_http_client_config_t</span> <span class="n">config</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="p">.</span><span class="n">url</span> <span class="o">=</span> <span class="s">"https://example.com/firmware.bin"</span><span class="p">,</span>
+        <span class="c1">// In production, always provide a certificate!</span>
+        <span class="c1">// .cert_pem = (char *)server_cert_pem_start,</span>
+        <span class="p">.</span><span class="n">crt_bundle_attach</span> <span class="o">=</span> <span class="n">esp_crt_bundle_attach</span><span class="p">,</span>
+    <span class="p">};</span>
+
+    <span class="n">esp_https_ota_config_t</span> <span class="n">ota_config</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="p">.</span><span class="n">http_config</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">config</span><span class="p">,</span>
+    <span class="p">};</span>
+
+    <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Attempting to download update from %s"</span><span class="p">,</span> <span class="n">config</span><span class="p">.</span><span class="n">url</span><span class="p">);</span>
+    <span class="n">esp_err_t</span> <span class="n">ret</span> <span class="o">=</span> <span class="n">esp_https_ota</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ota_config</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">ret</span> <span class="o">==</span> <span class="n">ESP_OK</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"OTA Succeed, Rebooting..."</span><span class="p">);</span>
+        <span class="n">esp_restart</span><span class="p">();</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="n">ESP_LOGE</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Firmware upgrade failed"</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="n">vTaskDelete</span><span class="p">(</span><span class="nb">NULL</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>By changing the URL to a valid firmware binary hosted on an HTTPS server, the ESP32-C6 will download the file, verify it, flash it to the alternate partition, and restart!</p>
+
+<h3 id="4-rollback-bonus">4. Rollback (Bonus)</h3>
+
+<p>ESP-IDF also supports App Rollback. If a newly flashed firmware panics or fails to connect to the server within a certain time frame, the bootloader will mark it as invalid and boot back into the previous, working firmware partition.</p>
+
+<h2 id="next-step">Next step</h2>
+
+<p>Let’s dive into an entirely different wireless technology: ESP-NOW!</p>
+
+<p><a href="../assignment-5/">Assignment 5: ESP-NOW Chat Room</a></p>
+
+      </section>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/assets/css/style.css?v=2244da98f21a89a4a6f49a27d5ca89d075a17535">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup theme-color -->
+<!-- start theme color meta headers -->
+<meta name="theme-color" content="#151515">
+<meta name="msapplication-navbutton-color" content="#151515">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- end theme color meta headers -->
+
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+
+<!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>LED Strip Example (SPI backend + WS2812) | Honza0297.github.io</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="LED Strip Example (SPI backend + WS2812)" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="http://localhost:4000/examples/C6/assignment-05-esp-now/managed_components/espressif__led_strip/examples/led_strip_spi_ws2812/" />
+<meta property="og:url" content="http://localhost:4000/examples/C6/assignment-05-esp-now/managed_components/espressif__led_strip/examples/led_strip_spi_ws2812/" />
+<meta property="og:site_name" content="Honza0297.github.io" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="LED Strip Example (SPI backend + WS2812)" />
+<script type="application/ld+json">
+{"@type":"WebPage","headline":"LED Strip Example (SPI backend + WS2812)","url":"http://localhost:4000/examples/C6/assignment-05-esp-now/managed_components/espressif__led_strip/examples/led_strip_spi_ws2812/","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <a id="a-title" href="/">
+          <h1>Honza0297.github.io</h1>
+        </a>
+        <h2></h2>
+
+        <section id="downloads">
+          
+          <a href="https://github.com/Honza0297/Honza0297.github.io" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <h1 id="led-strip-example-spi-backend--ws2812">LED Strip Example (SPI backend + WS2812)</h1>
+
+<p>This example demonstrates how to blink the WS2812 LED using the <a href="https://components.espressif.com/component/espressif/led_strip">led_strip</a> component.</p>
+
+<h2 id="how-to-use-example">How to Use Example</h2>
+
+<h3 id="hardware-required">Hardware Required</h3>
+
+<ul>
+  <li>A development board with Espressif SoC</li>
+  <li>A USB cable for Power supply and programming</li>
+  <li>WS2812 LED strip</li>
+</ul>
+
+<h3 id="configure-the-example">Configure the Example</h3>
+
+<p>Before project configuration and build, be sure to set the correct chip target using <code class="language-plaintext highlighter-rouge">idf.py set-target &lt;chip_name&gt;</code>. Then assign the proper GPIO in the <a href="/examples/C6/assignment-05-esp-now/managed_components/espressif__led_strip/examples/led_strip_spi_ws2812/main/led_strip_spi_ws2812_main.c">source file</a>. If your led strip has multiple LEDs, don’t forget update the number.</p>
+
+<h3 id="build-and-flash">Build and Flash</h3>
+
+<p>Run <code class="language-plaintext highlighter-rouge">idf.py -p PORT build flash monitor</code> to build, flash and monitor the project.</p>
+
+<p>(To exit the serial monitor, type <code class="language-plaintext highlighter-rouge">Ctrl-]</code>.)</p>
+
+<p>See the <a href="https://docs.espressif.com/projects/esp-idf/en/latest/get-started/index.html">Getting Started Guide</a> for full steps to configure and use ESP-IDF to build projects.</p>
+
+<h2 id="example-output">Example Output</h2>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>I (299) gpio: GPIO[14]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0
+I (309) example: Created LED strip object with SPI backend
+I (309) example: Start blinking LED strip
+</code></pre></div></div>
+
+      </section>
+    </div>
+  </body>
+</html>

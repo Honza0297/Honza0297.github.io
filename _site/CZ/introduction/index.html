@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/assets/css/style.css?v=2244da98f21a89a4a6f49a27d5ca89d075a17535">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup theme-color -->
+<!-- start theme color meta headers -->
+<meta name="theme-color" content="#151515">
+<meta name="msapplication-navbutton-color" content="#151515">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- end theme color meta headers -->
+
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+
+<!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>Workshop: ESP-IDF a ESP32-C6: Úvod | Honza0297.github.io</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="Workshop: ESP-IDF a ESP32-C6: Úvod" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="http://localhost:4000/CZ/introduction/" />
+<meta property="og:url" content="http://localhost:4000/CZ/introduction/" />
+<meta property="og:site_name" content="Honza0297.github.io" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2024-09-30T01:00:00+02:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Workshop: ESP-IDF a ESP32-C6: Úvod" />
+<script type="application/ld+json">
+{"datePublished":"2024-09-30T01:00:00+02:00","@type":"BlogPosting","headline":"Workshop: ESP-IDF a ESP32-C6: Úvod","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/CZ/introduction/"},"url":"http://localhost:4000/CZ/introduction/","dateModified":"2024-09-30T01:00:00+02:00","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <a id="a-title" href="/">
+          <h1>Honza0297.github.io</h1>
+        </a>
+        <h2></h2>
+
+        <section id="downloads">
+          
+          <a href="https://github.com/Honza0297/Honza0297.github.io" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <h2 id="představení-esp-idf">Představení ESP-IDF</h2>
+
+<p><strong>ESP-IDF</strong> (Espressif IoT Development Framework) je oficiální vývojový framework pro všechny čipy rodiny ESP32 od firmy Espressif Systems. Framework poskytuje kompletní prostředí pro vývoj, flashování a monitorování IoT aplikací, které mohou pokrývat vše od sítí přes bezpečnost, až po vysoce spolehlivé aplikace. Samotné čipy ESP32 jsou populární napříč odvětvími, od domácích kutilů a bastlířů až po profesionální a průmyslové nasazení.</p>
+
+<p>ESP-IDF v sobě obsahuje také FreeRTOS, který vývojářům umožňuje tvořit <em>real-time</em> aplikace s podporou multitaskingu. Díky široké paletě knihoven, komponent, podporovaných protokolů (Wi-Fi, Bluetooth, Thread, ZigBee, MQTT a mnoho dalšího), nástrojům a podrobné dokumentaci ESP-IDF usnadňuje vývoj IoT aplikací a umožňuje jednoduché využití velkého spektra hardware a periferií.</p>
+
+<p>Zároveň ESP-IDF obsahuje zhruba 400 příkladových projektů, pokrývajících základní případy použití, což umožňuje vývojářům dále zrychlit počáteční fázi vývoje a ti tak mohou rychleji začít pracovat na svých projektech.</p>
+
+<h3 id="architektura">Architektura</h3>
+
+<p>Architektura frameworku ESP-IDF je rozdělená do 3 vrstev:</p>
+
+<ul>
+  <li><strong>ESP-IDF platforma</strong>
+    <ul>
+      <li>Obsahuje samotné jádro ESP-IDF: FreeRTOS, ovladače, protokoly, build system…</li>
+    </ul>
+  </li>
+  <li><strong>Middleware</strong>
+    <ul>
+      <li>Přidává další funkcionalitu do ESP-IDF, například audio framework ESP-ADF</li>
+    </ul>
+  </li>
+  <li><strong>AIoT aplikace</strong>
+    <ul>
+      <li>Váš projekt</li>
+    </ul>
+
+    <p><img src="../assets/esp-idf-highlevel.webp" /></p>
+  </li>
+</ul>
+
+<h3 id="frameworks">Frameworks</h3>
+
+<p>Na ESP-IDF je založených i několik dalších frameworků:</p>
+
+<ul>
+  <li><strong>Arduino for ESP32</strong></li>
+  <li><strong>ESP-ADF</strong> (Audio Development Framework): Připravený pro audio aplikace</li>
+  <li><strong>ESP-WHO</strong> (AI Development Framework): Zaměřený na rozpoznávání a detekci obličeje</li>
+  <li><strong>ESP-RainMaker</strong>: Díky cloudovým službám zjednodušuje připojení a ovládání zařízení s ESP32</li>
+  <li><strong>ESP-Matter SDK</strong>: Oficiální vývojový framework pro Matter na čipech rodiny ESP32</li>
+</ul>
+
+<p>Pokud se chcete podívat na všechny odvozené frameworky, navštivte náš <a href="https://github.com/espressif">GitHub</a>.</p>
+
+<h3 id="podpora-různých-verzí-esp-idf">Podpora různých verzí ESP-IDF</h3>
+
+<p>ESP-IDF se stále vyvíjí. Pro aktuální informace o podporovaných verzích navšitvte náš Github.</p>
+
+<h2 id="představení-esp32-c6">Představení ESP32-C6</h2>
+
+<p>ESP32-C6 je <em>ultra-low-power</em> čip s architekturou RISC-V. Obsahuje jedno “plnohodnotné” a jedno ULP (<em>ultra-low-power</em>) jádro a podporuje všechny běžné bezdrátové technologie:  2.4 GHz Wi-Fi 6 (802.11ax), Bluetooth® 5 (LE), Zigbee a Thread (802.15.4). K dispozici je volitelná 4MB flash paměť přímo v pouzdře čipu, 22 nebo 30 GPIO pinů a bohatá nabídka periferií:</p>
+
+<p><img src="../assets/esp32-c6-diagram.webp" class="grid-w22" /></p>
+
+<ul>
+  <li>30 (QFN40) nebo 22 (QFN32) pinů</li>
+  <li>5 strapping piny</li>
+  <li>6 GPIO pinů je potřebných pro in-package flash</li>
+  <li><strong>Analogová rozhraní:</strong>
+    <ul>
+      <li>12-bit SAR ADC, až 7 kanálů</li>
+      <li>Senzor teploty</li>
+    </ul>
+  </li>
+  <li><strong>Digitální rozhraní:</strong>
+    <ul>
+      <li>2x UARTs</li>
+      <li>Low-power (LP) UART</li>
+      <li>2x SPI pro komunikaci s flash pamětí</li>
+      <li>SPI pro obecné použití</li>
+      <li>I2C</li>
+      <li>Low-power (LP) I2C</li>
+      <li>I2S</li>
+      <li>Pulse count kontroler</li>
+      <li>USB Serial/JTAG kontroler</li>
+      <li>2x TWAI® kontrolery, kompatibilní s ISO 11898-1 (CAN Specification 2.0)</li>
+      <li>SDIO 2.0 slave kontroler</li>
+      <li>LED PWM controller, až 6 kanálů</li>
+      <li>Motor Control PWM (MCPWM)</li>
+      <li>Remote control periferie (TX/RX)</li>
+      <li>Paralelní IO rozhraní (PARLIO)</li>
+      <li>Obecný DMA kontroler se 3 transmit 3 receive kanály</li>
+      <li>Event task matrix (ETM)</li>
+    </ul>
+  </li>
+  <li><strong>Timery:</strong>
+    <ul>
+      <li>52-bit systémový timer</li>
+      <li>2x 54-bit timer pro obecné použití</li>
+      <li>3x digitální watchdog</li>
+      <li>Analogový watchdog</li>
+    </ul>
+  </li>
+</ul>
+
+<p>Pro více detailů se podívejte na <a href="https://www.espressif.com/sites/default/files/documentation/esp32-c6_datasheet_en.pdf">datasheet ESP32-C6</a>.</p>
+
+<h2 id="představení-kitu-esp32-c6-devkit-c">Představení kitu ESP32-C6-DevKit-C</h2>
+
+<p>ESP32-C6-DevKitC-1 je vývojová deska určená (nejen) začátečníkům, v jejímž srdci je modul ESP32-C6-WROOM-1(U) spolu s 8 MB SPI flash paměti. Stejně jako samotný čip ESP32-C6, deska podporuje mnoho protokolů, od Wi-Fi, přes Blzuetooth LE, až po Zigbee a Thread.</p>
+
+<p>Většina GPIO pinů je přístupná z vývodů po stranách desky se standardní roztečí 2.54 mm. Periferie na ně můžou být připojené pomocí klasických vodičů, případně lze desku zacvaknout do nepájivého pole.</p>
+
+<h3 id="vlastnosti">Vlastnosti</h3>
+
+<p>Níže jsou uvedené základní vlastnosti vývojého kitu:</p>
+
+<ul>
+  <li>ESP32-C6-WROOM-1 modul</li>
+  <li>Pinové vývody po stranách</li>
+  <li>5 V to 3.3 V low-dropou regulátor</li>
+  <li>3.3 V Power On LED</li>
+  <li>USB-to-UART Bridge</li>
+  <li>ESP32-C6 USB Type-C Port pro flashování a debug</li>
+  <li>Boot Button</li>
+  <li>Reset Button</li>
+  <li>USB Type-C to UART Port</li>
+  <li>RGB LED na pinu GPIO8</li>
+  <li>J5 jumper pro měření proudu</li>
+</ul>
+
+<h4 id="popis-desky">Popis desky</h4>
+
+<p><img src="../assets/esp32-c6-devkitc-1-v1.2-annotated-photo.webp" class="grid-w22" />
+  <img src="../assets/esp32-c6-devkitc-1-v1.2-block-diagram.webp" class="grid-w22" /></p>
+
+<h4 id="layout-desky">Layout desky</h4>
+
+<p><img src="../assets/esp32-c6-devkitc-1-pin-layout.webp" class="grid-w22" /></p>
+
+<h4 id="j1-pinové-pole">J1 pinové pole</h4>
+
+<table>
+  <thead>
+    <tr>
+      <th>No.</th>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Function</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td>3V3</td>
+      <td>P</td>
+      <td>3.3 V power supply</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>RST</td>
+      <td>I</td>
+      <td>High: enables the chip; Low: disables the chip.</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>4</td>
+      <td>I/O/T</td>
+      <td>MTMS, GPIO4, <strong>LP_GPIO4</strong>, <strong>LP_UART_RXD</strong>, ADC1_CH4, FSPIHD</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>5</td>
+      <td>I/O/T</td>
+      <td>MTDI, GPIO5, <strong>LP_GPIO5</strong>, <strong>LP_UART_TXD</strong>, ADC1_CH5, FSPIWP</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>6</td>
+      <td>I/O/T</td>
+      <td>MTCK, GPIO6, <strong>LP_GPIO6</strong>, <strong>LP_I2C_SDA</strong>, ADC1_CH6, FSPICLK</td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td>7</td>
+      <td>I/O/T</td>
+      <td>MTDO, GPIO7, <strong>LP_GPIO7</strong>, <strong>LP_I2C_SCL</strong>, FSPID</td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td>0</td>
+      <td>I/O/T</td>
+      <td>GPIO0, XTAL_32K_P, <strong>LP_GPIO0</strong>, <strong>LP_UART_DTRN</strong>, ADC1_CH0</td>
+    </tr>
+    <tr>
+      <td>8</td>
+      <td>1</td>
+      <td>I/O/T</td>
+      <td>GPIO1, XTAL_32K_N, <strong>LP_GPIO1</strong>, <strong>LP_UART_DSRN</strong>, ADC1_CH1</td>
+    </tr>
+    <tr>
+      <td>9</td>
+      <td>8</td>
+      <td>I/O/T</td>
+      <td>GPIO8</td>
+    </tr>
+    <tr>
+      <td>10</td>
+      <td>10</td>
+      <td>I/O/T</td>
+      <td>GPIO10</td>
+    </tr>
+    <tr>
+      <td>11</td>
+      <td>11</td>
+      <td>I/O/T</td>
+      <td>GPIO11</td>
+    </tr>
+    <tr>
+      <td>12</td>
+      <td>2</td>
+      <td>I/O/T</td>
+      <td>GPIO2, <strong>LP_GPIO2</strong>, <strong>LP_UART_RTSN</strong>, ADC1_CH2, FSPIQ</td>
+    </tr>
+    <tr>
+      <td>13</td>
+      <td>3</td>
+      <td>I/O/T</td>
+      <td>GPIO3, <strong>LP_GPIO3</strong>, <strong>LP_UART_CTSN</strong>, ADC1_CH3</td>
+    </tr>
+    <tr>
+      <td>14</td>
+      <td>5V</td>
+      <td>P</td>
+      <td>5 V power supply</td>
+    </tr>
+    <tr>
+      <td>15</td>
+      <td>G</td>
+      <td>G</td>
+      <td>Ground</td>
+    </tr>
+    <tr>
+      <td>16</td>
+      <td>NC</td>
+      <td>–</td>
+      <td>No connection</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4 id="j3-pinové-pole">J3 pinové pole</h4>
+
+<table>
+  <thead>
+    <tr>
+      <th>No.</th>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Function</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td>G</td>
+      <td>G</td>
+      <td>Ground</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>TX</td>
+      <td>I/O/T</td>
+      <td>U0TXD, GPIO16, FSPICS0</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>RX</td>
+      <td>I/O/T</td>
+      <td>U0RXD, GPIO17, FSPICS1</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>15</td>
+      <td>I/O/T</td>
+      <td>GPIO15</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>23</td>
+      <td>I/O/T</td>
+      <td>GPIO23, SDIO_DATA3</td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td>22</td>
+      <td>I/O/T</td>
+      <td>GPIO22, SDIO_DATA2</td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td>21</td>
+      <td>I/O/T</td>
+      <td>GPIO21, SDIO_DATA1, FSPICS5</td>
+    </tr>
+    <tr>
+      <td>8</td>
+      <td>20</td>
+      <td>I/O/T</td>
+      <td>GPIO20, SDIO_DATA0, FSPICS4</td>
+    </tr>
+    <tr>
+      <td>9</td>
+      <td>19</td>
+      <td>I/O/T</td>
+      <td>GPIO19, SDIO_CLK, FSPICS3</td>
+    </tr>
+    <tr>
+      <td>10</td>
+      <td>18</td>
+      <td>I/O/T</td>
+      <td>GPIO18, SDIO_CMD, FSPICS2</td>
+    </tr>
+    <tr>
+      <td>11</td>
+      <td>9</td>
+      <td>I/O/T</td>
+      <td>GPIO9</td>
+    </tr>
+    <tr>
+      <td>12</td>
+      <td>G</td>
+      <td>G</td>
+      <td>Ground</td>
+    </tr>
+    <tr>
+      <td>13</td>
+      <td>13</td>
+      <td>I/O/T</td>
+      <td>GPIO13, USB_D+</td>
+    </tr>
+    <tr>
+      <td>14</td>
+      <td>12</td>
+      <td>I/O/T</td>
+      <td>GPIO12, USB_D-</td>
+    </tr>
+    <tr>
+      <td>15</td>
+      <td>G</td>
+      <td>G</td>
+      <td>Ground</td>
+    </tr>
+    <tr>
+      <td>16</td>
+      <td>NC</td>
+      <td>–</td>
+      <td>No connection</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="zdroje">Zdroje</h3>
+
+<ul>
+  <li><a href="https://www.espressif.com/sites/default/files/documentation/esp32-c6_datasheet_en.pdf">ESP32-C6 Datasheet</a></li>
+  <li><a href="https://docs.espressif.com/projects/esp-idf/en/release-v5.5/esp32c6/index.html">ESP32-C6 Documentation</a></li>
+  <li><a href="https://docs.espressif.com/projects/espressif-esp-dev-kits/en/latest/esp32c6/esp32-c6-devkitc-1/user_guide.html">ESP32-C6-DevKit-C Documentation</a></li>
+</ul>
+
+<h2 id="další-krok">Další krok</h2>
+
+<p>Pro teoretickém úvodu již nastal čas pustit se do programování. Nejprve si ale musíme naisntalovat potřebné nástroje.</p>
+
+<p><a href="../assignment-1">Úkol 1: Instalace ESP-IDF</a></p>
+
+      </section>
+    </div>
+  </body>
+</html>

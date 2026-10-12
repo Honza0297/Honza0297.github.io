@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/assets/css/style.css?v=2244da98f21a89a4a6f49a27d5ca89d075a17535">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup theme-color -->
+<!-- start theme color meta headers -->
+<meta name="theme-color" content="#151515">
+<meta name="msapplication-navbutton-color" content="#151515">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- end theme color meta headers -->
+
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+
+<!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>ESP-IDF and ESP32-C6 Workshop - Assignment 5: ESP-NOW Chat Room | Honza0297.github.io</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="ESP-IDF and ESP32-C6 Workshop - Assignment 5: ESP-NOW Chat Room" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="http://localhost:4000/EN/assignment-5/" />
+<meta property="og:url" content="http://localhost:4000/EN/assignment-5/" />
+<meta property="og:site_name" content="Honza0297.github.io" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2024-06-30T01:00:00+02:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="ESP-IDF and ESP32-C6 Workshop - Assignment 5: ESP-NOW Chat Room" />
+<script type="application/ld+json">
+{"datePublished":"2024-06-30T01:00:00+02:00","@type":"BlogPosting","headline":"ESP-IDF and ESP32-C6 Workshop - Assignment 5: ESP-NOW Chat Room","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/EN/assignment-5/"},"url":"http://localhost:4000/EN/assignment-5/","dateModified":"2024-06-30T01:00:00+02:00","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <a id="a-title" href="/">
+          <h1>Honza0297.github.io</h1>
+        </a>
+        <h2></h2>
+
+        <section id="downloads">
+          
+          <a href="https://github.com/Honza0297/Honza0297.github.io" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <h2 id="assignment-5-esp-now-chat-room">Assignment 5: ESP-NOW Chat Room</h2>
+
+<hr />
+
+<p>While Wi-Fi is great for connecting to the Internet, it requires an Access Point (router) and has overhead due to the connection process. What if you just want multiple ESP32 boards to talk directly to each other?</p>
+
+<p><strong>ESP-NOW</strong> is a connectionless, low-overhead wireless communication protocol defined by Espressif. It allows multiple devices to communicate with each other peer-to-peer (P2P) without a router.</p>
+
+<p>In this assignment, we will turn our workshop room into a giant ESP-NOW Chat Room! Every participant’s board will broadcast commands, and when another board receives a specific command, it will change its LED color.</p>
+
+<h3 id="1-initializing-esp-now">1. Initializing ESP-NOW</h3>
+
+<p>ESP-NOW requires the Wi-Fi peripheral to be turned on in Station or SoftAP mode, even though we aren’t connecting to a router.</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_netif_init</span><span class="p">());</span>
+<span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_event_loop_create_default</span><span class="p">());</span>
+<span class="n">wifi_init_config_t</span> <span class="n">cfg</span> <span class="o">=</span> <span class="n">WIFI_INIT_CONFIG_DEFAULT</span><span class="p">();</span>
+<span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_wifi_init</span><span class="p">(</span><span class="o">&amp;</span><span class="n">cfg</span><span class="p">));</span>
+<span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_wifi_set_mode</span><span class="p">(</span><span class="n">WIFI_MODE_STA</span><span class="p">));</span>
+<span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_wifi_start</span><span class="p">());</span>
+</code></pre></div></div>
+
+<p>Then we initialize ESP-NOW itself:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_now_init</span><span class="p">());</span>
+</code></pre></div></div>
+
+<h3 id="2-adding-peers">2. Adding Peers</h3>
+
+<p>To broadcast to everyone in the room, we add a peer with the broadcast MAC address <code class="language-plaintext highlighter-rouge">FF:FF:FF:FF:FF:FF</code>.</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">esp_now_peer_info_t</span> <span class="n">peerInfo</span> <span class="o">=</span> <span class="p">{};</span>
+<span class="n">memset</span><span class="p">(</span><span class="o">&amp;</span><span class="n">peerInfo</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">peerInfo</span><span class="p">));</span>
+<span class="c1">// Broadcast MAC address</span>
+<span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">6</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">peerInfo</span><span class="p">.</span><span class="n">peer_addr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mh">0xFF</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="n">peerInfo</span><span class="p">.</span><span class="n">channel</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="c1">// Use current channel</span>
+<span class="n">peerInfo</span><span class="p">.</span><span class="n">encrypt</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span> <span class="c1">// No encryption for broadcast</span>
+
+<span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_now_add_peer</span><span class="p">(</span><span class="o">&amp;</span><span class="n">peerInfo</span><span class="p">));</span>
+</code></pre></div></div>
+
+<h3 id="3-receiving-commands">3. Receiving Commands</h3>
+
+<p>We register a callback function that executes whenever an ESP-NOW packet is received. This function will parse the incoming string and change our LED color!</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">on_data_recv</span><span class="p">(</span><span class="k">const</span> <span class="kt">uint8_t</span> <span class="o">*</span><span class="n">mac_addr</span><span class="p">,</span> <span class="k">const</span> <span class="kt">uint8_t</span> <span class="o">*</span><span class="n">data</span><span class="p">,</span> <span class="kt">int</span> <span class="n">data_len</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="c1">// data might not be null terminated, so let's copy it safely</span>
+    <span class="kt">char</span> <span class="n">msg</span><span class="p">[</span><span class="mi">32</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+    <span class="kt">int</span> <span class="n">len</span> <span class="o">=</span> <span class="n">data_len</span> <span class="o">&lt;</span> <span class="mi">31</span> <span class="o">?</span> <span class="n">data_len</span> <span class="o">:</span> <span class="mi">31</span><span class="p">;</span>
+    <span class="n">memcpy</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">len</span><span class="p">);</span>
+
+    <span class="n">ESP_LOGI</span><span class="p">(</span><span class="s">"ESP-NOW"</span><span class="p">,</span> <span class="s">"Received: %s"</span><span class="p">,</span> <span class="n">msg</span><span class="p">);</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">strcmp</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="s">"LED ON"</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">led_strip_set_pixel</span><span class="p">(</span><span class="n">led_strip</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">20</span><span class="p">);</span> <span class="c1">// White</span>
+        <span class="n">led_strip_refresh</span><span class="p">(</span><span class="n">led_strip</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">strcmp</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="s">"LED OFF"</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">led_strip_clear</span><span class="p">(</span><span class="n">led_strip</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">strcmp</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="s">"COLOR RED"</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">led_strip_set_pixel</span><span class="p">(</span><span class="n">led_strip</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span> <span class="c1">// Red</span>
+        <span class="n">led_strip_refresh</span><span class="p">(</span><span class="n">led_strip</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">strcmp</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="s">"COLOR GREEN"</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">led_strip_set_pixel</span><span class="p">(</span><span class="n">led_strip</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span> <span class="c1">// Green</span>
+        <span class="n">led_strip_refresh</span><span class="p">(</span><span class="n">led_strip</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="c1">// In app_main:</span>
+<span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_now_register_recv_cb</span><span class="p">(</span><span class="n">on_data_recv</span><span class="p">));</span>
+</code></pre></div></div>
+
+<h3 id="4-sending-commands">4. Sending Commands</h3>
+
+<p>Let’s periodically broadcast a command to the room! Alternatively, you could hook this up to a physical button on the board. For now, we will just send it in a loop.</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">uint8_t</span> <span class="n">broadcast_mac</span><span class="p">[]</span> <span class="o">=</span> <span class="p">{</span><span class="mh">0xFF</span><span class="p">,</span> <span class="mh">0xFF</span><span class="p">,</span> <span class="mh">0xFF</span><span class="p">,</span> <span class="mh">0xFF</span><span class="p">,</span> <span class="mh">0xFF</span><span class="p">,</span> <span class="mh">0xFF</span><span class="p">};</span>
+<span class="kt">char</span> <span class="o">*</span><span class="n">msg</span> <span class="o">=</span> <span class="s">"COLOR GREEN"</span><span class="p">;</span>
+
+<span class="k">while</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">esp_err_t</span> <span class="n">result</span> <span class="o">=</span> <span class="n">esp_now_send</span><span class="p">(</span><span class="n">broadcast_mac</span><span class="p">,</span> <span class="p">(</span><span class="kt">uint8_t</span> <span class="o">*</span><span class="p">)</span><span class="n">msg</span><span class="p">,</span> <span class="n">strlen</span><span class="p">(</span><span class="n">msg</span><span class="p">));</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">result</span> <span class="o">==</span> <span class="n">ESP_OK</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ESP_LOGI</span><span class="p">(</span><span class="s">"ESP-NOW"</span><span class="p">,</span> <span class="s">"Broadcast sent!"</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="n">ESP_LOGE</span><span class="p">(</span><span class="s">"ESP-NOW"</span><span class="p">,</span> <span class="s">"Send error"</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="n">vTaskDelay</span><span class="p">(</span><span class="mi">5000</span> <span class="o">/</span> <span class="n">portTICK_PERIOD_MS</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="5-build-flash-and-monitor">5. Build, Flash, and Monitor</h3>
+
+<p>Make sure you have the <code class="language-plaintext highlighter-rouge">led_strip</code> component added:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>idf.py add-dependency <span class="s2">"espressif/led_strip^3.0.3"</span>
+</code></pre></div></div>
+
+<p>Then build and flash:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>idf.py build flash monitor
+</code></pre></div></div>
+
+<p>Work with the person next to you: Have one person broadcast “COLOR RED” and the other broadcast “COLOR GREEN”. See your LEDs sync up!</p>
+
+<h2 id="next-step">Next step</h2>
+
+<p>Let’s look at one final feature of the ESP32-C6: The Low-Power core!</p>
+
+<p><a href="../assignment-6/">Assignment 6: LP-core</a></p>
+
+      </section>
+    </div>
+  </body>
+</html>

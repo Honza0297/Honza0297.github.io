@@ -55,5 +55,3 @@ These workshops are designed for developers who want to learn ESP32 development 
 
 If you have any feedback, feel free to open a
 [discussion on GitHub](https://github.com/espressif/developer-portal/discussions).
-
-**Developed by Espressif Systems**

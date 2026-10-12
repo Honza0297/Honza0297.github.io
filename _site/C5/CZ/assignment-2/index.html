@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/assets/css/style.css?v=2244da98f21a89a4a6f49a27d5ca89d075a17535">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup theme-color -->
+<!-- start theme color meta headers -->
+<meta name="theme-color" content="#151515">
+<meta name="msapplication-navbutton-color" content="#151515">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- end theme color meta headers -->
+
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+
+<!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>Workshop: ESP-IDF a ESP32-C5 - Úkol 2 | Honza0297.github.io</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="Workshop: ESP-IDF a ESP32-C5 - Úkol 2" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="http://localhost:4000/C5/CZ/assignment-2/" />
+<meta property="og:url" content="http://localhost:4000/C5/CZ/assignment-2/" />
+<meta property="og:site_name" content="Honza0297.github.io" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2024-09-30T01:00:00+02:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Workshop: ESP-IDF a ESP32-C5 - Úkol 2" />
+<script type="application/ld+json">
+{"datePublished":"2024-09-30T01:00:00+02:00","@type":"BlogPosting","headline":"Workshop: ESP-IDF a ESP32-C5 - Úkol 2","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/C5/CZ/assignment-2/"},"url":"http://localhost:4000/C5/CZ/assignment-2/","dateModified":"2024-09-30T01:00:00+02:00","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <a id="a-title" href="/">
+          <h1>Honza0297.github.io</h1>
+        </a>
+        <h2></h2>
+
+        <section id="downloads">
+          
+          <a href="https://github.com/Honza0297/Honza0297.github.io" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <h2 id="úkol-2-vytváření-projektu-a-komponenty">Úkol 2: Vytváření projektu a Komponenty</h2>
+
+<hr />
+
+<p>V tomto úkolu si ukážeme, jak pracovat s koponenty (<strong>Components</strong>) a jak je používat ke zrychlení vývoje vašich projektů.</p>
+
+<p>Komponenty jsou podobné knihovnám (třeba těm z Arduino IDE); také obsahují různou přídavnou funkcionalitu, kterou byste v základním ESP-IDF nenašli. Pro příklad uveďme třeba různé drivery pro senzory, protokolové komponenty nebo různé BSP (<em>board support package</em>) komponenty. Některé komponenty jsou již přímou součástí některých ESP-IDF příkladů, je ale možné používat i externí komponenty díky modulární struktuře ESP-IDF.</p>
+
+<p>Díky využívání komponent se nejen zjednododušuje udržovatelnost projektu, také se výrazně zrychluje jeho vývoj. Díky komponentám také lze znovupoužít stejnou funkcionalitu napříč různými projekty.</p>
+
+<p>Pokud chcete vytvořit a publikovat vlastní komponentu (třeba pro váš specifický senzor), doporučujeme, abyste zhlédli talk <a href="https://www.youtube.com/watch?v=D86gQ4knUnc">DevCon23 - Developing, Publishing, and Maintaining Components for ESP-IDF</a> (v angličtině).</p>
+
+<p><a href="https://www.youtube.com/watch?v=D86gQ4knUnc">Sledovat na YouTube</a></p>
+
+<p>Komponenty můžete prohledávat například přes platformu <a href="https://components.espressif.com">ESP Registry</a>.</p>
+
+<p>Využívání komponentů si ukážeme na novém projektu, kde si od základů napíšeme jednoduchou aplikaci, která rozbliká vestavěnou RGB LED s využitím komponenty pro LED pásky.</p>
+
+<h3 id="pracujeme-s-komponenty">Pracujeme s komponenty</h3>
+
+<p>Budeme používat následující dvě komponenty:</p>
+
+<ul>
+  <li>Komponentu pro RGB LED (WS2812) pásky, i když v našem případě bude LED “páskem” pouze jediná vestavěná LED připojená ke <code class="language-plaintext highlighter-rouge">GPIO27</code>.</li>
+  <li>Komponentu <a href="https://docs.espressif.com/projects/esp-idf/en/release-v5.2/esp32c5/api-reference/peripherals/rmt.html">Remote Control Transceiver</a> (RMT), kterou budeme kontrolovat tok dat do LED.</li>
+</ul>
+
+<ol>
+  <li><strong>Vytvoření nového projektu</strong></li>
+</ol>
+
+<p>Nový projekt lze vytvořit přes GUI i přes příkazovou řádku. Pro ty, kdo s terminálem (CLI) příliš nepracují, to může být poněkud děsivé, v budoucnu vám to ale pomůže například v situacích, kdy budete ESP-IDF používat s jiným IDE než VSCode (nebo úplně samostatně). Níže ale budou uvedené oba příklady.</p>
+
+<p><strong>GUI</strong></p>
+
+<p>Otevřeme ESP-IDF Explorer (ikonka Espressifu v taskbaru nebo přes <em>View -&gt; Open View -&gt; ESP-IDF: Explorer</em>) a vybereme příkaz <strong>New Project Wizard</strong> (může být schovaný v <strong>Advanced</strong> menu). Dále postupujeme podle obrázků:</p>
+
+<p><img src="/C5/CZ/assignment-2/assets/wizard-1.webp" alt="První krok tvorby nového projektu" /></p>
+
+<p><em>Vybereme, na jaké šabloně náš projekt založíme. Zvolíme *ESP-IDF Templates/sample-project</em> a klikneme na <em>Create project using template sample_project</em>.*</p>
+
+<p><img src="/C5/CZ/assignment-2/assets/wizard-2.webp" alt="Druhý krok tvorby nového projektu" /></p>
+
+<p><em>V dalším kroku vybereme, jak se bude projekt jmenovat, kam ho uložíme a jaký čip budeme používat.</em></p>
+
+<p>Po vytvoření projektu se objeví informace o tom, že byl projekt úspěšně vytvořen. Uprostřed by se mělo nacházet tlačítko pro otevření nově vytvořeného projektu - klikneme na něj.</p>
+
+<p><strong>CLI</strong></p>
+
+<p>V ESP-IDF Exploreru v záložce <em>commands</em> vybereme ESP-IDF Terminal, který se otevře v dolní části obrazovky. Pro vytvoření nového projektu:</p>
+
+<ul>
+  <li>Vytvoříme a přejdeme do složky, ve které chceme mít náš projekt</li>
+  <li>Projekt vytvoříme</li>
+  <li>Přejdeme do něj</li>
+</ul>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">mkdir</span> ~/my-workshop-folder
+<span class="nb">cd</span> ~/my-workshop-folder
+idf.py create-project my-workshop-project
+<span class="nb">cd </span>my-workshop-project
+</code></pre></div></div>
+
+<blockquote>
+  <p>Pokud vám příkazy <code class="language-plaintext highlighter-rouge">idf.py ...</code> nefungují, ujistěte se, že používáte ESP-IDF Terminal a ne jen běžnou konzoli.</p>
+</blockquote>
+
+<p>Nyní musíme nastavit tzv. <strong>target</strong>. Toto slovo může mít v kontextu ESP-IDF více významů, v našem případě to ale vždy bude znamenat <strong>typ SoC, který používáme</strong>. V našem případě je to ESP32-C5 chip (via Builtin USB JTAG).</p>
+
+<p>V CLI je mírný problém, jelikož může vzniknout nesoulad mezi VSCode a ESP-IDF, proto je lepší místo příkazu nastavovat proměnnou prostředí (<em>environment variable</em>).</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">export </span><span class="nv">IDF_TARGET</span><span class="o">=</span>esp32c5
+<span class="c"># idf.py set-target esp32c5</span>
+</code></pre></div></div>
+
+<p>Nyní jsme připraveni přidat komponentu <a href="https://components.espressif.com/components/espressif/led_strip/versions/3.0.3">espressif/led_strip</a>. Jak již bylo řečeno, komponenta se postará o všechny potřebné ovladače pro náš LED “pásek” o jedné vestavěné diodě.</p>
+
+<ol>
+  <li><strong>Přidání komponenty</strong></li>
+</ol>
+
+<p><strong>GUI</strong></p>
+
+<ul>
+  <li>Otevřete <em>View -&gt; Command Pallete</em> (Ctrl + Shift + P nebo ⇧ + ⌘ + P) a do nově otevřené řádky napište <em>ESP-IDF: Show ESP Component Registry</em>. Nyní vyhledejte <strong>espressif/led_strip</strong> (vyhledávání může zabrat pár vteřin, kdy se zdánlivě nic neděje), klikněte na komponentu, vyberte správnou verzi (<strong>3.0.3</strong>) a klikněte na <em>Install</em>.</li>
+</ul>
+
+<p><img src="/C5/CZ/assignment-2/assets/ledstrip-1.webp" alt="Instalace led_strip komponenty 1" /></p>
+
+<p><em>Vyhledání komponenty</em></p>
+
+<p><img src="/C5/CZ/assignment-2/assets/ledstrip-2.webp" alt="Instalace led_strip komponenty 2" /></p>
+
+<p><em>Vyhledání komponenty</em></p>
+
+<p><strong>CLI</strong></p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>idf.py add-dependency <span class="s2">"espressif/led_strip^3.0.3"</span>
+</code></pre></div></div>
+
+<p>Můžete si všimnout, že v hlavním adresáři projektu (<strong>main</strong>) se vytvořil nový soubor s názvem <strong>idf_component.yml</strong>. Při prvním buildu se navíc vytvoří složka  <strong>managed_components</strong> a komponenta se do ní stáhne, pokud byla přidaná přes CLI. Pokud jste komponentu přidali přes GUI, vše se vytvoří i bez buildu.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Obsah idf_component.yml</span>
+<span class="na">dependencies</span><span class="pi">:</span>
+  <span class="s">espressif/led_strip</span><span class="pi">:</span> <span class="s2">"</span><span class="s">^3.0.3"</span>
+    <span class="na">idf</span><span class="pi">:</span> <span class="s1">'</span><span class="s">&gt;=5.0'</span>
+</code></pre></div></div>
+
+<p>Závislé komponenty můžete do tohoto souboru přidávat také ručně, bez použití jakýchkoli příkazů.</p>
+
+<p>Nyní se již vrhneme na samotné programování.</p>
+
+<ol>
+  <li><strong>Vytvoření funkce, která nakonfiguruje LED a ovladač RMT</strong></li>
+</ol>
+
+<p>Otevřeme si soubor <code class="language-plaintext highlighter-rouge">main.c</code>. Nejdříve musíme importovat potřebné knihovny…</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include "led_strip.h"
+#include "esp_log.h"
+#include "esp_err.h"
+</span></code></pre></div></div>
+
+<p>…deklarovat potřebné konstanty a logovací tag…</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// 10MHz resolution, 1 tick = 0.1us (led strip needs a high resolution)</span>
+<span class="cp">#define LED_STRIP_RMT_RES_HZ  (10 * 1000 * 1000)
+</span>
+<span class="k">static</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">TAG</span> <span class="o">=</span> <span class="s">"led_strip"</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>…a vytvořit kostru funkce pro konfiguraci. Funkce vrací handle LED “pásku”, který budeme používat v <code class="language-plaintext highlighter-rouge">app_main</code>:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">led_strip_handle_t</span> <span class="nf">configure_led</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">led_strip_handle_t</span> <span class="n">led_strip</span><span class="p">;</span>
+    <span class="c1">// Your code goes here</span>
+    <span class="k">return</span> <span class="n">led_strip</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>Následující kroky budete vpisovat do této funkce na místo komentáře <code class="language-plaintext highlighter-rouge">Your code goes here</code>.</p>
+
+<ol>
+  <li><strong>Konfigurace LED “pásku”</strong></li>
+</ol>
+
+<p>Použijeme strukturu <code class="language-plaintext highlighter-rouge">led_strip_config_t</code>. Pro <strong>ESP32-C5-DevKit-C</strong>, LED je typu WS2812.</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">led_strip_config_t</span> <span class="n">strip_config</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="c1">// Set the GPIO that the LED is connected</span>
+        <span class="p">.</span><span class="n">strip_gpio_num</span> <span class="o">=</span> <span class="mi">27</span><span class="p">,</span>
+        <span class="c1">// Set the number of connected LEDs, 1</span>
+        <span class="p">.</span><span class="n">max_leds</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="c1">// Set the pixel format of your LED strip</span>
+        <span class="p">.</span><span class="n">color_component_format</span> <span class="o">=</span> <span class="n">LED_STRIP_COLOR_COMPONENT_FMT_GRB</span><span class="p">,</span>
+        <span class="c1">// LED model</span>
+        <span class="p">.</span><span class="n">led_model</span> <span class="o">=</span> <span class="n">LED_MODEL_WS2812</span><span class="p">,</span>
+        <span class="c1">// In some cases, the logic is inverted</span>
+        <span class="p">.</span><span class="n">flags</span><span class="p">.</span><span class="n">invert_out</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
+    <span class="p">};</span>
+</code></pre></div></div>
+
+<ol>
+  <li><strong>Konfigurace RMT</strong></li>
+</ol>
+
+<p>Použijeme strukturu <code class="language-plaintext highlighter-rouge">led_strip_rmt_config_t</code>:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">led_strip_rmt_config_t</span> <span class="n">rmt_config</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="c1">// Set the clock source</span>
+        <span class="p">.</span><span class="n">clk_src</span> <span class="o">=</span> <span class="n">RMT_CLK_SRC_DEFAULT</span><span class="p">,</span>
+        <span class="c1">// Set the RMT counter clock</span>
+        <span class="p">.</span><span class="n">resolution_hz</span> <span class="o">=</span> <span class="n">LED_STRIP_RMT_RES_HZ</span><span class="p">,</span>
+        <span class="c1">// Set the memory block size (0 means let driver choose automatically)</span>
+        <span class="p">.</span><span class="n">mem_block_symbols</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="c1">// Set the DMA feature (not supported on the ESP32-C5)</span>
+        <span class="p">.</span><span class="n">flags</span><span class="p">.</span><span class="n">with_dma</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
+    <span class="p">};</span>
+</code></pre></div></div>
+
+<ol>
+  <li><strong>Vytvoření RMT device</strong></li>
+</ol>
+
+<p>Voláme <code class="language-plaintext highlighter-rouge">led_strip_new_rmt_device()</code> a zabalíme ji do <code class="language-plaintext highlighter-rouge">ESP_ERROR_CHECK()</code> — pokud inicializace selže, program se okamžitě zastaví s chybovou hláškou. Po úspěšné inicializaci zalogujeme zprávu pomocí <code class="language-plaintext highlighter-rouge">ESP_LOGI()</code> a vrátíme handle:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">led_strip_new_rmt_device</span><span class="p">(</span><span class="o">&amp;</span><span class="n">strip_config</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">rmt_config</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">led_strip</span><span class="p">));</span>
+    <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"LED strip initialized successfully"</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">led_strip</span><span class="p">;</span>
+</code></pre></div></div>
+
+<ol>
+  <li><strong>Vytvoření objektu pro LED “pásek”</strong></li>
+</ol>
+
+<p>Když máme funkci <code class="language-plaintext highlighter-rouge">configure_led()</code> hotovu, zavoláme ji v hlavní funkci <code class="language-plaintext highlighter-rouge">app_main</code> a uložíme vrácený handle do lokální proměnné:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">led_strip_handle_t</span> <span class="n">led_strip</span> <span class="o">=</span> <span class="n">configure_led</span><span class="p">();</span>
+</code></pre></div></div>
+
+<ol>
+  <li><strong>Nastavení barev</strong></li>
+</ol>
+
+<p>K nastavení barvy použijeme funkci <code class="language-plaintext highlighter-rouge">led_strip_set_pixel</code> s následujícími parametry:</p>
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">led_strip</code>: námi nakonfigurovaný objekt LED “pásku”</li>
+  <li><code class="language-plaintext highlighter-rouge">0</code>: index diody v pásku (jelikož máme pouze jednu, index bude vždy 0)</li>
+  <li><code class="language-plaintext highlighter-rouge">20</code>: červená (RED) složka s hodnotami mezi 0 a 255</li>
+  <li><code class="language-plaintext highlighter-rouge">0</code>: zelená (GREEN) složka s hodnotami mezi 0 a 255</li>
+  <li><code class="language-plaintext highlighter-rouge">0</code>: modrá (BLUE) složka s hodnotami mezi 0 a 255</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">led_strip_set_pixel</span><span class="p">(</span><span class="n">led_strip</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">));</span>
+</code></pre></div></div>
+
+<blockquote>
+  <p>Vyzkoušejte si různé hodnoty pro R,G,B kanály!</p>
+</blockquote>
+
+<ol>
+  <li><strong>Update hodnot LED “pásku”</strong></li>
+</ol>
+
+<p>Samotné nastavení hodnoty pixelu nestačí; aby se hodnoty nastavené v předchozích kroku projevily, je třeba celý “pásek” nejdříve obnovit:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">led_strip_refresh</span><span class="p">(</span><span class="n">led_strip</span><span class="p">));</span>
+    <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"LED strip set to red and refreshed"</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>Pokud chceme celý LED pásek vypnout, můžeme k tomu použít funkci <code class="language-plaintext highlighter-rouge">led_strip_clear(led_strip);</code>.</p>
+
+<ol>
+  <li><strong>Přeložení a odeslání kódu do desky</strong></li>
+</ol>
+
+<p>Když je náš kód kompletní, musíme ho nějakým způsobem dostat do naší desky. Celý proces se dá rozdělit do 4 kroků:</p>
+
+<ul>
+  <li>Určení <strong>targetu</strong>: konkrétní desky, kterou používáme. V záložce <em>ESP-IDF explorer</em> v části <em>Commands</em> vybereme možnost <strong>Set Espressif Device Target (IDF_TARGET)</strong>, zvolíme možnost <strong>esp32c5</strong> a v následné nabídce vybereme možnost <strong>ESP32-C5 chip (via builtin USB-JTAG)</strong>.</li>
+  <li><strong>Build</strong>: sestavení aplikace a vytvoření binárního souboru, který budeme nahrávat. Na stejném místě jako posledně klikneme na příkaz <strong>Build Project</strong>.</li>
+  <li>Výběr správného <strong>seriového portu</strong>, ke kterému je naše deska připojená. I seriový port nastavíme pomocí příkazu v <em>ESP-IDF Exploreru</em>, tentokrát pomocí <strong>Select Port to Use</strong>.</li>
+  <li><strong>Flash</strong>: nahrání binárního souboru na desku. K tomu nám poslouží stejnojmenný příkaz, který lze nalézt hned vedle ostatních. Pokud se nás VScode zeptá na “flash method”, vybereme “UART”.</li>
+</ul>
+
+<p>Pokud někdo omylem vybere špatnou flashovací metodu (např JTAG), stačí v souboru <code class="language-plaintext highlighter-rouge">.vscode/settings.json</code> manuálně upravit <code class="language-plaintext highlighter-rouge">"idf.flashType":</code> na  <code class="language-plaintext highlighter-rouge">"UART"</code>.</p>
+
+<blockquote>
+  <p>Všechny příkazy lze vyvolat také pomocí <em>Command Pallete</em>, kterou otevřete kombinací kláves Ctrl + Shift + P nebo ⇧ + ⌘ + P. Příkazy se ovšem jmenují občas trochu jinak (například místo <em>Select Serial Port</em> se příkaz jmenuje <em>ESP-IDF: Select Port to Use</em> ). Oba přístupy ale můžete libovolně kombinovat.</p>
+</blockquote>
+
+<h4 id="kompletní-kód">Kompletní kód</h4>
+
+<p>Níže naleznete kompletní a okomentovaný kód pro tento úkol:</p>
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include &lt;stdio.h&gt;
+#include "led_strip.h"
+#include "esp_log.h"
+#include "esp_err.h"
+</span>
+<span class="c1">// 10MHz resolution, 1 tick = 0.1us (led strip needs a high resolution)</span>
+<span class="cp">#define LED_STRIP_RMT_RES_HZ  (10 * 1000 * 1000)
+</span>
+<span class="k">static</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">TAG</span> <span class="o">=</span> <span class="s">"led_strip"</span><span class="p">;</span>
+
+<span class="n">led_strip_handle_t</span> <span class="nf">configure_led</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="c1">// LED strip general initialization, according to your led board design</span>
+    <span class="n">led_strip_config_t</span> <span class="n">strip_config</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="c1">// Set the GPIO that the LED is connected</span>
+        <span class="p">.</span><span class="n">strip_gpio_num</span> <span class="o">=</span> <span class="mi">27</span><span class="p">,</span>
+        <span class="c1">// Set the number of connected LEDs in the strip</span>
+        <span class="p">.</span><span class="n">max_leds</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="c1">// Set the pixel format of your LED strip</span>
+        <span class="p">.</span><span class="n">color_component_format</span> <span class="o">=</span> <span class="n">LED_STRIP_COLOR_COMPONENT_FMT_GRB</span><span class="p">,</span>
+        <span class="c1">// LED strip model</span>
+        <span class="p">.</span><span class="n">led_model</span> <span class="o">=</span> <span class="n">LED_MODEL_WS2812</span><span class="p">,</span>
+        <span class="c1">// In some cases, the logic is inverted</span>
+        <span class="p">.</span><span class="n">flags</span><span class="p">.</span><span class="n">invert_out</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
+    <span class="p">};</span>
+
+    <span class="c1">// LED strip backend configuration: RMT</span>
+    <span class="n">led_strip_rmt_config_t</span> <span class="n">rmt_config</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="c1">// Set the clock source</span>
+        <span class="p">.</span><span class="n">clk_src</span> <span class="o">=</span> <span class="n">RMT_CLK_SRC_DEFAULT</span><span class="p">,</span>
+        <span class="c1">// Set the RMT counter clock</span>
+        <span class="p">.</span><span class="n">resolution_hz</span> <span class="o">=</span> <span class="n">LED_STRIP_RMT_RES_HZ</span><span class="p">,</span>
+        <span class="c1">// Set the memory block size (0 means let driver choose automatically)</span>
+        <span class="p">.</span><span class="n">mem_block_symbols</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="c1">// Set the DMA feature (not supported on the ESP32-C5)</span>
+        <span class="p">.</span><span class="n">flags</span><span class="p">.</span><span class="n">with_dma</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
+    <span class="p">};</span>
+
+    <span class="c1">// LED Strip object handle</span>
+    <span class="n">led_strip_handle_t</span> <span class="n">led_strip</span><span class="p">;</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">led_strip_new_rmt_device</span><span class="p">(</span><span class="o">&amp;</span><span class="n">strip_config</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">rmt_config</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">led_strip</span><span class="p">));</span>
+    <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"LED strip initialized successfully"</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">led_strip</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">app_main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">led_strip_handle_t</span> <span class="n">led_strip</span> <span class="o">=</span> <span class="n">configure_led</span><span class="p">();</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">led_strip_set_pixel</span><span class="p">(</span><span class="n">led_strip</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">));</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">led_strip_refresh</span><span class="p">(</span><span class="n">led_strip</span><span class="p">));</span>
+    <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"LED strip set to red and refreshed"</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h4 id="předpokládaný-výsledek">Předpokládaný výsledek</h4>
+
+<p>Vestavěná LED by se měla rozsvítit červeně.</p>
+
+<blockquote>
+  <p><strong>Poznámka:</strong> <strong>Poznámka k BSP:</strong> Generická BSP komponenta <a href="https://components.espressif.com/components/espressif/esp_bsp_generic/">espressif/esp_bsp_generic</a> (verze <strong>1.2.0</strong>) v současné době ESP32-C5 nepodporuje, proto není přístup přes BSP v tomto workshopu obsažen. Pokud vás BSP zajímá, podívejte se na verzi workshopu pro ESP32-C6.</p>
+</blockquote>
+
+<h2 id="další-krok">Další krok</h2>
+
+<p>Budiž světlo! Když zvládáme základní práci s ESP a IDE, jsme připravení se připojit i k WiFi!</p>
+
+<p><a href="../assignment-3">Úkol 3: Připojení k Wi-Fi</a></p>
+
+      </section>
+    </div>
+  </body>
+</html>

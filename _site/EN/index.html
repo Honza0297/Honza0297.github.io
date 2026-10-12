@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/assets/css/style.css?v=2244da98f21a89a4a6f49a27d5ca89d075a17535">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup theme-color -->
+<!-- start theme color meta headers -->
+<meta name="theme-color" content="#151515">
+<meta name="msapplication-navbutton-color" content="#151515">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- end theme color meta headers -->
+
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+
+<!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>ESP-IDF and ESP32-C6 Workshop | Honza0297.github.io</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="ESP-IDF and ESP32-C6 Workshop" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="http://localhost:4000/EN/" />
+<meta property="og:url" content="http://localhost:4000/EN/" />
+<meta property="og:site_name" content="Honza0297.github.io" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2024-06-03T01:00:00+02:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="ESP-IDF and ESP32-C6 Workshop" />
+<script type="application/ld+json">
+{"datePublished":"2024-06-03T01:00:00+02:00","@type":"BlogPosting","headline":"ESP-IDF and ESP32-C6 Workshop","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/EN/"},"url":"http://localhost:4000/EN/","dateModified":"2024-06-03T01:00:00+02:00","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <a id="a-title" href="/">
+          <h1>Honza0297.github.io</h1>
+        </a>
+        <h2></h2>
+
+        <section id="downloads">
+          
+          <a href="https://github.com/Honza0297/Honza0297.github.io" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <h1 id="esp-idf-and-esp32-c6-workshop">ESP-IDF and ESP32-C6 Workshop</h1>
+
+<p>Welcome to the Espressif IoT Development Framework (ESP-IDF) workshop!</p>
+
+<h2 id="about-this-workshop">About this workshop</h2>
+
+<p>By participating in this workshop, you will gain a deeper understanding of how the Espressif IoT
+Development Framework (ESP-IDF) and ESP32-C6 <em>System on a Chip</em> (SoC) work. Through a number of
+hands-on assignments covering a range of essential skills, you will learn to create even better
+and more efficient IoT applications for your projects!</p>
+
+<p>Specifically, in this workshop we will go through the installation of the ESP-IDF framework.
+Then we will move on to creating our own project, which we will try to build, upload, and monitor
+using the ESP-IDF terminal. In the following chapters, we will learn how to connect to Wi-Fi using
+provisioning, perform OTA updates, communicate via ESP-NOW, and finally some tricks for working
+with the low-power core that is part of the ESP32-C6 SoC.</p>
+
+<blockquote>
+  <p>This workshop will certainly bring a lot of interesting information even to those who use other
+chips from the ESP32 family. However, keep in mind that not all chips support everything that
+ESP32-C6 supports (like dual-band Wi-Fi 6 or the ULP RISC-V core)!</p>
+</blockquote>
+
+<h2 id="companion-reference-projects">Companion reference projects</h2>
+
+<p>This workshop has companion ESP-IDF projects following the same assignment numbering. They are
+included in this repository under <a href="../../examples/C6/">examples/C6/</a> — browse them directly on
+GitHub or clone the repo to build locally. See <a href="../../examples/C6/README.md">examples/C6/README.md</a>
+for usage instructions.</p>
+
+<h2 id="agenda">Agenda</h2>
+
+<p>If you have met the <a href="#prerequisites">prerequisites</a>, we can start with the individual chapters:</p>
+
+<ul>
+  <li><a href="introduction/">Introduction: ESP-IDF Presentation</a>: Initial introduction to our ESP-IDF
+framework, followed by basic information about the ESP32-C6 chip and the devkit on which this
+tutorial will be demonstrated.</li>
+  <li><a href="assignment-1/">Assignment 1: Install ESP-IDF</a>: Installing the necessary tools to start
+development.</li>
+  <li><a href="assignment-2/">Assignment 2: Basics: Hello World &amp; LED</a>: Verifying hardware connectivity and
+introducing the ESP-IDF build lifecycle via the terminal.</li>
+  <li><a href="assignment-3/">Assignment 3: Wi-Fi &amp; Provisioning</a>: Understanding the Wi-Fi peripheral,
+dual-band capabilities, and connecting using BLE provisioning.</li>
+  <li><a href="assignment-4/">Assignment 4: OTA Updates</a>: Remote code updates using partition tables and HTTPS.</li>
+  <li><a href="assignment-5/">Assignment 5: ESP-NOW Chat Room</a>: Connectionless peer-to-peer communication.</li>
+  <li><a href="assignment-6/">Assignment 6: LP-core</a>: Demonstration of working with the low-power core for
+applications where energy consumption is an important factor.</li>
+</ul>
+
+<h2 id="prerequisites">Prerequisites</h2>
+
+<p>To follow this workshop, you will need both hardware and software equipment.</p>
+
+<p>Required hardware:</p>
+
+<ul>
+  <li>Computer running Linux, Windows or macOS operating system</li>
+  <li>ESP32-C6-DevKitC or ESP32-C6-DevKitM</li>
+  <li>USB cable (supporting power + data) compatible with the devkit above</li>
+  <li>Visual Studio Code</li>
+</ul>
+
+<p>Required software:</p>
+
+<ul>
+  <li><a href="https://code.visualstudio.com/download">Visual Studio Code</a></li>
+  <li><strong>ESP BLE Prov</strong> app:
+    <ul>
+      <li>Android: <a href="https://play.google.com/store/apps/details?id=com.espressif.provble&amp;pcampaignid=web_share">ESP BLE Prov</a></li>
+      <li>iOS: <a href="https://apps.apple.com/us/app/esp-ble-provisioning/id1473590141">ESP BLE Prov</a></li>
+    </ul>
+  </li>
+</ul>
+
+<h2 id="time-requirements">Time Requirements</h2>
+
+<p><strong>Estimated time: 120 min</strong></p>
+
+<h2 id="feedback">Feedback</h2>
+
+<p>If you have any feedback about the workshop, feel free to start a new
+<a href="https://github.com/espressif/developer-portal/discussions">discussion on GitHub</a>.</p>
+
+<h2 id="conclusion">Conclusion</h2>
+
+<p>We hope that the workshop will bring you knowledge that will serve as a solid foundation for your
+future projects. Thank you for the time and effort you devoted to the workshop, and we look forward
+to the projects you will create with our chips in the future!</p>
+
+<hr />
+
+<p><a href="../../">← Back to Workshop Portal</a></p>
+
+      </section>
+    </div>
+  </body>
+</html>

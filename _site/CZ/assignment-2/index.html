@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/assets/css/style.css?v=2244da98f21a89a4a6f49a27d5ca89d075a17535">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup theme-color -->
+<!-- start theme color meta headers -->
+<meta name="theme-color" content="#151515">
+<meta name="msapplication-navbutton-color" content="#151515">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- end theme color meta headers -->
+
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+
+<!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>Workshop: ESP-IDF a ESP32-C6 - Úkol 2 | Honza0297.github.io</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="Workshop: ESP-IDF a ESP32-C6 - Úkol 2" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="http://localhost:4000/CZ/assignment-2/" />
+<meta property="og:url" content="http://localhost:4000/CZ/assignment-2/" />
+<meta property="og:site_name" content="Honza0297.github.io" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2024-09-30T01:00:00+02:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Workshop: ESP-IDF a ESP32-C6 - Úkol 2" />
+<script type="application/ld+json">
+{"datePublished":"2024-09-30T01:00:00+02:00","@type":"BlogPosting","headline":"Workshop: ESP-IDF a ESP32-C6 - Úkol 2","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/CZ/assignment-2/"},"url":"http://localhost:4000/CZ/assignment-2/","dateModified":"2024-09-30T01:00:00+02:00","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <a id="a-title" href="/">
+          <h1>Honza0297.github.io</h1>
+        </a>
+        <h2></h2>
+
+        <section id="downloads">
+          
+          <a href="https://github.com/Honza0297/Honza0297.github.io" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <h2 id="úkol-2-vytváření-projektu-a-komponenty">Úkol 2: Vytváření projektu a Komponenty</h2>
+
+<hr />
+
+<p>V tomto úkolu si ukážeme, jak pracovat s koponenty (<strong>Components</strong>) a jak je používat ke zrychlení vývoje vašich projektů.</p>
+
+<p>Komponenty jsou podobné knihovnám (třeba těm z Arduino IDE); také obsahují různou přídavnou funkcionalitu, kterou byste v základním ESP-IDF nenašli. Pro příklad uveďme třeba různé drivery pro senzory, protokolové komponenty, nebo třeba BSP, <em>board support package</em>, o kterém ještě bude řeč. Některé komponenty jsou již přímou součástí některých ESP-IDF příkladů, je ale možné používat i externí komponenty díky modulární struktuře ESP-IDF.</p>
+
+<p>Díky využívání komponent se nejen zjednododušuje udržovatelnost projektu, také se výrazně zrychluje jeho vývoj. Díky komponentám také lze znovupoužít stejnou funkcionalitu napříč různými projekty.</p>
+
+<p>Pokud chcete vytvořit a publikovat vlastní komponentu (třeba pro váš specifický senzor), doporučujeme, abyste zhlédli talk <a href="https://www.youtube.com/watch?v=D86gQ4knUnc">DevCon23 - Developing, Publishing, and Maintaining Components for ESP-IDF</a> (v angličtině).</p>
+
+<p>Komponenty můžete prohledávat například přes platformu <a href="https://components.espressif.com">ESP Registry</a>.</p>
+
+<p>Využívání komponentů si ukážeme na novém projektu, kde si od základů napíšeme jednoduchou aplikaci, která rozbliká vestavěnou RGB LED s využitím komponenty pro LED pásky. Později si ukážeme, jak k tomu samému můžeme použít i komponentu BSP (<em>board support package</em>), která už byla zmíněná výše.</p>
+
+<h3 id="pracujeme-s-komponenty">Pracujeme s komponenty</h3>
+
+<p>Budeme používat následující dvě komponenty:</p>
+
+<ul>
+  <li>Komponentu pro RGB LED (WS2812) pásky, i když v našem případě bude LED “páskem” pouze jediná vestavěná LED připojená ke <code class="language-plaintext highlighter-rouge">GPIO8</code>.</li>
+  <li>Komponentu <a href="https://docs.espressif.com/projects/esp-idf/en/release-v5.2/esp32c6/api-reference/peripherals/rmt.html">Remote Control Transceiver</a> (RMT), kterou budeme kontrolovat tok dat do LED.</li>
+</ul>
+
+<ol>
+  <li><strong>Vytvoření nového projektu</strong></li>
+</ol>
+
+<p>Nový projekt lze vytvořit přes GUI i přes příkazovou řádku. Pro ty, kdo s terminálem (CLI) příliš nepracují, to může být poněkud děsivé, v budoucnu vám to ale pomůže například v situacích, kdy budete ESP-IDF používat s jiným IDE než VSCode (nebo úplně samostatně). Níže ale budou uvedené oba příklady.</p>
+
+<p><strong>GUI</strong></p>
+
+<p>Otevřeme ESP-IDF Explorer (ikonka Espressifu v taskbaru nebo přes <em>View -&gt; Open View -&gt; ESP-IDF: Explorer</em>) a vybereme příkaz <strong>New Project Wizard</strong> (může být schovaný v <strong>Advanced</strong> menu). Dále postupujeme podle obrázků:</p>
+
+<p><img src="./wizard0.png" alt="První krok tvorby nového projektu" title="Vytvoření nového projektu. Seriový port není podstatný, půjde změnit později." /></p>
+
+<p><img src="./wizard1.png" alt="Druhý krok tvorby nového projektu" title="V dalším kroku vybereme, na jaké šabloně náš projekt založíme. Zvolíme *get-started/hello_world* a vytvoříme projekt" /></p>
+
+<p>Po vytvoření projektu se vpravo dole objeví nenápadné okénko, které se vás zeptá, zda chcete otevřít nově vytvořený projekt v novém okně. Kliněte na “Yes”.</p>
+
+<p><strong>CLI</strong></p>
+
+<p>V ESP-IDF Exploreru v záložce <em>commands</em> vybereme ESP-IDF Terminal, který se otevře v dolní části obrazovky. Pro vytvoření nového projektu:</p>
+
+<ul>
+  <li>Vytvoříme a přejdeme do složky, ve které chceme mít náš projekt</li>
+  <li>Projekt vytvoříme</li>
+  <li>Přejdeme do něj</li>
+</ul>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">mkdir</span> ~/my-workshop-folder
+<span class="nb">cd</span> ~/my-workshop-folder
+idf.py create-project my-workshop-project
+<span class="nb">cd </span>my-workshop-project
+</code></pre></div></div>
+
+<blockquote>
+  <p>Pokud vám příkazy <code class="language-plaintext highlighter-rouge">idf.py ...</code> nefungují, ujistěte se, že používáte ESP-IDF Terminal a ne jen běžnou konzoli.</p>
+</blockquote>
+
+<p>Nyní musíme nastavit tzv. <strong>target</strong>. Toto slovo může mít v kontextu ESP-IDF více významů, v našem případě to ale vždy bude znamenat <strong>typ SoC, který používáme</strong>. V našem případě je to ESP32-C6 chip (via Builtin USB JTAG).</p>
+
+<p>V CLI je mírný problém, jelikož může vzniknout nesoulad mezi VSCode a ESP-IDF, proto je lepší místo příkazu nastavovat proměnnou prostředí (<em>environment variable</em>).</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">export </span><span class="nv">IDF_TARGET</span><span class="o">=</span>esp32c6
+<span class="c"># idf.py set-target esp32c6</span>
+</code></pre></div></div>
+
+<p>Nyní jsme připraveni přidat komponentu <a href="https://components.espressif.com/components/espressif/led_strip/versions/2.5.3">espressif/led_strip</a>. Jak již bylo řečeno, komponenta se postará o všechny potřebné ovladače pro náš LED “pásek” o jedné vestavěné diodě.</p>
+
+<ol>
+  <li><strong>Přidání komponenty</strong></li>
+</ol>
+
+<p><strong>GUI</strong></p>
+
+<ul>
+  <li>Otevřete <em>View -&gt; Command Pallete</em> (Ctrl + Shift + P nebo ⇧ + ⌘ + P) a do nově otevřené řádky napište <em>ESP-IDF: Show ESP Component Registry</em>. Nyní vyhledejte <strong>espressif/led_strip</strong> (vyhledávání může zabrat pár vteřin, kdy se zdánlivě nic neděje), klikněte na komponentu, vyberte správnou verzi (<strong>2.5.3</strong>) a klikněte na <em>Install</em>.</li>
+</ul>
+
+<p><strong>POZOR:</strong> Používáme starší verzi komponenty, nezapomeňte si ji vybrat z</p>
+
+<p><img src="./ledstrip0.png" alt="Instalace led_strip komponenty 1" title="Vyhledání komponenty" /></p>
+
+<p><img src="./ledstrip1.png" alt="Instalace led_strip komponenty 2" title="Instalace komponenty" /></p>
+
+<p><strong>CLI</strong></p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>idf.py add-dependency <span class="s2">"espressif/led_strip^2.5.3"</span>
+</code></pre></div></div>
+
+<p>Můžete si všimnout, že v hlavním adresáři projektu (<strong>main</strong>) se vytvořil nový soubor s názvem <strong>idf_component.yml</strong>. Při prvním buildu se navíc vytvoří složka  <strong>managed_components</strong> a komponenta se do ní stáhne, pokud byla přidaná přes CLI. Pokud jste komponentu přidali přes GUI, vše se vytvoří i bez buildu.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Obsah idf_component.yml</span>
+<span class="na">dependencies</span><span class="pi">:</span>
+  <span class="s">espressif/led_strip</span><span class="pi">:</span> <span class="s2">"</span><span class="s">^2.5.3"</span>
+  <span class="na">idf</span><span class="pi">:</span>
+    <span class="na">version</span><span class="pi">:</span> <span class="s2">"</span><span class="s">&gt;=4.4"</span>
+</code></pre></div></div>
+
+<p>Závislé komponenty můžete do tohoto souboru přidávat také ručně, bez použití jakýchkoli příkazů.</p>
+
+<p>Nyní se již vrhneme na samotné programování.</p>
+
+<ol>
+  <li><strong>Vytvoření funkce, která nakonfiguruje LED a ovladač RMT</strong></li>
+</ol>
+
+<p>Otevřeme si soubor <code class="language-plaintext highlighter-rouge">hello_world_main.c</code>. Nejdříve musíme importovat knihovnu <code class="language-plaintext highlighter-rouge">led_strip.h</code>…</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include "led_strip.h"
+</span></code></pre></div></div>
+
+<p>…deklarovat potřebné konstanty…</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// 10MHz resolution, 1 tick = 0.1us (led strip needs a high resolution)</span>
+<span class="cp">#define LED_STRIP_RMT_RES_HZ  (10 * 1000 * 1000)
+</span></code></pre></div></div>
+
+<p>…a vytvořit kostru funkce pro konfiguraci:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">led_strip_handle_t</span> <span class="n">led_strip</span><span class="p">;</span>
+<span class="kt">void</span> <span class="nf">configure_led</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="c1">// Your code goes here</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>Následující 3 kroky budete vpisovat do této funkce na místo komentáře <code class="language-plaintext highlighter-rouge">Your code goes here</code>.</p>
+
+<ol>
+  <li><strong>Konfigurace LED “pásku”</strong></li>
+</ol>
+
+<p>Použijeme strukturu <code class="language-plaintext highlighter-rouge">led_strip_config_t</code>. Pro <strong>ESP32-C6-DevKit-C</strong>, LED je typu WS2812.</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">led_strip_config_t</span> <span class="n">strip_config</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="c1">// Set the GPIO8 that the LED is connected</span>
+        <span class="p">.</span><span class="n">strip_gpio_num</span> <span class="o">=</span> <span class="mi">8</span><span class="p">,</span>
+        <span class="c1">// Set the number of connected LEDs, 1</span>
+        <span class="p">.</span><span class="n">max_leds</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="c1">// Set the pixel format of your LED strip</span>
+        <span class="p">.</span><span class="n">led_pixel_format</span> <span class="o">=</span> <span class="n">LED_PIXEL_FORMAT_GRB</span><span class="p">,</span>
+        <span class="c1">// LED model</span>
+        <span class="p">.</span><span class="n">led_model</span> <span class="o">=</span> <span class="n">LED_MODEL_WS2812</span><span class="p">,</span>
+        <span class="c1">// In some cases, the logic is inverted</span>
+        <span class="p">.</span><span class="n">flags</span><span class="p">.</span><span class="n">invert_out</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
+    <span class="p">};</span>
+</code></pre></div></div>
+
+<ol>
+  <li><strong>Konfigurace RMT</strong></li>
+</ol>
+
+<p>Použijeme strukturu <code class="language-plaintext highlighter-rouge">led_strip_rmt_config_t</code>:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">led_strip_rmt_config_t</span> <span class="n">rmt_config</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="c1">// Set the clock source</span>
+        <span class="p">.</span><span class="n">clk_src</span> <span class="o">=</span> <span class="n">RMT_CLK_SRC_DEFAULT</span><span class="p">,</span>
+        <span class="c1">// Set the RMT counter clock</span>
+        <span class="p">.</span><span class="n">resolution_hz</span> <span class="o">=</span> <span class="n">LED_STRIP_RMT_RES_HZ</span><span class="p">,</span>
+        <span class="c1">// Set the DMA feature (not supported on the ESP32-C6)</span>
+        <span class="p">.</span><span class="n">flags</span><span class="p">.</span><span class="n">with_dma</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
+    <span class="p">};</span>
+</code></pre></div></div>
+
+<ol>
+  <li><strong>Vytvoření RMT device</strong></li>
+</ol>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">led_strip_new_rmt_device</span><span class="p">(</span><span class="o">&amp;</span><span class="n">strip_config</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">rmt_config</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">led_strip</span><span class="p">);</span>
+</code></pre></div></div>
+
+<ol>
+  <li><strong>Vytvoření objektu pro LED “pásek”</strong></li>
+</ol>
+
+<p>Když máme funkci <code class="language-plaintext highlighter-rouge">configure_led()</code> hotovu, můžeme ji zavolat v hlavní funkci <code class="language-plaintext highlighter-rouge">app_main</code>.</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">configure_led</span><span class="p">();</span>
+</code></pre></div></div>
+
+<ol>
+  <li><strong>Nastavení barev</strong></li>
+</ol>
+
+<p>K nastavení barvy použijeme funkci <code class="language-plaintext highlighter-rouge">led_strip_set_pixel</code> s následujícími parametry:</p>
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">led_strip</code>: námi nakonfigurovaný objekt LED “pásku”</li>
+  <li><code class="language-plaintext highlighter-rouge">0</code>: index diody v pásku (jelikož máme pouze jednu, index bude vždy 0)</li>
+  <li><code class="language-plaintext highlighter-rouge">20</code>: červená (RED) složka s hodnotami mezi 0 a 255</li>
+  <li><code class="language-plaintext highlighter-rouge">0</code>: zelená (GREEN) složka s hodnotami mezi 0 a 255</li>
+  <li><code class="language-plaintext highlighter-rouge">0</code>: modrá (BLUE) složka s hodnotami mezi 0 a 255</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">led_strip_set_pixel</span><span class="p">(</span><span class="n">led_strip</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+</code></pre></div></div>
+
+<blockquote>
+  <p>Vyzkoušejte si různé hodnoty pro R,G,B kanály!</p>
+</blockquote>
+
+<ol>
+  <li><strong>Update hodnot LED “pásku”</strong></li>
+</ol>
+
+<p>Samotné nastavení hodnoty pixelu nestačí; aby se hodnoty nastavené v předchozích kroku projevily, je třeba celý “pásek” nejdříve obnovit:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">led_strip_refresh</span><span class="p">(</span><span class="n">led_strip</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>Pokud chceme celý LED pásek vypnout, můžeme k tomu použít funkci <code class="language-plaintext highlighter-rouge">led_strip_clear(led_strip);</code>.</p>
+
+<ol>
+  <li><strong>Přeložení a odeslání kódu do desky</strong></li>
+</ol>
+
+<p>Když je náš kód kompletní, musíme ho nějakým způsobem dostat do naší desky. Celý proces se dá rozdělit do 4 kroků:</p>
+
+<ul>
+  <li>Určení <strong>targetu</strong>: konkrétní desky, kterou používáme. V záložce <em>ESP-IDF explorer</em> v části <em>Commands</em> vybereme možnost <strong>Set Espressif Device Target (IDF_TARGET)</strong>, zvolíme možnost <strong>esp32c6</strong> a v následné nabídce vybereme možnost <strong>ESP32-C6 chip (via builtin USB-JTAG)</strong>.</li>
+  <li><strong>Build</strong>: sestavení aplikace a vytvoření binárního souboru, který budeme nahrávat. Na stejném místě jako posledně klikneme na příkaz <strong>Build Project</strong>.</li>
+  <li>Výběr správného <strong>seriového portu</strong>, ke kterému je naše deska připojená. I seriový port nastavíme pomocí příkazu v <em>ESP-IDF Exploreru</em>, tentokrát pomocí <strong>Select Port to Use</strong>.</li>
+  <li><strong>Flash</strong>: nahrání binárního souboru na desku. K tomu nám poslouží stejnojmenný příkaz, který lze nalézt hned vedle ostatních. Pokud se nás VScode zeptá na “flash method”, vybereme “UART”.</li>
+</ul>
+
+<p>Pokud někdo omylem vybere špatnou flashovací metodu (např JTAG), stačí v souboru <code class="language-plaintext highlighter-rouge">.vscode/settings.json</code> manuálně upravit <code class="language-plaintext highlighter-rouge">"idf.flashType":</code> na  <code class="language-plaintext highlighter-rouge">"UART"</code>.</p>
+
+<blockquote>
+  <p>Všechny příkazy lze vyvolat také pomocí <em>Command Pallete</em>, kterou otevřete kombinací kláves Ctrl + Shift + P nebo ⇧ + ⌘ + P. Příkazy se ovšem jmenují občas trochu jinak (například místo <em>Select Serial Port</em> se příkaz jmenuje <em>ESP-IDF: Select Port to Use</em> ). Oba přístupy ale můžete libovolně kombinovat.</p>
+</blockquote>
+
+<h4 id="kompletní-kód">Kompletní kód</h4>
+
+<p>Níže naleznete kompletní a okomentovaný kód pro tento úkol:</p>
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include &lt;stdio.h&gt;
+#include "led_strip.h"
+</span>
+<span class="c1">// 10MHz resolution, 1 tick = 0.1us (led strip needs a high resolution)</span>
+<span class="cp">#define LED_STRIP_RMT_RES_HZ  (10 * 1000 * 1000)
+</span>
+<span class="n">led_strip_handle_t</span> <span class="n">led_strip</span><span class="p">;</span>
+
+<span class="kt">void</span> <span class="nf">configure_led</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="c1">// LED strip general initialization, according to your led board design</span>
+    <span class="n">led_strip_config_t</span> <span class="n">strip_config</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="c1">// Set the GPIO that the LED is connected</span>
+        <span class="p">.</span><span class="n">strip_gpio_num</span> <span class="o">=</span> <span class="mi">8</span><span class="p">,</span>
+        <span class="c1">// Set the number of connected LEDs in the strip</span>
+        <span class="p">.</span><span class="n">max_leds</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="c1">// Set the pixel format of your LED strip</span>
+        <span class="p">.</span><span class="n">led_pixel_format</span> <span class="o">=</span> <span class="n">LED_PIXEL_FORMAT_GRB</span><span class="p">,</span>
+        <span class="c1">// LED strip model</span>
+        <span class="p">.</span><span class="n">led_model</span> <span class="o">=</span> <span class="n">LED_MODEL_WS2812</span><span class="p">,</span>
+        <span class="c1">// In some cases, the logic is inverted</span>
+        <span class="p">.</span><span class="n">flags</span><span class="p">.</span><span class="n">invert_out</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
+    <span class="p">};</span>
+
+    <span class="c1">// LED strip backend configuration: RMT</span>
+    <span class="n">led_strip_rmt_config_t</span> <span class="n">rmt_config</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="c1">// Set the clock source</span>
+        <span class="p">.</span><span class="n">clk_src</span> <span class="o">=</span> <span class="n">RMT_CLK_SRC_DEFAULT</span><span class="p">,</span>
+        <span class="c1">// Set the RMT counter clock</span>
+        <span class="p">.</span><span class="n">resolution_hz</span> <span class="o">=</span> <span class="n">LED_STRIP_RMT_RES_HZ</span><span class="p">,</span>
+        <span class="c1">// Set the DMA feature (not supported on the ESP32-C6)</span>
+        <span class="p">.</span><span class="n">flags</span><span class="p">.</span><span class="n">with_dma</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
+    <span class="p">};</span>
+
+    <span class="c1">// LED Strip object handle</span>
+    <span class="n">led_strip_new_rmt_device</span><span class="p">(</span><span class="o">&amp;</span><span class="n">strip_config</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">rmt_config</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">led_strip</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">app_main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">configure_led</span><span class="p">();</span>
+    <span class="n">led_strip_set_pixel</span><span class="p">(</span><span class="n">led_strip</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+    <span class="n">led_strip_refresh</span><span class="p">(</span><span class="n">led_strip</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h4 id="předpokládaný-výsledek">Předpokládaný výsledek</h4>
+
+<p>Vestavěná LED by se měla rozsvítit červeně.</p>
+
+<h3 id="část-druhá-totéž-ale-s-bsp">Část druhá: totéž, ale s BSP</h3>
+
+<p>V předchozí části jsme se naučili, jak přidávat do projektu komponenty. Teď si povíme něco o BSP - <em>board support package</em>.</p>
+
+<p>BSP je komponenta, který umožňuje jednoduše konfigurovat periferie (LED, tlačítko…) nějaké specifické vývojové desky. Konkrétně náš <strong>ESP32-C6-DevKit</strong> má jedno tlačítko připojené na <strong>GPIO9</strong> a jednu adresovatelnou LED na pinu <strong>GPIO8</strong>. V BSP pro tuhle konkrétní desku tedy budou tyhle dvě periferie nakonfigurované a pokud BSP použijeme, nemusíme se starat o konfiguraci pinů ani přidávat žádné další komponenty, které by se o dané periferie staraly.</p>
+
+<p>Příklad s naším kitem je pro BSP poměrně jednoduchý, ale existují i složitější vývojové desky, třeba <strong>ESP32-S3-BOX-3</strong>. BSP pro tento kit si tedy poradí se všemi periferiemi, jako jsou například displej, senzory, LED, ale také např. audio kodeky. Všechno v jediném balíčku a bez žádných dodatečných komponent.</p>
+
+<p>Výhody použití BSP jsou například:</p>
+
+<ul>
+  <li>Snadná počáteční konfigurace</li>
+  <li>Znovupoužití kódu napříč různými projekty se stejným vývojovým kitem</li>
+  <li>Snižuje množství chyb při konfiguraci desky</li>
+  <li>Zajišťuje, že všechny potřebné závislosti budou součástí projektu</li>
+</ul>
+
+<p>Kromě práce s BSP si také ukážeme, jak vytvořit projekt z nějakého příkladu, který je součásti komponenty, v našem případě komponenty <a href="https://components.espressif.com/components/espressif/esp_bsp_generic/">espressif/esp_bsp_generic</a> a příkladu <a href="https://components.espressif.com/components/espressif/esp_bsp_generic/versions/1.2.0/examples/generic_button_led?language=en">examples/generic_button_led</a>. Některé komponenty totiž obsahují i demonstrační projekty, které ukazují, jak takovou komponentu správně používat.</p>
+
+<p>Níže si popíšeme, jak na to:</p>
+
+<ol>
+  <li><strong>Vytvoření nového projektu z příkladu</strong></li>
+</ol>
+
+<p>Abychom vytvořili nový projekt z příkladu, který je součástí komponenty, musíme se na chvíli přesunout do ESP-IDF příkazové řádky. Tu vyvoláme buď jako příkaz <em>ESP-IDF: Open ESP-IDF Terminal</em> v <em>Command Palette</em> nebo najdeme příkaz <em>ESP-IDF Terminal</em> jako tlačítko v části <em>Commands</em> našeho <em>ESP-IDF Exploreru</em>. Abychom nevytvářeli projekt uvnitř projektu, posuneme se nejdříve o adresář výše.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd</span> ..
+idf.py create-project-from-example <span class="s2">"espressif/esp_bsp_generic^1.2.0:generic_button_led"</span>
+</code></pre></div></div>
+
+<p>Následně v novém okně projekt otevřeme (bude ve stejné složce jako ten předchozí) a <strong>zkontrolujeme</strong>, že soubor <code class="language-plaintext highlighter-rouge">main/idf_component.yaml</code> vypadá následovně:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">dependencies</span><span class="pi">:</span>
+  <span class="na">esp_bsp_generic</span><span class="pi">:</span>
+    <span class="na">version</span><span class="pi">:</span> <span class="s">^1.2.0</span>
+<span class="na">description</span><span class="pi">:</span> <span class="s">BSP Display example</span>
+</code></pre></div></div>
+
+<p>Pokud například nsedí verze BSP, změníme ji na <code class="language-plaintext highlighter-rouge">^1.2.0</code>, jak je na ukázce výše.</p>
+
+<ol>
+  <li><strong>Nastavení periferií</strong></li>
+</ol>
+
+<p>Jelikož používáme generické BSP, konfiguraci se přece jenom nevyhneme. Opět budeme pracovat s LED, musíme tedy nastavit, že naše deska disponuje jednou LED na pinu <strong>GPIO8</strong> (a ovládat ji budeme pomocí RMT).</p>
+
+<p>ESP-IDF používá ke knfiguraci projektů jazyk Kconfig a knihovnu kconfiglib. Konfigurační menu vyvoláme pomocí:</p>
+<ul>
+  <li>Příkazu <em>SDK Configuration Editor (menuconfig)</em> v <em>ESP-IDF: Explorer</em>-u</li>
+  <li>Vyhledáním tohoto příkazu v <em>Command Pallete</em> (Ctrl + Shift + P)</li>
+  <li>V CLI pomocí příkazu <code class="language-plaintext highlighter-rouge">idf.py menuconfig</code>, zavolaného v kořenové složce projektu.</li>
+</ul>
+
+<p>V konfiguračním menu přejděte do  <code class="language-plaintext highlighter-rouge">Component config</code> -&gt; <code class="language-plaintext highlighter-rouge">Board Support Package (generic)</code> a nastavte:</p>
+
+<ul>
+  <li><strong>Buttons</strong>
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">Number of buttons in BSP</code> na <code class="language-plaintext highlighter-rouge">0</code></li>
+    </ul>
+  </li>
+  <li><strong>LEDs</strong>
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">LED type</code> na <code class="language-plaintext highlighter-rouge">Addressable RGB LED</code></li>
+      <li><code class="language-plaintext highlighter-rouge">Number of LEDs in BSP</code> na <code class="language-plaintext highlighter-rouge">1</code></li>
+      <li><code class="language-plaintext highlighter-rouge">Addressable RGB LED GPIO</code> na <code class="language-plaintext highlighter-rouge">8</code></li>
+      <li><code class="language-plaintext highlighter-rouge">Addressable RGB LED backend peripheral</code> na <code class="language-plaintext highlighter-rouge">RMT</code></li>
+    </ul>
+  </li>
+</ul>
+
+<p>Na závěr nezapomeňte vše uložit tlačítkem <strong>Save</strong> vpravo nahoře.</p>
+
+<blockquote>
+  <p>Konfigurační menu vyvolané přes <code class="language-plaintext highlighter-rouge">idf.py menuconfig</code> se ovládá šipkami, do menu se vstupuje enterem a odchází se z něj pomocí baskspace. Závěrečné opuštění se provádí klávesou Escape a následným stiskem (Y) pro potvrzení uložení.</p>
+</blockquote>
+
+<ol>
+  <li><strong>Sestavení a nahrání: Build and flash</strong></li>
+</ol>
+
+<p>Do souboru <code class="language-plaintext highlighter-rouge">main.c</code> našeho BSP projektu zkopírujte kód níže:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include &lt;stdio.h&gt;
+#include "bsp/esp-bsp.h"
+#include "led_indicator_blink_default.h"
+</span>
+<span class="k">static</span> <span class="n">led_indicator_handle_t</span> <span class="n">leds</span><span class="p">[</span><span class="n">BSP_LED_NUM</span><span class="p">];</span>
+
+<span class="kt">void</span> <span class="nf">app_main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">bsp_led_indicator_create</span><span class="p">(</span><span class="n">leds</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="n">BSP_LED_NUM</span><span class="p">));</span>
+    <span class="n">led_indicator_set_rgb</span><span class="p">(</span><span class="n">leds</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">SET_IRGB</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mh">0x20</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">));</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>Nyní můžete projekt sestavit a nahrát do vaší vývojové desky.</p>
+
+<blockquote>
+  <p>Pokud se během sestavení vyskytl problém, zkuste vymazat build files:</p>
+
+  <p><code class="language-plaintext highlighter-rouge">idf.py fullclean</code></p>
+
+  <p>nebo <em>Full Clean</em> v <em>ESP-IDF Explorer</em>-u</p>
+</blockquote>
+
+<h4 id="extra-část">Extra část</h4>
+
+<p>Pokud si chcete vyzkoušet i další funkcionalitu z tohoto BSP, zkuste si spustit následující kód. Možná budete potřebovat upravit konfiguraci a přidat tlačítko.</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include &lt;stdio.h&gt;
+#include "bsp/esp-bsp.h"
+#include "esp_log.h"
+#include "led_indicator_blink_default.h"
+</span>
+<span class="k">static</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">TAG</span> <span class="o">=</span> <span class="s">"example"</span><span class="p">;</span>
+
+<span class="cp">#if CONFIG_BSP_LEDS_NUM &gt; 0
+</span><span class="k">static</span> <span class="kt">int</span> <span class="n">example_sel_effect</span> <span class="o">=</span> <span class="n">BSP_LED_BREATHE_SLOW</span><span class="p">;</span>
+<span class="k">static</span> <span class="n">led_indicator_handle_t</span> <span class="n">leds</span><span class="p">[</span><span class="n">BSP_LED_NUM</span><span class="p">];</span>
+<span class="cp">#endif
+</span>
+<span class="cp">#if CONFIG_BSP_BUTTONS_NUM &gt; 0
+</span><span class="k">static</span> <span class="kt">void</span> <span class="nf">btn_handler</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">button_handle</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">usr_data</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">int</span> <span class="n">button_pressed</span> <span class="o">=</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="n">usr_data</span><span class="p">;</span>
+    <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Button pressed: %d. "</span><span class="p">,</span> <span class="n">button_pressed</span><span class="p">);</span>
+
+<span class="cp">#if CONFIG_BSP_LEDS_NUM &gt; 0
+</span>    <span class="n">led_indicator_stop</span><span class="p">(</span><span class="n">leds</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">example_sel_effect</span><span class="p">);</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">button_pressed</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">example_sel_effect</span><span class="o">++</span><span class="p">;</span><span class="n">p</span><span class="err">ř</span><span class="n">i</span> <span class="n">podobn</span><span class="err">é</span> <span class="err">ú</span><span class="n">loze</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">example_sel_effect</span> <span class="o">&gt;=</span> <span class="n">BSP_LED_MAX</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">example_sel_effect</span> <span class="o">=</span> <span class="n">BSP_LED_ON</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Changed LED blink effect: %d."</span><span class="p">,</span> <span class="n">example_sel_effect</span><span class="p">);</span>
+    <span class="n">led_indicator_start</span><span class="p">(</span><span class="n">leds</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">example_sel_effect</span><span class="p">);</span>
+<span class="cp">#endif
+</span><span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">app_main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="cp">#if CONFIG_BSP_BUTTONS_NUM &gt; 0
+</span>    <span class="cm">/* Init buttons */</span>
+    <span class="n">button_handle_t</span> <span class="n">btns</span><span class="p">[</span><span class="n">BSP_BUTTON_NUM</span><span class="p">];</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">bsp_iot_button_create</span><span class="p">(</span><span class="n">btns</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="n">BSP_BUTTON_NUM</span><span class="p">));</span>
+    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">BSP_BUTTON_NUM</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">iot_button_register_cb</span><span class="p">(</span><span class="n">btns</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">BUTTON_PRESS_DOWN</span><span class="p">,</span> <span class="n">btn_handler</span><span class="p">,</span> <span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="p">)</span> <span class="n">i</span><span class="p">));</span>
+    <span class="p">}</span>
+<span class="cp">#endif
+</span>
+<span class="cp">#if CONFIG_BSP_LEDS_NUM &gt; 0
+</span>    <span class="cm">/* Init LEDs */</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">bsp_led_indicator_create</span><span class="p">(</span><span class="n">leds</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="n">BSP_LED_NUM</span><span class="p">));</span>
+
+    <span class="cm">/* Set LED color for first LED (only for addressable RGB LEDs) */</span>
+    <span class="n">led_indicator_set_rgb</span><span class="p">(</span><span class="n">leds</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">SET_IRGB</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mh">0x00</span><span class="p">,</span> <span class="mh">0x64</span><span class="p">,</span> <span class="mh">0x64</span><span class="p">));</span>
+
+    <span class="cm">/*
+    Start effect for each LED
+    (predefined: BSP_LED_ON, BSP_LED_OFF, BSP_LED_BLINK_FAST, BSP_LED_BLINK_SLOW, BSP_LED_BREATHE_FAST, BSP_LED_BREATHE_SLOW)
+    */</span>
+    <span class="n">led_indicator_start</span><span class="p">(</span><span class="n">leds</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">BSP_LED_BREATHE_SLOW</span><span class="p">);</span>
+<span class="cp">#endif
+</span><span class="p">}</span>
+</code></pre></div></div>
+
+<h2 id="další-krok">Další krok</h2>
+
+<p>Budiž světlo! Když zvládáme základní práci s ESP a IDE, jsme připravení se připojit i k WiFi!</p>
+
+<p><a href="../assignment-3">Úkol 3: Připojení k Wi-Fi</a></p>
+
+      </section>
+    </div>
+  </body>
+</html>

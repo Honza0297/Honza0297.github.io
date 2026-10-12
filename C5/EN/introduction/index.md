@@ -6,12 +6,7 @@ layout: default
 
 ## Lecture: ESP-IDF introduction
 
-> **Info:** Compared to the ESP32-C6 version of this workshop, the ESP32-C5 track intentionally
-> skips the dedicated protocols/TLS chapter. If you want to explore that topic in depth, use the
-> ESP-IDF examples, [esp-protocols](https://github.com/espressif/esp-protocols), or the ESP32-C6
-> workshop.
-
-The ESP-IDF (Espressif IoT Development Framework) is the official operating system and development
+The ESP-IDF (Espressif IoT Development Framework) is the official development
 framework for the ESP32 series of microcontrollers by Espressif Systems. It provides a
 comprehensive environment for building IoT applications with robust networking, security, and
 reliability features.

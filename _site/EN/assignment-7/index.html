@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/assets/css/style.css?v=2244da98f21a89a4a6f49a27d5ca89d075a17535">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup theme-color -->
+<!-- start theme color meta headers -->
+<meta name="theme-color" content="#151515">
+<meta name="msapplication-navbutton-color" content="#151515">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- end theme color meta headers -->
+
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+
+<!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>Workshop: ESP-IDF and ESP32-C6 - Assignment 7 | Honza0297.github.io</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="Workshop: ESP-IDF and ESP32-C6 - Assignment 7" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="http://localhost:4000/EN/assignment-7/" />
+<meta property="og:url" content="http://localhost:4000/EN/assignment-7/" />
+<meta property="og:site_name" content="Honza0297.github.io" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2024-09-30T01:00:00+02:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Workshop: ESP-IDF and ESP32-C6 - Assignment 7" />
+<script type="application/ld+json">
+{"datePublished":"2024-09-30T01:00:00+02:00","@type":"BlogPosting","headline":"Workshop: ESP-IDF and ESP32-C6 - Assignment 7","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/EN/assignment-7/"},"url":"http://localhost:4000/EN/assignment-7/","dateModified":"2024-09-30T01:00:00+02:00","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <a id="a-title" href="/">
+          <h1>Honza0297.github.io</h1>
+        </a>
+        <h2></h2>
+
+        <section id="downloads">
+          
+          <a href="https://github.com/Honza0297/Honza0297.github.io" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <h2 id="assignment-7-low-power-core">Assignment 7: Low Power Core</h2>
+
+<hr />
+<p>ESP32-C6 has two cores: a high-power (HP) core for standard use and a low-power (LP) core to minimize consumption.</p>
+
+<p>The second core is often called <strong>Ultra-Low-Power (ULP) core</strong> mainly in English and is designed primarily to handle simple tasks while the main (HP) core is in sleep mode, which significantly reduces electrical energy consumption. This function will certainly be appreciated by those who build battery-powered projects, where it’s not so much about performance, but rather about efficiency.</p>
+
+<p>The ULP core can function independently of the HP core, where it can, for example, collect data from sensors and perform their basic processing, or control GPIO, all with absolutely minimal consumption and a 20 MHz clock, which is comparable to, for example, an Arduino UNO. If you are interested in a complete overview of what this core can do, visit the documentation on <a href="https://docs.espressif.com/projects/esp-idf/en/latest/esp32c6/api-reference/system/ulp-lp-core.html#">ULP LP-Core Coprocessor Programming</a>.</p>
+
+<h3 id="ulp-core">(U)LP core</h3>
+
+<ul>
+  <li>32-bit RISC-V core @20MHz</li>
+  <li>16KB LP SRAM</li>
+  <li>RISC-V IMAC instruction set</li>
+  <li>Act as a co-processor</li>
+  <li>Access to peripherals, including
+    <ul>
+      <li>GPIO</li>
+      <li>UART</li>
+      <li>I2C</li>
+    </ul>
+  </li>
+</ul>
+
+<p>You can look at the DevCon23 talk <a href="https://www.youtube.com/watch?v=FpTwQlGtV0k">Low-Power Features of ESP32-C6: Target Wake Time + LP Core</a>, which covers some aspects of the LP core and TWT.</p>
+
+<h4 id="ulp-pinout">ULP pinout</h4>
+
+<p>The ULP core uses a specific set of pins. If you need to know the details, use the <a href="../introduction/#board-layout">pin layout</a> to know which pins will work with the LP core.</p>
+
+<h3 id="practical-work-with-lp-core">Practical work with LP core</h3>
+
+<p>In this demonstration, we will write code that blinks an LED. Once the “big” HP core will take care of the control, the second time the ULP core will do the same job. We will try to compare consumption at the same time.</p>
+
+<p><strong>For this assignment, we will create a new empty project.</strong> For more detailed instructions, visit chapter 1 (creating a project from the <code class="language-plaintext highlighter-rouge">hello world</code> example).</p>
+
+<ol>
+  <li><strong>Create a <code class="language-plaintext highlighter-rouge">main/ulp</code> folder and a <code class="language-plaintext highlighter-rouge">main.c</code> file inside</strong></li>
+</ol>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include &lt;stdint.h&gt;
+#include &lt;stdbool.h&gt;
+#include "ulp_lp_core.h"
+#include "ulp_lp_core_utils.h"
+#include "ulp_lp_core_gpio.h"
+#include "ulp_lp_core_interrupts.h"
+</span>
+<span class="cp">#define WAKEUP_PIN LP_IO_NUM_0
+#define RED_PIN    LP_IO_NUM_4
+#define GREEN_PIN  LP_IO_NUM_5
+</span>
+<span class="k">static</span> <span class="kt">uint32_t</span> <span class="n">wakeup_count</span><span class="p">;</span>
+<span class="kt">uint32_t</span> <span class="n">start_toggle</span><span class="p">;</span>
+
+<span class="kt">void</span> <span class="n">LP_CORE_ISR_ATTR</span> <span class="nf">ulp_lp_core_lp_io_intr_handler</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">ulp_lp_core_gpio_clear_intr_status</span><span class="p">();</span>
+    <span class="n">wakeup_count</span><span class="o">++</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">main</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="cm">/* Register interrupt for the wakeup pin */</span>
+    <span class="n">ulp_lp_core_intr_enable</span><span class="p">();</span>
+    <span class="n">ulp_lp_core_gpio_intr_enable</span><span class="p">(</span><span class="n">WAKEUP_PIN</span><span class="p">,</span> <span class="n">LP_IO_INTR_POSEDGE</span><span class="p">);</span>
+
+    <span class="kt">int</span> <span class="n">level</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+        <span class="cm">/* Toggle the Red LED GPIO */</span>
+        <span class="n">ulp_lp_core_gpio_set_level</span><span class="p">(</span><span class="n">GREEN_PIN</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+        <span class="n">ulp_lp_core_gpio_set_level</span><span class="p">(</span><span class="n">RED_PIN</span><span class="p">,</span> <span class="n">level</span><span class="p">);</span>
+        <span class="n">level</span> <span class="o">=</span> <span class="n">level</span> <span class="o">?</span> <span class="mi">0</span> <span class="o">:</span> <span class="mi">1</span><span class="p">;</span>
+        <span class="n">ulp_lp_core_delay_us</span><span class="p">(</span><span class="mi">1000000</span><span class="p">);</span>
+
+        <span class="cm">/* Wakeup the main processor after 4 toggles of the button */</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">wakeup_count</span> <span class="o">&gt;=</span> <span class="mi">4</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">ulp_lp_core_gpio_set_level</span><span class="p">(</span><span class="n">RED_PIN</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+            <span class="n">ulp_lp_core_wakeup_main_processor</span><span class="p">();</span>
+            <span class="n">wakeup_count</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="cm">/* ulp_lp_core_halt() is called automatically when main exits */</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>In this code, we enable interrupts on the LP core using <code class="language-plaintext highlighter-rouge">ulp_lp_core_intr_enable</code>, while setting <code class="language-plaintext highlighter-rouge">GPIO0</code> as an input pin, activated by a rising edge (signal transition from LOW to HIGH state). We use the <code class="language-plaintext highlighter-rouge">ulp_lp_core_gpio_intr_enable</code> function to connect the pin and interrupt. The <em>Wake up counter</em> will be handled by the <em>interrupt handler</em> <code class="language-plaintext highlighter-rouge">ulp_lp_core_lp_io_intr_handler</code>.</p>
+
+<p>Now a loop for blinking and <em>wake up counter</em> starts. The value of our GPIO is set by the <code class="language-plaintext highlighter-rouge">ulp_lp_core_gpio_set_level</code> function. If the number of button presses is 4 or more, the HP core is started by the <code class="language-plaintext highlighter-rouge">ulp_lp_core_wakeup_main_processor</code> function.</p>
+
+<ol>
+  <li><strong>Changes in <code class="language-plaintext highlighter-rouge">main/CMakeLists.txt</code></strong></li>
+</ol>
+
+<p>In CMake we need to set the ULP application name, source files and more…</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code># Set usual component variables
+set(app_sources "hello_world_main.c")
+idf_component_register(SRCS ${app_sources}
+                       REQUIRES ulp
+                       WHOLE_ARCHIVE)
+#
+# ULP support additions to component CMakeLists.txt.
+#
+# 1. The ULP app name must be unique (if multiple components use ULP).
+set(ulp_app_name ulp_${COMPONENT_NAME})
+#
+# 2. Specify all C and Assembly source files.
+#    Files should be placed into a separate directory (in this case, ulp/),
+#    which should not be added to COMPONENT_SRCS.
+set(ulp_sources "ulp/main.c")
+#
+# 3. List all the component source files which include automatically
+#    generated ULP export file, ${ulp_app_name}.h:
+set(ulp_exp_dep_srcs ${app_sources})
+#
+# 4. Call function to build ULP binary and embed in project using the argument
+#    values above.
+ulp_embed_binary(${ulp_app_name} "${ulp_sources}" "${ulp_exp_dep_srcs}")
+
+</code></pre></div></div>
+
+<ol>
+  <li><strong>Code in <code class="language-plaintext highlighter-rouge">main/hello_world_main.c</code> for HP core</strong></li>
+</ol>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include &lt;stdio.h&gt;
+#include "esp_sleep.h"
+#include "driver/gpio.h"
+#include "driver/rtc_io.h"
+#include "ulp_lp_core.h"
+#include "ulp_main.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+</span>
+<span class="k">extern</span> <span class="k">const</span> <span class="kt">uint8_t</span> <span class="n">ulp_main_bin_start</span><span class="p">[]</span> <span class="n">asm</span><span class="p">(</span><span class="s">"_binary_ulp_main_bin_start"</span><span class="p">);</span>
+<span class="k">extern</span> <span class="k">const</span> <span class="kt">uint8_t</span> <span class="n">ulp_main_bin_end</span><span class="p">[]</span>   <span class="n">asm</span><span class="p">(</span><span class="s">"_binary_ulp_main_bin_end"</span><span class="p">);</span>
+
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">init_ulp_program</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
+
+<span class="cp">#define WAKEUP_PIN  GPIO_NUM_0
+#define RED_PIN     GPIO_NUM_4
+#define GREEN_PIN   GPIO_NUM_5
+</span>
+<span class="kt">void</span> <span class="nf">app_main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="cm">/* If user is using USB-serial-jtag then idf monitor needs some time to
+    *  re-connect to the USB port. We wait 1 sec here to allow for it to make the reconnection
+    *  before we print anything. Otherwise the chip will go back to sleep again before the user
+    *  has time to monitor any output.
+    */</span>
+    <span class="n">vTaskDelay</span><span class="p">(</span><span class="n">pdMS_TO_TICKS</span><span class="p">(</span><span class="mi">1000</span><span class="p">));</span>
+
+    <span class="cm">/* ULP caused wakeup */</span>
+    <span class="n">esp_sleep_wakeup_cause_t</span> <span class="n">cause</span> <span class="o">=</span> <span class="n">esp_sleep_get_wakeup_cause</span><span class="p">();</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">cause</span> <span class="o">==</span> <span class="n">ESP_SLEEP_WAKEUP_ULP</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">"ULP woke up the main CPU! </span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
+        <span class="n">ulp_lp_core_stop</span><span class="p">();</span>
+    <span class="p">}</span>
+
+    <span class="n">printf</span><span class="p">(</span><span class="s">"In active mode</span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">"Long press the wake button to put the chip to sleep and run the ULP</span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
+
+    <span class="cm">/* Initialize selected GPIOs */</span>
+    <span class="n">rtc_gpio_init</span><span class="p">(</span><span class="n">WAKEUP_PIN</span><span class="p">);</span>
+    <span class="n">rtc_gpio_set_direction</span><span class="p">(</span><span class="n">WAKEUP_PIN</span><span class="p">,</span> <span class="n">RTC_GPIO_MODE_INPUT_ONLY</span><span class="p">);</span>
+    <span class="n">rtc_gpio_pulldown_dis</span><span class="p">(</span><span class="n">WAKEUP_PIN</span><span class="p">);</span>
+    <span class="n">rtc_gpio_pullup_dis</span><span class="p">(</span><span class="n">WAKEUP_PIN</span><span class="p">);</span>
+
+    <span class="n">rtc_gpio_init</span><span class="p">(</span><span class="n">RED_PIN</span><span class="p">);</span>
+    <span class="n">rtc_gpio_set_direction</span><span class="p">(</span><span class="n">RED_PIN</span><span class="p">,</span> <span class="n">RTC_GPIO_MODE_OUTPUT_ONLY</span><span class="p">);</span>
+    <span class="n">rtc_gpio_pulldown_dis</span><span class="p">(</span><span class="n">RED_PIN</span><span class="p">);</span>
+    <span class="n">rtc_gpio_pullup_dis</span><span class="p">(</span><span class="n">RED_PIN</span><span class="p">);</span>
+
+    <span class="n">rtc_gpio_init</span><span class="p">(</span><span class="n">GREEN_PIN</span><span class="p">);</span>
+    <span class="n">rtc_gpio_set_direction</span><span class="p">(</span><span class="n">GREEN_PIN</span><span class="p">,</span> <span class="n">RTC_GPIO_MODE_OUTPUT_ONLY</span><span class="p">);</span>
+    <span class="n">rtc_gpio_pulldown_dis</span><span class="p">(</span><span class="n">GREEN_PIN</span><span class="p">);</span>
+    <span class="n">rtc_gpio_pullup_dis</span><span class="p">(</span><span class="n">GREEN_PIN</span><span class="p">);</span>
+
+    <span class="kt">int</span> <span class="n">gpio_level</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">previous_gpio_level</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">cnt</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+    <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+        <span class="cm">/* Toggle the Green LED GPIO */</span>
+        <span class="n">rtc_gpio_set_level</span><span class="p">(</span><span class="n">RED_PIN</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+        <span class="n">rtc_gpio_set_level</span><span class="p">(</span><span class="n">GREEN_PIN</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+        <span class="n">vTaskDelay</span><span class="p">(</span><span class="n">pdMS_TO_TICKS</span><span class="p">(</span><span class="mi">1000</span><span class="p">));</span>
+        <span class="n">rtc_gpio_set_level</span><span class="p">(</span><span class="n">GREEN_PIN</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+        <span class="n">vTaskDelay</span><span class="p">(</span><span class="n">pdMS_TO_TICKS</span><span class="p">(</span><span class="mi">1000</span><span class="p">));</span>
+
+        <span class="cm">/* Read the wakeup pin continuously */</span>
+        <span class="n">gpio_level</span> <span class="o">=</span> <span class="n">rtc_gpio_get_level</span><span class="p">(</span><span class="n">WAKEUP_PIN</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">gpio_level</span> <span class="o">!=</span> <span class="n">previous_gpio_level</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">previous_gpio_level</span> <span class="o">=</span> <span class="n">gpio_level</span><span class="p">;</span>
+            <span class="n">cnt</span><span class="o">++</span><span class="p">;</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">cnt</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+                <span class="n">rtc_gpio_set_level</span><span class="p">(</span><span class="n">GREEN_PIN</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+                <span class="n">cnt</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+                <span class="k">break</span><span class="p">;</span>
+                <span class="cm">/* break and run the LP core code */</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="cm">/* Load and run the ULP program */</span>
+    <span class="n">init_ulp_program</span><span class="p">();</span>
+
+    <span class="cm">/* Go back to sleep, only the ULP will run */</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">"Entering in deep sleep</span><span class="se">\n\n</span><span class="s">"</span><span class="p">);</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">"Press the wake button at least 3 or 4 times to wakeup the main CPU again</span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
+    <span class="n">vTaskDelay</span><span class="p">(</span><span class="mi">10</span><span class="p">);</span>
+
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span> <span class="n">esp_sleep_enable_ulp_wakeup</span><span class="p">());</span>
+
+    <span class="n">esp_deep_sleep_start</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">init_ulp_program</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">esp_err_t</span> <span class="n">err</span> <span class="o">=</span> <span class="n">ulp_lp_core_load_binary</span><span class="p">(</span><span class="n">ulp_main_bin_start</span><span class="p">,</span> <span class="p">(</span><span class="n">ulp_main_bin_end</span> <span class="o">-</span> <span class="n">ulp_main_bin_start</span><span class="p">));</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">err</span><span class="p">);</span>
+
+    <span class="cm">/* Start the program */</span>
+    <span class="n">ulp_lp_core_cfg_t</span> <span class="n">cfg</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="p">.</span><span class="n">wakeup_source</span> <span class="o">=</span> <span class="n">ULP_LP_CORE_WAKEUP_SOURCE_HP_CPU</span><span class="p">,</span>
+    <span class="p">};</span>
+
+    <span class="n">err</span> <span class="o">=</span> <span class="n">ulp_lp_core_run</span><span class="p">(</span><span class="o">&amp;</span><span class="n">cfg</span><span class="p">);</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">err</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ol>
+  <li><strong>Enabling LP core in configuration</strong></li>
+</ol>
+
+<p>To enable the LP core and be able to compile for it, we need to set the following configuration parameters in the project configuration.
+For example, by creating <code class="language-plaintext highlighter-rouge">sdkconfig.defaults</code> with the following content:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code># Enable ULP
+CONFIG_ULP_COPROC_ENABLED=y
+CONFIG_ULP_COPROC_TYPE_LP_CORE=y
+CONFIG_ULP_COPROC_RESERVE_MEM=4096
+# Set log level to Warning to produce clean output
+CONFIG_BOOTLOADER_LOG_LEVEL_WARN=y
+CONFIG_BOOTLOADER_LOG_LEVEL=2
+CONFIG_LOG_DEFAULT_LEVEL_WARN=y
+CONFIG_LOG_DEFAULT_LEVEL=2
+</code></pre></div></div>
+
+<ol>
+  <li><strong>HW setup</strong></li>
+</ol>
+
+<p>For this example, you will also need 2 LEDs and one button connected to the following pins:</p>
+
+<ul>
+  <li>Red LED -&gt; <strong>GPIO4</strong></li>
+  <li>Green LED -&gt; <strong>GPIO5</strong></li>
+  <li>Button (pull-down, active high) -&gt; <strong>GPIO0</strong>. In other words, we connect one “side” of the button to <strong>3.3V</strong> and the other to <strong>GPIO0</strong>. Additionally, we connect a resistor between <strong>GPIO0</strong> and <strong>GND</strong>.</li>
+</ul>
+
+<p><img src="./cudlik.png" alt="Button schema" title="Button schema" /></p>
+
+<ol>
+  <li><strong>Build, flash, and monitor output from the board</strong></li>
+</ol>
+
+<p>Check that you are using the USB port labeled <strong>UART</strong> for uploading and subsequent monitoring of output. You won’t break anything by erasing the flash memory (command <em>Erase Flash</em>) before we upload this example.</p>
+
+<h4 id="what-should-happen">What should happen…</h4>
+
+<p>After flashing, the green LED should start blinking every second with the following output:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In active mode
+Long press the wake button to put the chip to sleep and run the ULP
+</code></pre></div></div>
+
+<p>If we press and hold the button for a long time, the LP core should be activated and the HP core should switch to <em>deep sleep mode</em>. The red LED starts blinking at a frequency of one second with the following output:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Entering in deep sleep
+Press the wake button at least 3 or 4 times to wakeup the main CPU again
+</code></pre></div></div>
+
+<p>Waking up from <em>deep sleep mode</em> is done by clicking the button four times:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ULP woke up the main CPU!
+In active mode
+Long press the wake button to put the chip to sleep and run the ULP
+</code></pre></div></div>
+
+<p>For power consumption measurement, we use the exposed J5 connector and a suitable tool, such as <a href="https://www.joulescope.com/">JouleScope</a> <a href="https://www.nordicsemi.com/Products/Development-hardware/Power-Profiler-Kit-2">PPK2</a>.</p>
+
+<p><strong>LED blinking with HP core</strong></p>
+
+<p>Using the “big” HP core, the average consumption over 10 seconds is approximately <strong>22.32mA</strong>.</p>
+
+<p><img src="../assets/ulp-hp-core.webp" /></p>
+
+<p><strong>LED blinking with LP core</strong></p>
+
+<p>But if we transfer the application to the LP core, we immediately drop by an order of magnitude: <strong>2.97mA</strong>.</p>
+
+<p><img src="../assets/ulp-lp-core.webp" /></p>
+
+<p>When we switch cores, we achieve savings of (up to) <strong>86.7%</strong> for the same task. However, the example is only indicative and the actual values will of course differ.</p>
+
+<p>More examples with LP core (in English):</p>
+
+<ul>
+  <li><a href="https://github.com/espressif/esp-idf/tree/master/examples/system/ulp/lp_core/gpio">LP Core simple example with GPIO Polling</a></li>
+  <li><a href="https://github.com/espressif/esp-idf/tree/master/examples/system/ulp/lp_core/gpio_intr_pulse_counter">LP Core Pulse Counting Example</a></li>
+  <li><a href="https://github.com/espressif/esp-idf/tree/master/examples/system/ulp/lp_core/interrupt">LP-Core example with interrupt triggered from HP-Core</a></li>
+  <li><a href="https://github.com/espressif/esp-idf/tree/master/examples/system/ulp/lp_core/lp_i2c">LP I2C Example</a></li>
+  <li><a href="https://github.com/espressif/esp-idf/tree/master/examples/system/ulp/lp_core/lp_uart">LP UART Examples</a></li>
+</ul>
+
+<h2 id="conclusion">Conclusion</h2>
+
+<p>Thank you very much for participating in our workshop and we hope it brought you something useful!</p>
+
+<p>During the workshop, we went through several different topics:</p>
+
+<ul>
+  <li><strong>Assignment 1</strong>: We successfully installed ESP-IDF and learned the basics of its use.</li>
+  <li><strong>Assignment 2</strong>: We learned how to create a new project, what components are and how to work with them.</li>
+  <li><strong>Assignment 3</strong>: We connected to Wi-Fi, which is probably the most important step in the entire IoT world.</li>
+  <li><strong>Assignment 4</strong>: We tried NVS (Non-Volatile Storage) and working with persistent data. We also talked about what a <em>partition table</em> is and how to modify it.</li>
+  <li><strong>Assignment 5</strong>: We tried <em>Wi-Fi provisioning</em> and learned how to take Wi-Fi configuration on our devices to the next level.</li>
+  <li><strong>Assignment 6</strong>: We dove into some of the protocols that ESP32-C6 supports, including TLS certificates for secure communication.</li>
+  <li><strong>Assignment 7</strong>: We tried the LP core and learned how to control consumption.</li>
+</ul>
+
+<p>Even though we went through several quite diverse topics, we barely scratched the surface. Both ESP32 and ESP-IDF offer much more. However, we all hope that with this workshop we have given you a solid foundation on which you will be able to continue working and developing your projects on your own.</p>
+
+<p>Thank you once again for participating and we look forward to your projects!</p>
+
+      </section>
+    </div>
+  </body>
+</html>

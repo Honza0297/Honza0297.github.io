@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/assets/css/style.css?v=2244da98f21a89a4a6f49a27d5ca89d075a17535">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup theme-color -->
+<!-- start theme color meta headers -->
+<meta name="theme-color" content="#151515">
+<meta name="msapplication-navbutton-color" content="#151515">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- end theme color meta headers -->
+
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+
+<!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>Workshop: ESP-IDF a ESP32-C5 | Honza0297.github.io</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="Workshop: ESP-IDF a ESP32-C5" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="http://localhost:4000/C5/CZ/" />
+<meta property="og:url" content="http://localhost:4000/C5/CZ/" />
+<meta property="og:site_name" content="Honza0297.github.io" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2024-09-30T01:00:00+02:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Workshop: ESP-IDF a ESP32-C5" />
+<script type="application/ld+json">
+{"datePublished":"2024-09-30T01:00:00+02:00","@type":"BlogPosting","headline":"Workshop: ESP-IDF a ESP32-C5","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/C5/CZ/"},"url":"http://localhost:4000/C5/CZ/","dateModified":"2024-09-30T01:00:00+02:00","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <a id="a-title" href="/">
+          <h1>Honza0297.github.io</h1>
+        </a>
+        <h2></h2>
+
+        <section id="downloads">
+          
+          <a href="https://github.com/Honza0297/Honza0297.github.io" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <p>Vítejte na workshopu o Espressif IoT Development frameworku (ESP-IDF)!</p>
+
+<h2 id="o-tomto-workshopu">O tomto workshopu</h2>
+
+<p>Účastí na tomto workshopu získáte hlubší pochopení toho, jak funguje Espressif IoT Development Framework (ESP-IDF) a ESP32-C5 <em>System on a Chip</em> (SoC). Díky mnoha praktickým úkolům, které vám pomůžou s různými základními dovednosti potřebnými pro programování (nejen) ESP32-C5, se naučíte vytvářet ještě lepší a efektivnější IoT aplikace pro vaše projekty!</p>
+
+<p>Konkrétně si v tomto workshopu projdeme instalaci frameworku ESP-IDF a ESP-IDF pluginu do VSCode. Poté se přesuneme k tvorbě vlastního projektu, který si zkusíme sestavit, nahrát a debugovat. V dalších kapitolách se naučíme, jak ve vašich projektech používat komponenty, blikat s adresovatelnou LED, konfigurovat ESP-IDF, připojit se k Wi-Fi a nakonec i pár triků pro práci s low-power jádrem, které je součástí SoC ESP32-C5.</p>
+
+<blockquote>
+  <p>Tento workshop jistě přinese mnoho zajímavých informací i těm, kteří využívají ostatní čipy z rodiny ESP32. Mějte ovšem na paměti, že ne všechny čipy podporují všechno, co podporuje ESP32-C5!</p>
+</blockquote>
+
+<h2 id="doprovodné-referenční-projekty--companion-reference-projects">Doprovodné referenční projekty / Companion reference projects</h2>
+
+<p>V repozitáři jsou i malé ESP-IDF projekty se stejným číslováním úkolů jako tento workshop (plus volitelný příklad protokolů/TLS). Jsou součástí tohoto repozitáře ve složce <a href="../../examples/C5/">examples/C5/</a> — procházejte je přímo na GitHubu nebo naklonujte repozitář a spusťte <code class="language-plaintext highlighter-rouge">build-all.sh</code>. Popis je v <a href="/examples/C5/">examples/C5/README.md</a>.</p>
+
+<h2 id="agenda">Agenda</h2>
+
+<p>Pokud jste splnili <a href="#prerekvizity">prerekvizity</a> můžeme se pustit do jednotlivých kapitol:</p>
+
+<ul>
+  <li><a href="introduction/">Úvod: Představení ESP-IDF</a>: Úvodní představení našeho frameworku ESP-IDF, následované základními informacemi o čipu ESP32-C5 a devkitu, na kterém bude tento tutoriál demonstrovaný.</li>
+  <li><a href="assignment-1">Úkol 1: Instalace ESP-IDF a VSCode</a>: Instalace nezbytných nástrojů pro začátek vývoje.</li>
+  <li><a href="assignment-2">Úkol 2: Vytvoření nového projektu s Komponenty</a>: Jak efektivně vytvořit, strukturovat a organizovat projekt.</li>
+  <li><a href="assignment-3">Úkol 3: Připojení k Wi-Fi</a>: Naprostý základ pro většinu IoT projektů.</li>
+  <li><a href="assignment-4">Úkol 4: Zkouška NVS (Non-Volatile Storage)</a>: Ukládání perzistentních dat.</li>
+  <li><a href="assignment-5">Úkol 5: Wi-Fi provisioning</a>: Podrobnější práce s Wi-Fi: nastavování a konfigurace Wi-Fi sítí.</li>
+  <li><a href="assignment-6">Úkol 6: Experimenty s low-power core</a>: Ukázka práce s low-power core pro aplikace, kde je spotřeba energie důležitým faktorem.</li>
+</ul>
+
+<h2 id="prerekvizity">Prerekvizity</h2>
+
+<p>Abyste zvládli tento workshop, budete potřebovat jak hardwarové, tak softwarové vybavení.</p>
+
+<p>Potřebný hardware:</p>
+
+<ul>
+  <li>Počítač s operačním systémem Linux, Windows nebo macOS</li>
+  <li>ESP32-C5-DevKitC nebo ESP32-C5-DevKitM</li>
+  <li>USB kabel (podporující napájení + data) kompatibilní s devkitem výše</li>
+  <li>Visual Studio Code s ESP-IDF pluginem (instalace je popsaná v další části)</li>
+</ul>
+
+<p>Potřebný software:</p>
+
+<ul>
+  <li><a href="https://code.visualstudio.com/download">Visual Studio Code</a></li>
+  <li><a href="https://github.com/espressif/vscode-esp-idf-extension?tab=readme-ov-file#how-to-use">ESP-IDF plugin pro VS Code</a></li>
+  <li>Aplikace <strong>ESP BLE Prov</strong>:
+    <ul>
+      <li>Android: <a href="https://play.google.com/store/apps/details?id=com.espressif.provble&amp;pcampaignid=web_share">ESP BLE Prov</a></li>
+      <li>iOS: <a href="https://apps.apple.com/us/app/esp-ble-provisioning/id1473590141">ESP BLE Prov</a>
+        <h2 id="časová-náročnost">Časová náročnost</h2>
+      </li>
+    </ul>
+  </li>
+</ul>
+
+<p><strong>Odhadovaný čas: 180 min</strong></p>
+
+<h2 id="feedback">Feedback</h2>
+
+<p>Pokud máte k workshopu jakýkoli feedback, neváhejte založit novou <a href="https://github.com/espressif/developer-portal/discussions">diskuzi na GitHubu</a>.</p>
+
+<h2 id="závěrem">Závěrem</h2>
+
+<p>Doufáme, že vám workshop přinese znalosti, které budou sloužit jako pevný základ pro vaše budoucí projekty. Díky za čas a úsilí, které jste workshopu věnovali, a těšíme se na projekty, které s našimi čipy v budoucnu vytvoříte!</p>
+
+<hr />
+
+      </section>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/assets/css/style.css?v=2244da98f21a89a4a6f49a27d5ca89d075a17535">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup theme-color -->
+<!-- start theme color meta headers -->
+<meta name="theme-color" content="#151515">
+<meta name="msapplication-navbutton-color" content="#151515">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- end theme color meta headers -->
+
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+
+<!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>Workshop: ESP-IDF a ESP32-C6 - Úkol 1 | Honza0297.github.io</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="Workshop: ESP-IDF a ESP32-C6 - Úkol 1" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="http://localhost:4000/CZ/assignment-1/" />
+<meta property="og:url" content="http://localhost:4000/CZ/assignment-1/" />
+<meta property="og:site_name" content="Honza0297.github.io" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2024-09-30T01:00:00+02:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Workshop: ESP-IDF a ESP32-C6 - Úkol 1" />
+<script type="application/ld+json">
+{"datePublished":"2024-09-30T01:00:00+02:00","@type":"BlogPosting","headline":"Workshop: ESP-IDF a ESP32-C6 - Úkol 1","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/CZ/assignment-1/"},"url":"http://localhost:4000/CZ/assignment-1/","dateModified":"2024-09-30T01:00:00+02:00","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <a id="a-title" href="/">
+          <h1>Honza0297.github.io</h1>
+        </a>
+        <h2></h2>
+
+        <section id="downloads">
+          
+          <a href="https://github.com/Honza0297/Honza0297.github.io" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <h2 id="úkol-1-instalace-visual-studio-code-a-esp-idf-pluginu">Úkol 1: Instalace Visual Studio Code a ESP-IDF pluginu</h2>
+
+<hr />
+
+<p>Abyste byli schopní zvládnout všechny úkoly v tomto workshopu, budete potřebovat <a href="https://code.visualstudio.com/">Visual Studio Code</a> a nainstalovaný framework ESP-IDF. Prvním úkolem tedy bude nainstalovat si všechny potřebné nástroje.</p>
+
+<p>V obou případech budeme postupovat podle návodu na <a href="https://github.com/espressif/vscode-esp-idf-extension?tab=readme-ov-file#how-to-use">githubových stránkách ESP-IDF pluginu pro VS Code</a>.</p>
+
+<h3 id="instalace-pro-windows">Instalace pro Windows</h3>
+
+<ol>
+  <li>Nainstalujte <a href="https://code.visualstudio.com/download">Visual Studio Code</a></li>
+  <li>Nainstalujte potřebné <a href="https://www.silabs.com/documents/public/software/CP210x_Universal_Windows_Driver.zip">ovladače</a></li>
+  <li>Ve VS Code otevřete <strong>Extensions</strong> (Ctrl + Shift + X nebo ⇧ + ⌘ + X)</li>
+  <li>Najděte <a href="https://marketplace.visualstudio.com/items?itemName=espressif.esp-idf-extension">ESP-IDF plugin</a> a nainstalujte ho</li>
+  <li>Otevřete <em>View -&gt; Command Pallete</em> (Ctrl + Shift + P nebo ⇧ + ⌘ + P) a do nově otevřené řádky napište <em>Configure ESP-IDF Extension</em></li>
+  <li>Vyberte možnost <strong>Express</strong> a následně vyberte Github jako download server a release/v5.5 jako ESP-IDF version</li>
+  <li>Klikněte na “Install”</li>
+</ol>
+
+<h3 id="instalace-pro-linux-a-mac">Instalace pro Linux a Mac</h3>
+
+<ol>
+  <li>Nainstalujte <a href="https://code.visualstudio.com/download">Visual Studio Code</a></li>
+  <li>Nainstalujte <a href="https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/linux-macos-setup.html#step-1-install-prerequisites">prerekvizity podle vaší distribuce</a> (<strong>Pouze step 1</strong>, celý návod se věnuje instalaci samostatného ESP-IDF, to v současné chvíli nepotřebujeme)</li>
+  <li>Ve VS Code otevřete <strong>Extensions</strong> (Ctrl + Shift + X nebo ⇧ + ⌘ + X)</li>
+  <li>Najděte <a href="https://marketplace.visualstudio.com/items?itemName=espressif.esp-idf-extension">ESP-IDF plugin</a> a nainstalujte ho</li>
+  <li>Otevřete <em>View -&gt; Command Pallete</em> (Ctrl + Shift + P nebo ⇧ + ⌘ + P) a do nově otevřené řádky napište <em>Configure ESP-IDF Extension</em></li>
+  <li>Vyberte možnost <strong>Express</strong> a následně vyberte Github jako download server a release/v5.5 jako <em>ESP-IDF version</em></li>
+  <li>Klikněte na “Install”</li>
+</ol>
+
+<h3 id="instalace-esp-ble-prov">Instalace ESP BLE Prov</h3>
+
+<p>Během jednoho z úkolů vyzkoušíme také Wi-Fi provisioning. K tomu budeme potřebovat aplikaci, přes kterou našemu ESPčku sdělíme SSID a heslo k síti.</p>
+
+<p>Aplikaci buď vyhledáte v appstoru příslušného systému, nebo přes odkazy níže:</p>
+
+<ul>
+  <li>Android: <a href="https://play.google.com/store/apps/details?id=com.espressif.provble&amp;pcampaignid=web_share">ESP BLE Provisioning</a></li>
+  <li>iOS: <a href="https://apps.apple.com/us/app/esp-ble-provisioning/id1473590141">ESP BLE Provisioning</a></li>
+</ul>
+
+<h3 id="vscode-esp-idf-plugin-a-samotné-esp-idf">VSCode, ESP-IDF plugin a samotné ESP-IDF</h3>
+
+<p>Nyní máte nainstalovaný ESP-IDF plugin i samotné ESP-IDF. Jak spolu tyto dvě věci vlastně souvisí?</p>
+
+<p>ESP-IDF je <strong>samostatný framework</strong>, který lze používat i bez VSCode a pluginu. Ovládá se z příkazové řádky (nemá tedy žádné GUI) a obsahuje všechnu logiku pro build, flashování i monitorování aplikace. Když tedy zmáčknete např. tlačítko <em>Build</em> v <em>ESP-IDF Exploreru</em> (nebojte, v dalších lekcích si vysvětlíme, co to znamená), nakonec se stejně zavolá příkaz <code class="language-plaintext highlighter-rouge">idf.py build</code>.</p>
+
+<p>ESP-IDF plugin je <strong>wrapper/adaptér</strong>, který zpřístupňuje funkcionalitu ESP-IDF ve VSCode. Jinak řečeno, propojuje VSCode a framework ESP-IDF: vytváří GUI v podobě <em>ESP-IDF Exploreru</em> a zároveň se stará o to, aby tlačítka plnila svou funkci, výstup příkazů se korektně zobrazoval ve VSCode, aby se konfigurace frameworku správně projevila a podobně. Ke svému fungování ale potřebuje právě i frameowrk, který běží v pozadí.</p>
+
+<p>Nyní byste měli mít funkční ESP-IDF plugin pro VSCode a nastavené ESP-IDF. Můžeme se tedy pustit do druhé části tutoriálu:</p>
+
+<p><a href="../assignment-2">Úkol 2: Vytváření projektů a Komponenty</a></p>
+
+      </section>
+    </div>
+  </body>
+</html>

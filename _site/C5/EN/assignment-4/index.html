@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/assets/css/style.css?v=2244da98f21a89a4a6f49a27d5ca89d075a17535">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup theme-color -->
+<!-- start theme color meta headers -->
+<meta name="theme-color" content="#151515">
+<meta name="msapplication-navbutton-color" content="#151515">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- end theme color meta headers -->
+
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+
+<!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>ESP-IDF and ESP32-C5 Workshop - Assignment 4: OTA Updates | Honza0297.github.io</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="ESP-IDF and ESP32-C5 Workshop - Assignment 4: OTA Updates" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="http://localhost:4000/C5/EN/assignment-4/" />
+<meta property="og:url" content="http://localhost:4000/C5/EN/assignment-4/" />
+<meta property="og:site_name" content="Honza0297.github.io" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2024-06-30T01:00:00+02:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="ESP-IDF and ESP32-C5 Workshop - Assignment 4: OTA Updates" />
+<script type="application/ld+json">
+{"datePublished":"2024-06-30T01:00:00+02:00","@type":"BlogPosting","headline":"ESP-IDF and ESP32-C5 Workshop - Assignment 4: OTA Updates","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/C5/EN/assignment-4/"},"url":"http://localhost:4000/C5/EN/assignment-4/","dateModified":"2024-06-30T01:00:00+02:00","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <a id="a-title" href="/">
+          <h1>Honza0297.github.io</h1>
+        </a>
+        <h2></h2>
+
+        <section id="downloads">
+          
+          <a href="https://github.com/Honza0297/Honza0297.github.io" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <h2 id="assignment-4-over-the-air-ota-updates">Assignment 4: Over-The-Air (OTA) Updates</h2>
+
+<hr />
+
+<blockquote>
+  <p><strong>Note:</strong> This is an optional chapter. If time is running short, you may skip directly to <a href="../assignment-5/">Assignment 5: ESP-NOW Chat Room</a>.</p>
+</blockquote>
+
+<p>In a real-world deployment, you won’t have physical access to a USB port to flash new firmware. Over-The-Air (OTA) updates allow you to download and install new firmware over a network connection like Wi-Fi.</p>
+
+<blockquote>
+  <p><strong>Keep reusing the project.</strong> Continue in the same project you provisioned in Assignment 3 — OTA needs a device that can already connect to your Wi-Fi, and we rely on the credentials you stored in NVS back then. We’ll replace <code class="language-plaintext highlighter-rouge">main.c</code> again, but keep <code class="language-plaintext highlighter-rouge">idf_component.yml</code> as-is: it already pulls in <code class="language-plaintext highlighter-rouge">led_strip</code> from Assignment 2, and we’re about to need it again.</p>
+</blockquote>
+
+<h3 id="1-partition-tables">1. Partition Tables</h3>
+
+<p>To support OTA, the flash memory of the ESP32-C5 must be divided into specific regions called partitions. A typical OTA partition table includes:</p>
+<ul>
+  <li><strong>nvs</strong>: Non-Volatile Storage for Wi-Fi credentials and calibration data.</li>
+  <li><strong>otadata</strong>: Stores information about which app partition is currently active.</li>
+  <li><strong>phy_init</strong>: Factory-calibrated radio data.</li>
+  <li><strong>ota_0</strong>: The first app slot - this is what gets flashed initially.</li>
+  <li><strong>ota_1</strong>: The second app slot, where new firmware gets downloaded to.</li>
+</ul>
+
+<p>When an OTA update occurs, the device downloads the new firmware into the inactive partition (whichever of <code class="language-plaintext highlighter-rouge">ota_0</code>/<code class="language-plaintext highlighter-rouge">ota_1</code> isn’t currently running). If the download is successful, it updates the <code class="language-plaintext highlighter-rouge">otadata</code> partition to point there and reboots.</p>
+
+<p>We define this layout in a file named <code class="language-plaintext highlighter-rouge">partitions.csv</code> in our project root:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code># Name,   Type, SubType, Offset,  Size, Flags
+nvs,      data, nvs,     ,        0x4000,
+otadata,  data, ota,     ,        0x2000,
+phy_init, data, phy,     ,        0x1000,
+ota_0,    app,  ota_0,   ,        1500K,
+ota_1,    app,  ota_1,   ,        1500K,
+</code></pre></div></div>
+
+<p>1500K per slot gives the OTA/TLS/Wi-Fi/LED code in this assignment comfortable headroom (the actual binary is roughly 1.1 MB) while still leaving two full slots on a 4 MB flash chip.</p>
+
+<blockquote>
+  <p><strong>Tip:</strong> If you’d rather not edit CSV files by hand, the ESP-IDF VS Code extension ships GUI editors for both the partition table and NVS contents.</p>
+
+  <p><img src="/C5/EN/assignment-4/assets/nvs-1.webp" alt="ESP-IDF Partition Table Editor" /></p>
+
+  <p><img src="/C5/EN/assignment-4/assets/nvs-2.webp" alt="ESP-IDF NVS Partition Editor" /></p>
+</blockquote>
+
+<h3 id="2-configuration-via-menuconfig">2. Configuration via menuconfig</h3>
+
+<p>To tell ESP-IDF to use our custom partition table, run:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>idf.py menuconfig
+</code></pre></div></div>
+
+<p>Navigate to:</p>
+<ul>
+  <li><strong>Partition Table</strong>
+    <ul>
+      <li><strong>Partition Table</strong>: Select <code class="language-plaintext highlighter-rouge">Custom partition table CSV</code></li>
+      <li><strong>Custom partition CSV file</strong>: Type <code class="language-plaintext highlighter-rouge">partitions.csv</code></li>
+    </ul>
+  </li>
+  <li><strong>Serial Flasher Config</strong>
+    <ul>
+      <li><strong>Flash size</strong>: Select <code class="language-plaintext highlighter-rouge">4 MB</code> — two 1500K app slots plus <code class="language-plaintext highlighter-rouge">nvs</code>/<code class="language-plaintext highlighter-rouge">otadata</code>/<code class="language-plaintext highlighter-rouge">phy_init</code> no longer fit in the default 2 MB assumption.</li>
+    </ul>
+  </li>
+</ul>
+
+<p>Press <code class="language-plaintext highlighter-rouge">Q</code> to quit and <code class="language-plaintext highlighter-rouge">Y</code> to save.</p>
+
+<blockquote>
+  <p>If you’d rather not click through menuconfig for this, drop both settings into a <code class="language-plaintext highlighter-rouge">sdkconfig.defaults</code> file in your project root instead:</p>
+  <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+CONFIG_PARTITION_TABLE_FILENAME="partitions.csv"
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+</code></pre></div>  </div>
+</blockquote>
+
+<h3 id="3-connecting-a-button">3. Connecting a Button</h3>
+
+<p>Instead of updating itself the moment it boots, our board will wait for you to press a physical button before it starts downloading anything. This is both safer (no surprise downloads mid-demo) and a good excuse to learn basic GPIO input — and we’ll keep reusing this exact button in Assignments 5 and 6, so it’s worth wiring up carefully now.</p>
+
+<p>Any simple 2-pin or 4-pin tactile push button works. On a 4-pin button, the two pins on each short side are internally connected to each other:</p>
+
+<p><img src="/C5/EN/assignment-4/assets/button.webp" alt="Tactile button pinout - the two pins on each side are internally connected" /></p>
+
+<p>Wire it like this:</p>
+
+<ul>
+  <li>One leg of the button -&gt; <strong>3V3</strong></li>
+  <li>The other leg of the button -&gt; <strong>GPIO0</strong></li>
+  <li>A pull-down resistor (e.g. 10 kΩ) between <strong>GPIO0</strong> and <strong>GND</strong></li>
+</ul>
+
+<p>With the pull-down resistor in place, <code class="language-plaintext highlighter-rouge">GPIO0</code> reads <strong>LOW</strong> while the button is released, and <strong>HIGH</strong> while it’s pressed (because the button then connects it straight to 3V3).</p>
+
+<blockquote>
+  <p><code class="language-plaintext highlighter-rouge">GPIO0</code> is also a boot-mode strapping pin on many ESP32 chips, but that only matters for the brief instant right at power-up/reset. Pressing the button during normal operation (which is all we ever do here) has no effect on that.</p>
+</blockquote>
+
+<h3 id="4-writing-the-code">4. Writing the Code</h3>
+
+<p>As before, let’s build this up instead of pasting it all at once.</p>
+
+<h4 id="41-skeleton">4.1 Skeleton</h4>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include &lt;stdio.h&gt;
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_system.h"
+#include "esp_event.h"
+#include "esp_log.h"
+#include "esp_https_ota.h"
+#include "esp_http_client.h"
+#include "esp_wifi.h"
+#include "esp_crt_bundle.h"
+#include "nvs_flash.h"
+#include "driver/gpio.h"
+#include "led_strip.h"
+</span>
+<span class="cp">#define BUTTON_GPIO GPIO_NUM_0
+#define LED_GPIO    27
+</span>
+<span class="c1">// (A) LED helpers - reused from Assignment 2</span>
+<span class="c1">// (B) Button GPIO setup</span>
+<span class="c1">// (C) Wi-Fi event handler - also updates the LED</span>
+<span class="c1">// (D) A task that polls the button and wakes up the OTA task</span>
+<span class="c1">// (E) The OTA task itself - now waits for a notification instead of running immediately</span>
+<span class="c1">// (F) app_main wires everything together</span>
+</code></pre></div></div>
+
+<h4 id="42-part-a-b-led-and-button-setup">4.2 Part (A)-(B): LED and button setup</h4>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">static</span> <span class="n">led_strip_handle_t</span> <span class="n">led_strip</span><span class="p">;</span>
+<span class="k">static</span> <span class="n">TaskHandle_t</span> <span class="n">s_ota_task_handle</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">led_set_color</span><span class="p">(</span><span class="kt">uint8_t</span> <span class="n">r</span><span class="p">,</span> <span class="kt">uint8_t</span> <span class="n">g</span><span class="p">,</span> <span class="kt">uint8_t</span> <span class="n">b</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">led_strip_set_pixel</span><span class="p">(</span><span class="n">led_strip</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">);</span>
+    <span class="n">led_strip_refresh</span><span class="p">(</span><span class="n">led_strip</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">configure_led</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">led_strip_config_t</span> <span class="n">strip_config</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="p">.</span><span class="n">strip_gpio_num</span> <span class="o">=</span> <span class="n">LED_GPIO</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">max_leds</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">color_component_format</span> <span class="o">=</span> <span class="n">LED_STRIP_COLOR_COMPONENT_FMT_GRB</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">led_model</span> <span class="o">=</span> <span class="n">LED_MODEL_WS2812</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">flags</span><span class="p">.</span><span class="n">invert_out</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
+    <span class="p">};</span>
+    <span class="n">led_strip_rmt_config_t</span> <span class="n">rmt_config</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="p">.</span><span class="n">clk_src</span> <span class="o">=</span> <span class="n">RMT_CLK_SRC_DEFAULT</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">resolution_hz</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">*</span> <span class="mi">1000</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">mem_block_symbols</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">flags</span><span class="p">.</span><span class="n">with_dma</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
+    <span class="p">};</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">led_strip_new_rmt_device</span><span class="p">(</span><span class="o">&amp;</span><span class="n">strip_config</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">rmt_config</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">led_strip</span><span class="p">));</span>
+    <span class="n">led_strip_clear</span><span class="p">(</span><span class="n">led_strip</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">configure_button</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">gpio_config_t</span> <span class="n">io_conf</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="p">.</span><span class="n">pin_bit_mask</span> <span class="o">=</span> <span class="mi">1ULL</span> <span class="o">&lt;&lt;</span> <span class="n">BUTTON_GPIO</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">mode</span> <span class="o">=</span> <span class="n">GPIO_MODE_INPUT</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">pull_up_en</span> <span class="o">=</span> <span class="n">GPIO_PULLUP_DISABLE</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">pull_down_en</span> <span class="o">=</span> <span class="n">GPIO_PULLDOWN_DISABLE</span><span class="p">,</span> <span class="c1">// we use an external pull-down resistor</span>
+    <span class="p">};</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">gpio_config</span><span class="p">(</span><span class="o">&amp;</span><span class="n">io_conf</span><span class="p">));</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>We’ll use the LED as a status light with a simple color code we’ll build up through this assignment:</p>
+<ul>
+  <li><strong>Yellow</strong> - connecting / reconnecting to Wi-Fi</li>
+  <li><strong>Blue</strong> - ready, waiting for the button</li>
+  <li><strong>White</strong> - downloading the update</li>
+  <li><strong>Green</strong> - update successful, about to reboot</li>
+  <li><strong>Red</strong> - update failed, back to blue after a few seconds</li>
+</ul>
+
+<h4 id="43-part-c-the-wi-fi-event-handler">4.3 Part (C): the Wi-Fi event handler</h4>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">static</span> <span class="kt">void</span> <span class="nf">event_handler</span><span class="p">(</span><span class="kt">void</span><span class="o">*</span> <span class="n">arg</span><span class="p">,</span> <span class="n">esp_event_base_t</span> <span class="n">event_base</span><span class="p">,</span> <span class="kt">int32_t</span> <span class="n">event_id</span><span class="p">,</span> <span class="kt">void</span><span class="o">*</span> <span class="n">event_data</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">event_base</span> <span class="o">==</span> <span class="n">WIFI_EVENT</span> <span class="o">&amp;&amp;</span> <span class="n">event_id</span> <span class="o">==</span> <span class="n">WIFI_EVENT_STA_START</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">esp_wifi_connect</span><span class="p">();</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">event_base</span> <span class="o">==</span> <span class="n">WIFI_EVENT</span> <span class="o">&amp;&amp;</span> <span class="n">event_id</span> <span class="o">==</span> <span class="n">WIFI_EVENT_STA_DISCONNECTED</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Disconnected. Connecting to the AP again..."</span><span class="p">);</span>
+        <span class="n">led_set_color</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span> <span class="c1">// yellow: (re)connecting</span>
+        <span class="n">esp_wifi_connect</span><span class="p">();</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">event_base</span> <span class="o">==</span> <span class="n">IP_EVENT</span> <span class="o">&amp;&amp;</span> <span class="n">event_id</span> <span class="o">==</span> <span class="n">IP_EVENT_STA_GOT_IP</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ip_event_got_ip_t</span><span class="o">*</span> <span class="n">event</span> <span class="o">=</span> <span class="p">(</span><span class="n">ip_event_got_ip_t</span><span class="o">*</span><span class="p">)</span> <span class="n">event_data</span><span class="p">;</span>
+        <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Connected with IP Address:"</span> <span class="n">IPSTR</span><span class="p">,</span> <span class="n">IP2STR</span><span class="p">(</span><span class="o">&amp;</span><span class="n">event</span><span class="o">-&gt;</span><span class="n">ip_info</span><span class="p">.</span><span class="n">ip</span><span class="p">));</span>
+        <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Ready. Press the button to start the OTA update."</span><span class="p">);</span>
+        <span class="n">led_set_color</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">20</span><span class="p">);</span> <span class="c1">// blue: ready, waiting for the button</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>This is the same Wi-Fi reconnect logic you’ve already seen, just extended to flip the LED to yellow or blue as the connection state changes.</p>
+
+<h4 id="44-part-d-the-button-task">4.4 Part (D): the button task</h4>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Polls the button and wakes ota_task up on a press. A dedicated task keeps</span>
+<span class="c1">// the debounce logic simple and out of the way of everything else.</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">button_task</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">pvParameter</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">bool</span> <span class="n">was_pressed</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">bool</span> <span class="n">pressed</span> <span class="o">=</span> <span class="n">gpio_get_level</span><span class="p">(</span><span class="n">BUTTON_GPIO</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">pressed</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">was_pressed</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">vTaskDelay</span><span class="p">(</span><span class="n">pdMS_TO_TICKS</span><span class="p">(</span><span class="mi">50</span><span class="p">));</span> <span class="c1">// simple debounce</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">gpio_get_level</span><span class="p">(</span><span class="n">BUTTON_GPIO</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+                <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Button pressed - triggering OTA update"</span><span class="p">);</span>
+                <span class="n">xTaskNotifyGive</span><span class="p">(</span><span class="n">s_ota_task_handle</span><span class="p">);</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="n">was_pressed</span> <span class="o">=</span> <span class="n">pressed</span><span class="p">;</span>
+        <span class="n">vTaskDelay</span><span class="p">(</span><span class="n">pdMS_TO_TICKS</span><span class="p">(</span><span class="mi">20</span><span class="p">));</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>Rather than wiring up a GPIO interrupt (easy to get wrong when you’re just starting out), this task simply polls the pin every 20 ms. When it sees the signal go from low to high, it waits 50 ms and double-checks the pin is still high — a simple but effective way to ignore the tiny electrical bounces a mechanical switch produces — then wakes <code class="language-plaintext highlighter-rouge">ota_task</code> up with <code class="language-plaintext highlighter-rouge">xTaskNotifyGive</code>.</p>
+
+<h4 id="45-part-e-the-ota-task">4.5 Part (E): the OTA task</h4>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">static</span> <span class="kt">void</span> <span class="nf">ota_task</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">pvParameter</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// Block here until button_task wakes us up - no auto-update on boot anymore!</span>
+        <span class="n">ulTaskNotifyTake</span><span class="p">(</span><span class="n">pdTRUE</span><span class="p">,</span> <span class="n">portMAX_DELAY</span><span class="p">);</span>
+
+        <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Starting OTA update"</span><span class="p">);</span>
+        <span class="n">led_set_color</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">20</span><span class="p">);</span> <span class="c1">// white: downloading</span>
+
+        <span class="n">esp_http_client_config_t</span> <span class="n">config</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="p">.</span><span class="n">url</span> <span class="o">=</span> <span class="s">"https://example.com/firmware.bin"</span><span class="p">,</span>
+            <span class="c1">// In production, always provide a certificate!</span>
+            <span class="c1">// .cert_pem = (char *)server_cert_pem_start,</span>
+            <span class="p">.</span><span class="n">crt_bundle_attach</span> <span class="o">=</span> <span class="n">esp_crt_bundle_attach</span><span class="p">,</span>
+        <span class="p">};</span>
+        <span class="n">esp_https_ota_config_t</span> <span class="n">ota_config</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="p">.</span><span class="n">http_config</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">config</span><span class="p">,</span>
+        <span class="p">};</span>
+
+        <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Attempting to download update from %s"</span><span class="p">,</span> <span class="n">config</span><span class="p">.</span><span class="n">url</span><span class="p">);</span>
+        <span class="n">esp_err_t</span> <span class="n">ret</span> <span class="o">=</span> <span class="n">esp_https_ota</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ota_config</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">ret</span> <span class="o">==</span> <span class="n">ESP_OK</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"OTA succeeded, rebooting..."</span><span class="p">);</span>
+            <span class="n">led_set_color</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span> <span class="c1">// green: success</span>
+            <span class="n">vTaskDelay</span><span class="p">(</span><span class="n">pdMS_TO_TICKS</span><span class="p">(</span><span class="mi">1000</span><span class="p">));</span>
+            <span class="n">esp_restart</span><span class="p">();</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="n">ESP_LOGE</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Firmware upgrade failed (expected if example.com is used)"</span><span class="p">);</span>
+            <span class="n">led_set_color</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span> <span class="c1">// red: failed</span>
+            <span class="n">vTaskDelay</span><span class="p">(</span><span class="n">pdMS_TO_TICKS</span><span class="p">(</span><span class="mi">3000</span><span class="p">));</span>
+            <span class="n">led_set_color</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">20</span><span class="p">);</span> <span class="c1">// back to blue: ready, feel free to try again</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">ulTaskNotifyTake(pdTRUE, portMAX_DELAY)</code> is the key change from before: the task just sleeps until <code class="language-plaintext highlighter-rouge">button_task</code> notifies it, instead of starting the download automatically after a fixed delay. Everything else — the <code class="language-plaintext highlighter-rouge">esp_https_ota</code> call itself — is unchanged from how OTA always worked.</p>
+
+<h4 id="46-part-f-app_main">4.6 Part (F): <code class="language-plaintext highlighter-rouge">app_main</code></h4>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">app_main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="c1">// Initialize NVS</span>
+    <span class="n">esp_err_t</span> <span class="n">err</span> <span class="o">=</span> <span class="n">nvs_flash_init</span><span class="p">();</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">err</span> <span class="o">==</span> <span class="n">ESP_ERR_NVS_NO_FREE_PAGES</span> <span class="o">||</span> <span class="n">err</span> <span class="o">==</span> <span class="n">ESP_ERR_NVS_NEW_VERSION_FOUND</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">nvs_flash_erase</span><span class="p">());</span>
+        <span class="n">err</span> <span class="o">=</span> <span class="n">nvs_flash_init</span><span class="p">();</span>
+    <span class="p">}</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">err</span><span class="p">);</span>
+
+    <span class="n">configure_led</span><span class="p">();</span>
+    <span class="n">configure_button</span><span class="p">();</span>
+    <span class="n">led_set_color</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span> <span class="c1">// yellow: connecting</span>
+
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_netif_init</span><span class="p">());</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_event_loop_create_default</span><span class="p">());</span>
+    <span class="n">esp_netif_create_default_wifi_sta</span><span class="p">();</span>
+
+    <span class="n">wifi_init_config_t</span> <span class="n">cfg</span> <span class="o">=</span> <span class="n">WIFI_INIT_CONFIG_DEFAULT</span><span class="p">();</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_wifi_init</span><span class="p">(</span><span class="o">&amp;</span><span class="n">cfg</span><span class="p">));</span>
+
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_event_handler_register</span><span class="p">(</span><span class="n">WIFI_EVENT</span><span class="p">,</span> <span class="n">ESP_EVENT_ANY_ID</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">event_handler</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">));</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_event_handler_register</span><span class="p">(</span><span class="n">IP_EVENT</span><span class="p">,</span> <span class="n">IP_EVENT_STA_GOT_IP</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">event_handler</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">));</span>
+
+    <span class="c1">// Relies on credentials already stored in NVS by the Assignment 3 provisioning step</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_wifi_set_mode</span><span class="p">(</span><span class="n">WIFI_MODE_STA</span><span class="p">));</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_wifi_start</span><span class="p">());</span>
+
+    <span class="c1">// Create the OTA task first so button_task has a valid handle to notify</span>
+    <span class="n">xTaskCreate</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ota_task</span><span class="p">,</span> <span class="s">"ota_task"</span><span class="p">,</span> <span class="mi">8192</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">s_ota_task_handle</span><span class="p">);</span>
+    <span class="n">xTaskCreate</span><span class="p">(</span><span class="o">&amp;</span><span class="n">button_task</span><span class="p">,</span> <span class="s">"button_task"</span><span class="p">,</span> <span class="mi">2048</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h4 id="47-complete-code">4.7 Complete code</h4>
+
+<p>The full file lives at <a href="../../../examples/C5/assignment-04-ota/"><code class="language-plaintext highlighter-rouge">examples/C5/assignment-04-ota</code></a>, alongside the matching <code class="language-plaintext highlighter-rouge">partitions.csv</code> and <code class="language-plaintext highlighter-rouge">idf_component.yml</code> — grab it from there if you’d rather not type everything out, or use it to check your work.</p>
+
+<h3 id="5-build-flash-and-monitor">5. Build, Flash, and Monitor</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>idf.py build flash monitor
+</code></pre></div></div>
+
+<p>Watch the LED: it should turn <strong>yellow</strong> while connecting, then <strong>blue</strong> once Wi-Fi comes up. Press the button — the LED turns <strong>white</strong> while it attempts the download, then either <strong>green</strong> (and the board reboots) or <strong>red</strong> for a few seconds before returning to blue, since <code class="language-plaintext highlighter-rouge">https://example.com/firmware.bin</code> isn’t a real firmware file. See <a href="#7-building-and-hosting-a-real-update-binary-self-paced-readers">step 7</a> below for how to point <code class="language-plaintext highlighter-rouge">config.url</code> at a <code class="language-plaintext highlighter-rouge">.bin</code> you actually built, to see the full happy path.</p>
+
+<h3 id="6-rollback-bonus">6. Rollback (Bonus)</h3>
+
+<p>ESP-IDF also supports App Rollback. If a newly flashed firmware panics or fails to connect to the server within a certain time frame, the bootloader will mark it as invalid and boot back into the previous, working firmware partition.</p>
+
+<h3 id="7-building-and-hosting-a-real-update-binary-self-paced-readers">7. Building and Hosting a Real Update Binary (Self-Paced Readers)</h3>
+
+<blockquote>
+  <p><strong>Running this workshop with a tutor?</strong> They’ve likely already set up a server and will give you a URL to use — you can skip this section and just update <code class="language-plaintext highlighter-rouge">config.url</code> with whatever you’re given.</p>
+</blockquote>
+
+<p>If you’re going through this on your own and want to see a real update happen (not just a failed download against <code class="language-plaintext highlighter-rouge">example.com</code>), here’s the shortest path:</p>
+
+<p><strong>1. Make a visible change.</strong> So you can actually tell the update worked, change something obvious before rebuilding — for example, bump a version string:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Running firmware v2!"</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p><strong>2. Build it.</strong></p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>idf.py build
+</code></pre></div></div>
+
+<p>The binary you need is <code class="language-plaintext highlighter-rouge">build/&lt;your-project-name&gt;.bin</code> (the same file <code class="language-plaintext highlighter-rouge">idf.py flash</code> normally uses).</p>
+
+<p><strong>3. Host it somewhere with a real HTTPS certificate.</strong> The code in this assignment uses <code class="language-plaintext highlighter-rouge">.crt_bundle_attach = esp_crt_bundle_attach</code>, which checks the server’s certificate against a bundle of well-known public Certificate Authorities. This means the easiest option is to put the <code class="language-plaintext highlighter-rouge">.bin</code> somewhere that already has valid HTTPS, without running any server yourself — for example:</p>
+<ul>
+  <li>Push it to a (public or private-but-accessible) GitHub repo and use the <code class="language-plaintext highlighter-rouge">raw.githubusercontent.com</code> link to the file.</li>
+  <li>Upload it to any cloud storage bucket that serves files over HTTPS (S3, Google Cloud Storage, etc.) with public read access.</li>
+</ul>
+
+<p>Point <code class="language-plaintext highlighter-rouge">config.url</code> at that link, rebuild and reflash with your <em>original</em> (v1) firmware, and press the button. You should see the LED go white, then green, and the board should reboot running the new binary — check the log line you changed in step 1 to confirm.</p>
+
+<blockquote>
+  <p><strong>Want to do it fully offline instead?</strong> You can run a local HTTPS server (e.g. <code class="language-plaintext highlighter-rouge">python -m http.server</code> wrapped with a self-signed TLS certificate) but then <code class="language-plaintext highlighter-rouge">esp_crt_bundle_attach</code> won’t trust it — a self-signed cert isn’t in the public CA bundle. You’d need to switch <code class="language-plaintext highlighter-rouge">esp_https_ota_config_t</code> from <code class="language-plaintext highlighter-rouge">.crt_bundle_attach</code> to <code class="language-plaintext highlighter-rouge">.cert_pem</code>, embedding your self-signed certificate into the firmware as the one it should trust. This works, but it’s more moving parts than most self-paced readers need just to see OTA work once.</p>
+</blockquote>
+
+<h2 id="next-step">Next step</h2>
+
+<p>Let’s dive into an entirely different wireless technology: ESP-NOW! The button and LED you just wired up are coming with us.</p>
+
+<p><a href="../assignment-5/">Assignment 5: ESP-NOW Chat Room</a></p>
+
+      </section>
+    </div>
+  </body>
+</html>

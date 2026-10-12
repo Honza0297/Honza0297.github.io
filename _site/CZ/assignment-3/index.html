@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/assets/css/style.css?v=2244da98f21a89a4a6f49a27d5ca89d075a17535">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup theme-color -->
+<!-- start theme color meta headers -->
+<meta name="theme-color" content="#151515">
+<meta name="msapplication-navbutton-color" content="#151515">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- end theme color meta headers -->
+
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+
+<!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>Workshop: ESP-IDF a ESP32-C6 - Úkol 3 | Honza0297.github.io</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="Workshop: ESP-IDF a ESP32-C6 - Úkol 3" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="http://localhost:4000/CZ/assignment-3/" />
+<meta property="og:url" content="http://localhost:4000/CZ/assignment-3/" />
+<meta property="og:site_name" content="Honza0297.github.io" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2024-09-30T01:00:00+02:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Workshop: ESP-IDF a ESP32-C6 - Úkol 3" />
+<script type="application/ld+json">
+{"datePublished":"2024-09-30T01:00:00+02:00","@type":"BlogPosting","headline":"Workshop: ESP-IDF a ESP32-C6 - Úkol 3","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/CZ/assignment-3/"},"url":"http://localhost:4000/CZ/assignment-3/","dateModified":"2024-09-30T01:00:00+02:00","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <a id="a-title" href="/">
+          <h1>Honza0297.github.io</h1>
+        </a>
+        <h2></h2>
+
+        <section id="downloads">
+          
+          <a href="https://github.com/Honza0297/Honza0297.github.io" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <h2 id="úkol-3-připojení-k-wi-fi">Úkol 3: Připojení k Wi-Fi</h2>
+
+<hr />
+
+<p>Nyní je konečně čas připojit naši ESP32-C6 k Wi-Fi síti. ESP32-C6 podporuje oba standardy Wi-Fi 4 a Wi-Fi 6 na frekvenci 2.4 GHz.</p>
+
+<p><a href="https://docs.espressif.com/projects/esp-idf/en/release-v5.5/esp32c6/api-reference/network/esp_wifi.html">Wi-Fi konektivita</a> je jednou z nejdůležitějších vlastností většiny čipů z rodiny ESP32 a je to jedna z podstatných součástí jejich úspěchu. Díky Wi-Fi je možné vaše IoT zařízení připojit k internetu a skutečně využít všechny jeho funkce. Tím se nutně nemyslí jen připojení ke cloudovým službám, ale také např. <em>over-the-air (OTA)</em> updaty, vzdálené ovládání a monitoring a mnohem víc.</p>
+
+<p>ESP32 podporuje dva módy: <em>Station</em> a <em>SoftAP</em>:</p>
+
+<ul>
+  <li><em>Station mode</em>: ESP se připojuje k existující síti (třeba k domácímu routeru).</li>
+  <li><em>SoftAP mode</em>: Ostatní zařízení (třeba laptop nebo mobil) se připojují přímo na ESP, kde může běžet např. webový server s ovládáním.</li>
+</ul>
+
+<p>Pro tento úkol znovupoužijeme projekt, se kterým jsme pracovali při minulém úkolu, konkrétně jeho druhou verzi za použití BSP a připojíme se k existující Wi-Fi 4/Wi-Fi 6 síti (budeme tedy používat <em>station mode</em>).</p>
+
+<h4 id="připojení-k-wi-fi">Připojení k Wi-Fi</h4>
+
+<p>Abychom mohli začít Wi-Fi používat, musíme frameowrku říct, že budeme používat Wi-Fi:
+do souboru <code class="language-plaintext highlighter-rouge">main/CMakeLists.txt</code>, specificky do funkce <code class="language-plaintext highlighter-rouge">idf_component_register</code> přidáme násleudjící řádek:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>REQUIRES esp_wifi esp_netif esp_event nvs_flash
+</code></pre></div></div>
+
+<p>Nyní potřebujeme nastavit ovladač Wi-Fi: musíme zadat <strong>SSID</strong> a <strong>heslo</strong>.</p>
+
+<ol>
+  <li><strong>Zkopírujeme si kostru</strong></li>
+</ol>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include &lt;stdio.h&gt;
+#include "bsp/esp-bsp.h"
+#include "led_indicator_blink_default.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/event_groups.h"
+#include "esp_system.h"
+#include "esp_wifi.h"
+#include "esp_event.h"
+#include "esp_log.h"
+#include "nvs_flash.h"
+#include "lwip/err.h"
+#include "lwip/sys.h"
+</span>
+<span class="cp">#define WIFI_SSID "network-ssid"
+#define WIFI_PASS "network-pass"
+</span>
+<span class="cp">#define WIFI_CONNECTED_BIT BIT0
+#define WIFI_FAIL_BIT      BIT1
+</span>
+<span class="k">static</span> <span class="n">led_indicator_handle_t</span> <span class="n">leds</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span>
+
+<span class="k">static</span> <span class="n">EventGroupHandle_t</span> <span class="n">s_wifi_event_group</span><span class="p">;</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="n">s_retry_num</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+<span class="k">static</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">TAG</span> <span class="o">=</span> <span class="s">"workshop"</span><span class="p">;</span>
+
+<span class="c1">// TODO handler</span>
+
+<span class="kt">void</span> <span class="nf">wifi_init_sta</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">s_wifi_event_group</span> <span class="o">=</span> <span class="n">xEventGroupCreate</span><span class="p">();</span>
+   <span class="c1">//TODO</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">app_main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+
+    <span class="n">esp_err_t</span> <span class="n">ret</span> <span class="o">=</span> <span class="n">nvs_flash_init</span><span class="p">();</span>
+
+    <span class="c1">//TODO</span>
+
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">bsp_led_indicator_create</span><span class="p">(</span><span class="n">leds</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="n">BSP_LED_NUM</span><span class="p">));</span>
+    <span class="n">led_indicator_set_rgb</span><span class="p">(</span><span class="n">leds</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">SET_IRGB</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mh">0x20</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">));</span>
+
+    <span class="n">wifi_init_sta</span><span class="p">();</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ol>
+  <li><strong>Inicializace Wi-Fi</strong></li>
+</ol>
+
+<p>Inicializace Wi-Fi se skládá z těchto kroků, které doplníme do funkce <code class="language-plaintext highlighter-rouge">wifi_init_sta()</code>:</p>
+
+<ul>
+  <li>Inicializace TCP/IP stacku:</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_netif_init</span><span class="p">());</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_event_loop_create_default</span><span class="p">());</span>
+    <span class="n">esp_netif_create_default_wifi_sta</span><span class="p">();</span>
+</code></pre></div></div>
+
+<ul>
+  <li>Vytvoření defaultní konfigurace pro Wi-Fi inicializaci a samotná inicializace:</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">wifi_init_config_t</span> <span class="n">cfg</span> <span class="o">=</span> <span class="n">WIFI_INIT_CONFIG_DEFAULT</span><span class="p">();</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_wifi_init</span><span class="p">(</span><span class="o">&amp;</span><span class="n">cfg</span><span class="p">));</span>
+</code></pre></div></div>
+
+<ul>
+  <li>Registrace <em>event handlerů</em> pro události <code class="language-plaintext highlighter-rouge">WIFI_EVENT</code> a <code class="language-plaintext highlighter-rouge">IP_EVENT</code>:</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">esp_event_handler_instance_t</span> <span class="n">instance_any_id</span><span class="p">;</span>
+    <span class="n">esp_event_handler_instance_t</span> <span class="n">instance_got_ip</span><span class="p">;</span>
+    <span class="n">esp_event_handler_instance_register</span><span class="p">(</span><span class="n">WIFI_EVENT</span><span class="p">,</span>
+            <span class="n">ESP_EVENT_ANY_ID</span><span class="p">,</span>
+            <span class="o">&amp;</span><span class="n">event_handler</span><span class="p">,</span>
+            <span class="nb">NULL</span><span class="p">,</span>
+            <span class="o">&amp;</span><span class="n">instance_any_id</span><span class="p">);</span>
+    <span class="n">esp_event_handler_instance_register</span><span class="p">(</span><span class="n">IP_EVENT</span><span class="p">,</span>
+            <span class="n">IP_EVENT_STA_GOT_IP</span><span class="p">,</span>
+            <span class="o">&amp;</span><span class="n">event_handler</span><span class="p">,</span>
+            <span class="nb">NULL</span><span class="p">,</span>
+            <span class="o">&amp;</span><span class="n">instance_got_ip</span><span class="p">);</span>
+</code></pre></div></div>
+
+<ul>
+  <li>Nastavení Wi-Fi módu na <em>station</em> pomocí <code class="language-plaintext highlighter-rouge">WIFI_MODE_STA</code>:</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_wifi_set_mode</span><span class="p">(</span><span class="n">WIFI_MODE_STA</span><span class="p">));</span>
+</code></pre></div></div>
+
+<ul>
+  <li>Nastavení samotných parametrů připojení pomocí struktury <code class="language-plaintext highlighter-rouge">wifi_config_t</code>:</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">wifi_config_t</span> <span class="n">wifi_config</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="p">.</span><span class="n">sta</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="c1">// Set the newtork name</span>
+            <span class="p">.</span><span class="n">ssid</span> <span class="o">=</span> <span class="n">WIFI_SSID</span><span class="p">,</span>
+            <span class="c1">// Set the network pass key</span>
+            <span class="p">.</span><span class="n">password</span> <span class="o">=</span> <span class="n">WIFI_PASS</span><span class="p">,</span>
+            <span class="c1">// Set WPA as the authentication mode</span>
+            <span class="p">.</span><span class="n">threshold</span><span class="p">.</span><span class="n">authmode</span> <span class="o">=</span> <span class="n">WIFI_AUTH_WPA_PSK</span><span class="p">,</span>
+            <span class="c1">// Set Simultaneous Authentication (SAE) and Password Element (PWE) derivation method</span>
+            <span class="p">.</span><span class="n">sae_pwe_h2e</span> <span class="o">=</span> <span class="n">WPA3_SAE_PWE_BOTH</span><span class="p">,</span>
+            <span class="c1">// Set the password identifier for H2E (Hash-to-Element)</span>
+            <span class="p">.</span><span class="n">sae_h2e_identifier</span> <span class="o">=</span> <span class="s">""</span><span class="p">,</span>
+        <span class="p">},</span>
+    <span class="p">};</span>
+</code></pre></div></div>
+
+<ul>
+  <li>Teď můžeme zavolat funkci <code class="language-plaintext highlighter-rouge">esp_wifi_set_config</code>.</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_wifi_set_config</span><span class="p">(</span><span class="n">WIFI_IF_STA</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">wifi_config</span><span class="p">));</span>
+</code></pre></div></div>
+
+<ul>
+  <li>Nyní jsou už jak Wi-Fi řadič, tak samotné spojení nastavené, můžeme tak zapnout Wi-Fi:</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_wifi_start</span><span class="p">());</span>
+</code></pre></div></div>
+
+<ul>
+  <li>Teď už stačí počkat na <code class="language-plaintext highlighter-rouge">WIFI_CONNECTED_BIT</code> nebo <code class="language-plaintext highlighter-rouge">WIFI_FAIL_BIT</code> a ujistit se, že se všechno zdařilo:</li>
+</ul>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">EventBits_t</span> <span class="n">bits</span> <span class="o">=</span> <span class="n">xEventGroupWaitBits</span><span class="p">(</span><span class="n">s_wifi_event_group</span><span class="p">,</span>
+            <span class="n">WIFI_CONNECTED_BIT</span> <span class="o">|</span> <span class="n">WIFI_FAIL_BIT</span><span class="p">,</span>
+            <span class="n">pdFALSE</span><span class="p">,</span>
+            <span class="n">pdFALSE</span><span class="p">,</span>
+            <span class="n">portMAX_DELAY</span><span class="p">);</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">bits</span> <span class="o">&amp;</span> <span class="n">WIFI_CONNECTED_BIT</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Connected!"</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="nf">if</span> <span class="p">(</span><span class="n">bits</span> <span class="o">&amp;</span> <span class="n">WIFI_FAIL_BIT</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ESP_LOGE</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Failed to connect!"</span><span class="p">);</span>
+    <span class="p">}</span>
+</code></pre></div></div>
+
+<p>Další části nejsou nutné, ale jsou užitečné.</p>
+
+<ol>
+  <li><strong>Vytvoření Wi-Fi event handler-u</strong></li>
+</ol>
+
+<p>Ten nebude součástí ani <code class="language-plaintext highlighter-rouge">app_main</code> ani <code class="language-plaintext highlighter-rouge">wifi_init_sta</code>, ale bude na stejné úrovni jako tyto dvě funkce. Musí se nacházet před <code class="language-plaintext highlighter-rouge">wifi_init_sta</code>, na místě komentáře <code class="language-plaintext highlighter-rouge">//TODO event handler</code>:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">static</span> <span class="kt">void</span> <span class="nf">event_handler</span><span class="p">(</span><span class="kt">void</span><span class="o">*</span> <span class="n">arg</span><span class="p">,</span> <span class="n">esp_event_base_t</span> <span class="n">event_base</span><span class="p">,</span>
+                                <span class="kt">int32_t</span> <span class="n">event_id</span><span class="p">,</span> <span class="kt">void</span><span class="o">*</span> <span class="n">event_data</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">event_base</span> <span class="o">==</span> <span class="n">WIFI_EVENT</span> <span class="o">&amp;&amp;</span> <span class="n">event_id</span> <span class="o">==</span> <span class="n">WIFI_EVENT_STA_START</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">esp_wifi_connect</span><span class="p">();</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">event_base</span> <span class="o">==</span> <span class="n">WIFI_EVENT</span> <span class="o">&amp;&amp;</span> <span class="n">event_id</span> <span class="o">==</span> <span class="n">WIFI_EVENT_STA_DISCONNECTED</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">s_retry_num</span> <span class="o">&lt;</span> <span class="mi">30</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">esp_wifi_connect</span><span class="p">();</span>
+            <span class="n">s_retry_num</span><span class="o">++</span><span class="p">;</span>
+            <span class="n">ESP_LOGW</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Trying to connect to WiFi"</span><span class="p">);</span>
+			<span class="n">led_indicator_set_rgb</span><span class="p">(</span><span class="n">leds</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">SET_IRGB</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x20</span><span class="p">));</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="n">xEventGroupSetBits</span><span class="p">(</span><span class="n">s_wifi_event_group</span><span class="p">,</span> <span class="n">WIFI_FAIL_BIT</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="n">ESP_LOGE</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Failed to connect to WiFi"</span><span class="p">);</span>
+		<span class="n">led_indicator_set_rgb</span><span class="p">(</span><span class="n">leds</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">SET_IRGB</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mh">0x20</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">));</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">event_base</span> <span class="o">==</span> <span class="n">IP_EVENT</span> <span class="o">&amp;&amp;</span> <span class="n">event_id</span> <span class="o">==</span> <span class="n">IP_EVENT_STA_GOT_IP</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ip_event_got_ip_t</span><span class="o">*</span> <span class="n">event</span> <span class="o">=</span> <span class="p">(</span><span class="n">ip_event_got_ip_t</span><span class="o">*</span><span class="p">)</span> <span class="n">event_data</span><span class="p">;</span>
+        <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"got ip:"</span> <span class="n">IPSTR</span><span class="p">,</span> <span class="n">IP2STR</span><span class="p">(</span><span class="o">&amp;</span><span class="n">event</span><span class="o">-&gt;</span><span class="n">ip_info</span><span class="p">.</span><span class="n">ip</span><span class="p">));</span>
+		<span class="n">led_indicator_set_rgb</span><span class="p">(</span><span class="n">leds</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">SET_IRGB</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x20</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">));</span>
+        <span class="n">s_retry_num</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="n">xEventGroupSetBits</span><span class="p">(</span><span class="n">s_wifi_event_group</span><span class="p">,</span> <span class="n">WIFI_CONNECTED_BIT</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ol>
+  <li><strong>Kontrola inicializace NVS</strong></li>
+</ol>
+
+<p>O NVS bude řeč v příštím úkolu, nyní to tedy bude trochu <em>blackbox</em>. Tento kód doplníme do <code class="language-plaintext highlighter-rouge">app_main</code>.</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">esp_err_t</span> <span class="n">ret</span> <span class="o">=</span> <span class="n">nvs_flash_init</span><span class="p">();</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">ret</span> <span class="o">==</span> <span class="n">ESP_ERR_NVS_NO_FREE_PAGES</span> <span class="o">||</span> <span class="n">ret</span> <span class="o">==</span> <span class="n">ESP_ERR_NVS_NEW_VERSION_FOUND</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">nvs_flash_erase</span><span class="p">());</span>
+      <span class="n">ret</span> <span class="o">=</span> <span class="n">nvs_flash_init</span><span class="p">();</span>
+    <span class="p">}</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">ret</span><span class="p">);</span>
+
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">bsp_led_indicator_create</span><span class="p">(</span><span class="n">leds</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="n">BSP_LED_NUM</span><span class="p">));</span>
+    <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"LEDs initialized successfully"</span><span class="p">);</span>
+    <span class="n">led_indicator_set_rgb</span><span class="p">(</span><span class="n">leds</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">SET_IRGB</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x20</span><span class="p">));</span>
+</code></pre></div></div>
+
+<ol>
+  <li><strong>Inicializace Wi-Fi</strong></li>
+</ol>
+
+<p>Posledním krokem je zavolání naší funkce v <code class="language-plaintext highlighter-rouge">app_main</code>:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">wifi_init_sta</span><span class="p">();</span>
+</code></pre></div></div>
+
+<p>Nyní už můžete svůj kód sestavit a nahrát.</p>
+
+<p>Funkce <code class="language-plaintext highlighter-rouge">ESP_LOGI</code> a <code class="language-plaintext highlighter-rouge">ESP_LOGE</code> vypisují data do seriové linky. Poté, co nahrajeme program do vývojové desky, můžeme otevřít komunikaci s deskou pomocí příkazu <em>Monitor</em> v ESP-IDF Exploreru nebo pomocí <em>ESP-IDF: Monitor Device</em> přes <em>Command Pallete</em>.</p>
+
+<h4 id="kompletní-kód">Kompletní kód</h4>
+
+<p>Níže můžete najít kompletní kód pro tento úkol:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include &lt;stdio.h&gt;
+#include "bsp/esp-bsp.h"
+#include "led_indicator_blink_default.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/event_groups.h"
+#include "esp_system.h"
+#include "esp_wifi.h"
+#include "esp_event.h"
+#include "esp_log.h"
+#include "nvs_flash.h"
+#include "lwip/err.h"
+#include "lwip/sys.h"
+</span>
+<span class="cp">#define WIFI_SSID "network-ssid"
+#define WIFI_PASS "network-pass"
+</span>
+<span class="cp">#define WIFI_CONNECTED_BIT BIT0
+#define WIFI_FAIL_BIT      BIT1
+</span>
+<span class="k">static</span> <span class="n">led_indicator_handle_t</span> <span class="n">leds</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span>
+
+<span class="k">static</span> <span class="n">EventGroupHandle_t</span> <span class="n">s_wifi_event_group</span><span class="p">;</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="n">s_retry_num</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+<span class="k">static</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">TAG</span> <span class="o">=</span> <span class="s">"workshop"</span><span class="p">;</span>
+
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">event_handler</span><span class="p">(</span><span class="kt">void</span><span class="o">*</span> <span class="n">arg</span><span class="p">,</span> <span class="n">esp_event_base_t</span> <span class="n">event_base</span><span class="p">,</span>
+                                <span class="kt">int32_t</span> <span class="n">event_id</span><span class="p">,</span> <span class="kt">void</span><span class="o">*</span> <span class="n">event_data</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">event_base</span> <span class="o">==</span> <span class="n">WIFI_EVENT</span> <span class="o">&amp;&amp;</span> <span class="n">event_id</span> <span class="o">==</span> <span class="n">WIFI_EVENT_STA_START</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">esp_wifi_connect</span><span class="p">();</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">event_base</span> <span class="o">==</span> <span class="n">WIFI_EVENT</span> <span class="o">&amp;&amp;</span> <span class="n">event_id</span> <span class="o">==</span> <span class="n">WIFI_EVENT_STA_DISCONNECTED</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">s_retry_num</span> <span class="o">&lt;</span> <span class="mi">30</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">esp_wifi_connect</span><span class="p">();</span>
+            <span class="n">s_retry_num</span><span class="o">++</span><span class="p">;</span>
+            <span class="n">ESP_LOGW</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Trying to connect to WiFi"</span><span class="p">);</span>
+			<span class="n">led_indicator_set_rgb</span><span class="p">(</span><span class="n">leds</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">SET_IRGB</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x20</span><span class="p">));</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="n">xEventGroupSetBits</span><span class="p">(</span><span class="n">s_wifi_event_group</span><span class="p">,</span> <span class="n">WIFI_FAIL_BIT</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="n">ESP_LOGE</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Failed to connect to WiFi"</span><span class="p">);</span>
+		<span class="n">led_indicator_set_rgb</span><span class="p">(</span><span class="n">leds</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">SET_IRGB</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mh">0x20</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">));</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">event_base</span> <span class="o">==</span> <span class="n">IP_EVENT</span> <span class="o">&amp;&amp;</span> <span class="n">event_id</span> <span class="o">==</span> <span class="n">IP_EVENT_STA_GOT_IP</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ip_event_got_ip_t</span><span class="o">*</span> <span class="n">event</span> <span class="o">=</span> <span class="p">(</span><span class="n">ip_event_got_ip_t</span><span class="o">*</span><span class="p">)</span> <span class="n">event_data</span><span class="p">;</span>
+        <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"got ip:"</span> <span class="n">IPSTR</span><span class="p">,</span> <span class="n">IP2STR</span><span class="p">(</span><span class="o">&amp;</span><span class="n">event</span><span class="o">-&gt;</span><span class="n">ip_info</span><span class="p">.</span><span class="n">ip</span><span class="p">));</span>
+		<span class="n">led_indicator_set_rgb</span><span class="p">(</span><span class="n">leds</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">SET_IRGB</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x20</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">));</span>
+        <span class="n">s_retry_num</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="n">xEventGroupSetBits</span><span class="p">(</span><span class="n">s_wifi_event_group</span><span class="p">,</span> <span class="n">WIFI_CONNECTED_BIT</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">wifi_init_sta</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">s_wifi_event_group</span> <span class="o">=</span> <span class="n">xEventGroupCreate</span><span class="p">();</span>
+
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_netif_init</span><span class="p">());</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_event_loop_create_default</span><span class="p">());</span>
+    <span class="n">esp_netif_create_default_wifi_sta</span><span class="p">();</span>
+
+    <span class="n">wifi_init_config_t</span> <span class="n">cfg</span> <span class="o">=</span> <span class="n">WIFI_INIT_CONFIG_DEFAULT</span><span class="p">();</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_wifi_init</span><span class="p">(</span><span class="o">&amp;</span><span class="n">cfg</span><span class="p">));</span>
+
+    <span class="n">esp_event_handler_instance_t</span> <span class="n">instance_any_id</span><span class="p">;</span>
+    <span class="n">esp_event_handler_instance_t</span> <span class="n">instance_got_ip</span><span class="p">;</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_event_handler_instance_register</span><span class="p">(</span><span class="n">WIFI_EVENT</span><span class="p">,</span>
+            <span class="n">ESP_EVENT_ANY_ID</span><span class="p">,</span>
+            <span class="o">&amp;</span><span class="n">event_handler</span><span class="p">,</span>
+            <span class="nb">NULL</span><span class="p">,</span>
+            <span class="o">&amp;</span><span class="n">instance_any_id</span><span class="p">));</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_event_handler_instance_register</span><span class="p">(</span><span class="n">IP_EVENT</span><span class="p">,</span>
+            <span class="n">IP_EVENT_STA_GOT_IP</span><span class="p">,</span>
+            <span class="o">&amp;</span><span class="n">event_handler</span><span class="p">,</span>
+            <span class="nb">NULL</span><span class="p">,</span>
+            <span class="o">&amp;</span><span class="n">instance_got_ip</span><span class="p">));</span>
+
+    <span class="n">wifi_config_t</span> <span class="n">wifi_config</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="p">.</span><span class="n">sta</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="p">.</span><span class="n">ssid</span> <span class="o">=</span> <span class="n">WIFI_SSID</span><span class="p">,</span>
+            <span class="p">.</span><span class="n">password</span> <span class="o">=</span> <span class="n">WIFI_PASS</span><span class="p">,</span>
+            <span class="p">.</span><span class="n">threshold</span><span class="p">.</span><span class="n">authmode</span> <span class="o">=</span> <span class="n">WIFI_AUTH_WPA_PSK</span><span class="p">,</span>
+            <span class="p">.</span><span class="n">sae_pwe_h2e</span> <span class="o">=</span> <span class="n">WPA3_SAE_PWE_BOTH</span><span class="p">,</span>
+            <span class="p">.</span><span class="n">sae_h2e_identifier</span> <span class="o">=</span> <span class="s">""</span><span class="p">,</span>
+        <span class="p">},</span>
+    <span class="p">};</span>
+
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_wifi_set_mode</span><span class="p">(</span><span class="n">WIFI_MODE_STA</span><span class="p">)</span> <span class="p">);</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_wifi_set_config</span><span class="p">(</span><span class="n">WIFI_IF_STA</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">wifi_config</span><span class="p">)</span> <span class="p">);</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_wifi_start</span><span class="p">()</span> <span class="p">);</span>
+
+    <span class="n">EventBits_t</span> <span class="n">bits</span> <span class="o">=</span> <span class="n">xEventGroupWaitBits</span><span class="p">(</span><span class="n">s_wifi_event_group</span><span class="p">,</span>
+            <span class="n">WIFI_CONNECTED_BIT</span> <span class="o">|</span> <span class="n">WIFI_FAIL_BIT</span><span class="p">,</span>
+            <span class="n">pdFALSE</span><span class="p">,</span>
+            <span class="n">pdFALSE</span><span class="p">,</span>
+            <span class="n">portMAX_DELAY</span><span class="p">);</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">bits</span> <span class="o">&amp;</span> <span class="n">WIFI_CONNECTED_BIT</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Connected!"</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">bits</span> <span class="o">&amp;</span> <span class="n">WIFI_FAIL_BIT</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ESP_LOGE</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Failed to connect!"</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">app_main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+
+    <span class="n">esp_err_t</span> <span class="n">ret</span> <span class="o">=</span> <span class="n">nvs_flash_init</span><span class="p">();</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">ret</span> <span class="o">==</span> <span class="n">ESP_ERR_NVS_NO_FREE_PAGES</span> <span class="o">||</span> <span class="n">ret</span> <span class="o">==</span> <span class="n">ESP_ERR_NVS_NEW_VERSION_FOUND</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">nvs_flash_erase</span><span class="p">());</span>
+      <span class="n">ret</span> <span class="o">=</span> <span class="n">nvs_flash_init</span><span class="p">();</span>
+    <span class="p">}</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">ret</span><span class="p">);</span>
+
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">bsp_led_indicator_create</span><span class="p">(</span><span class="n">leds</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="n">BSP_LED_NUM</span><span class="p">));</span>
+    <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"LEDs initialized successfully"</span><span class="p">);</span>
+    <span class="n">led_indicator_set_rgb</span><span class="p">(</span><span class="n">leds</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">SET_IRGB</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x20</span><span class="p">));</span>
+
+    <span class="n">wifi_init_sta</span><span class="p">();</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="extra">Extra</h3>
+
+<ol>
+  <li>Pokud budete chtít, můžete si například doma vyzkoušet připojení k Wi-Fi i pomocí komponenty <a href="https://github.com/espressif/esp-idf/tree/release/v5.2/examples/common_components/protocol_examples_common">common_components/protocol_examples_common</a>.</li>
+</ol>
+
+<h2 id="next-step">Next step</h2>
+
+<p>Když už jsme se úspěšně připojili na Wi-Fi, přesuneme se na práci s pamětí!</p>
+
+<p><a href="../assignment-4">Úkol 4: NVS</a></p>
+
+      </section>
+    </div>
+  </body>
+</html>

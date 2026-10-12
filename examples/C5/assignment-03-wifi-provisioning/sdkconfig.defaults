@@ -1,0 +1,8 @@
+# BLE provisioning (wifi_prov_scheme_ble) needs the Bluetooth stack enabled.
+# ESP32-C5 only has a BLE radio, so NimBLE (the lightweight BLE-only host) is used.
+CONFIG_BT_ENABLED=y
+CONFIG_BT_NIMBLE_ENABLED=y
+
+# The NimBLE + protocomm/protobuf stack needed for provisioning no longer fits
+# in the default 1MB factory partition - use the larger single-app layout.
+CONFIG_PARTITION_TABLE_SINGLE_APP_LARGE=y

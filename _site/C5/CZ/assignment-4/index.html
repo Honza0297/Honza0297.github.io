@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/assets/css/style.css?v=2244da98f21a89a4a6f49a27d5ca89d075a17535">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup theme-color -->
+<!-- start theme color meta headers -->
+<meta name="theme-color" content="#151515">
+<meta name="msapplication-navbutton-color" content="#151515">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- end theme color meta headers -->
+
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+
+<!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>Workshop: ESP-IDF a ESP32-C5 - Úkol 4 | Honza0297.github.io</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="Workshop: ESP-IDF a ESP32-C5 - Úkol 4" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="http://localhost:4000/C5/CZ/assignment-4/" />
+<meta property="og:url" content="http://localhost:4000/C5/CZ/assignment-4/" />
+<meta property="og:site_name" content="Honza0297.github.io" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2024-09-30T01:00:00+02:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Workshop: ESP-IDF a ESP32-C5 - Úkol 4" />
+<script type="application/ld+json">
+{"datePublished":"2024-09-30T01:00:00+02:00","@type":"BlogPosting","headline":"Workshop: ESP-IDF a ESP32-C5 - Úkol 4","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/C5/CZ/assignment-4/"},"url":"http://localhost:4000/C5/CZ/assignment-4/","dateModified":"2024-09-30T01:00:00+02:00","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <a id="a-title" href="/">
+          <h1>Honza0297.github.io</h1>
+        </a>
+        <h2></h2>
+
+        <section id="downloads">
+          
+          <a href="https://github.com/Honza0297/Honza0297.github.io" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <h2 id="úkol-4-totéž-ale-s-nvs">Úkol 4: Totéž, ale s NVS</h2>
+
+<p>V minulém úkolu jsme použili tu nejjednoduší možnost uložení SSID a hesla; definovali jsme si konstanty přímo v kódu. Nejen, že tenhle postup není ideální z hlediska změn, kdy každou změnu v SSID nebo heslu musíme aplikovat přímo v kódu a přeflashovat naši aplikaci. Tento způsob také přináší nemalá bezpečnostní rizika.</p>
+
+<p>V tomhle úkolu se podíváme, jak pracovat s <a href="https://docs.espressif.com/projects/esp-idf/en/release-v5.2/esp32/api-reference/storage/nvs_flash.html">Non-Volatile-Storage (NVS)</a>. Často se NVS říká “emulovaná EEPROM”. ESP32-C5 ale žádnou EEPROM vestavěnou nemá, takže NVS používá paměť flash (tu samou, kam ukládáme i naši aplikaci).</p>
+
+<blockquote>
+  <p><strong>Poznámka:</strong> V tomhle úkolu použijeme ten samý projekt, který jsme používali v minulých dvou úkolech.</p>
+</blockquote>
+
+<p>Princip ukládání dat v knihovně NVS je založený na párech klíč-hodnota (podobně jako slovník v Pythonu), mimo jiné typu <code class="language-plaintext highlighter-rouge">integer</code>, <code class="language-plaintext highlighter-rouge">string</code>, a <code class="language-plaintext highlighter-rouge">blob</code> (binární data proměnlivé délky).</p>
+
+<blockquote>
+  <p>Velikost řetězců (včetně nulového ukončovacího znaku) je v současné době omezená na 4000 bytů. Bloby jsou omezené na 508,000 bytů nebo 97.6% velikosti oddílu (partition size, 4000 bytů v našem případě), podle toho, co je menší.</p>
+</blockquote>
+
+<p>NVS je užitečné zejména v případě, kdy potřebujeme ukládat jednu nebo více konfigurací, které potřebují zůstat perzistentní - trvale uložené ve flash paměti.</p>
+
+<h3 id="praktická-ukázka-nvs">Praktická ukázka NVS</h3>
+
+<p>V ukázce si předvedeme, jak připravit <em>partition table</em>, NVS datový soubor a změníme kód z předcházejícího úkolu tak, aby se WI-Fi jméno a heslo četly z NVS.</p>
+
+<ol>
+  <li><strong>Vytvoření partition tabulky</strong></li>
+</ol>
+
+<p>Jak jsme si řekli, NVS používá paměť flash. Ta se ale používá i pro jiná data. Musíme tedy upravit partition tabulku a alokovat v ní místo pro náš NVS oddíl.</p>
+
+<p>Pomocí nám již dobře známé zkratky Ctrl + Shift + P otevřeme <em>Command Palette</em> a vyhledáme <em>Open Partition Table Editor UI</em>.</p>
+
+<blockquote>
+  <p><strong>Poznámka:</strong> Pokud vám nejde vyvolat <em>Partition Table Editor</em>, ověřte, že máte v konfiguraci nastavenou možnost <em>Partition Table -&gt; Partition Table</em> na <em>Custom partition table CSV</em>.</p>
+</blockquote>
+
+<p>Tabulku naplníme pomocí “Add New Row” tak, jak je vidno na obrázku:</p>
+
+<p><img src="/C5/CZ/assignment-4/assets/nvs-1.webp" alt="Obsah partition tabulky" /></p>
+
+<p>Po kliknutí na tlačítko “Save” dojde k uložení a vytvoření základní partition tabulky <code class="language-plaintext highlighter-rouge">partitions.csv</code>, která bude vypadat takto:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code># ESP-IDF Partition Table
+# Name,   Type, SubType, Offset,  Size,   Flags
+nvs,      data, nvs,     0x9000,  0x6000,
+phy_init, data, phy,     0xf000,  0x1000,
+factory,  app,  factory, 0x10000, 1M,
+</code></pre></div></div>
+
+<p>Hodnoty jsou editovatelné i přímo a jednotlivé oddíly lze upravit podle vlastní potřeby.</p>
+
+<ol>
+  <li><strong>Vytvoření NVS souboru</strong></li>
+</ol>
+
+<p>NVS editor otevřeme podobně: opět pomocí Ctrl + Shift + P otevřeme <em>Command Palette</em> a vybereme možnost <em>Open NVS partition editor</em>. Zdánlivě se nic nestane, ale nahoře uprostřed se otevře okno pro zadání jména souboru, kam budeme chtít NVS soubor uložit. Zvolíme třeba <code class="language-plaintext highlighter-rouge">nvs.csv</code> a stiskneme Enter. Otevře se nám okno podobné tomu níže:</p>
+
+<p><img src="/C5/CZ/assignment-4/assets/nvs-2.webp" alt="Obsah NVS tabulky" /></p>
+
+<p>Změníme hodnotu <code class="language-plaintext highlighter-rouge">Size of partition (bytes)</code> na <code class="language-plaintext highlighter-rouge">0x6000</code> (stejná hodnota jako v partition table), přidáme řádky pomocí “Add New Row” a vyplníme je podle obrázku výše. Následně zmáčkneme “Save”.</p>
+
+<p>Nakonec můžeme otevřít soubor <code class="language-plaintext highlighter-rouge">nvs.csv</code> a ověřit, že vypadá stejně jako ten níže:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>key,type,encoding,value
+storage,namespace,,
+ssid,data,string,"network-ssid"
+password,data,string,"network-password"
+
+</code></pre></div></div>
+
+<ol>
+  <li><strong>Zakomponování NVS kódu do našeho projektu</strong></li>
+</ol>
+
+<p>Budeme potřebovat kostru nové funkce <code class="language-plaintext highlighter-rouge">esp_err_t get_wifi_credentials</code>, do které budeme vpisovat kód pro vyčtení dat z NVS:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">char</span> <span class="n">ssid</span><span class="p">[</span><span class="mi">32</span><span class="p">];</span>
+<span class="kt">char</span> <span class="n">password</span><span class="p">[</span><span class="mi">64</span><span class="p">];</span>
+
+<span class="n">esp_err_t</span> <span class="nf">get_wifi_credentials</span><span class="p">(</span><span class="kt">void</span><span class="p">){</span>
+
+	<span class="c1">//TODO</span>
+<span class="p">}</span>
+
+</code></pre></div></div>
+
+<p>Potom, co jsme už v minulém úkolu provedli inicializaci NVS, můžeme NVS oddíl otevřít:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Opening Non-Volatile Storage (NVS) handle"</span><span class="p">);</span>
+    <span class="n">nvs_handle_t</span> <span class="n">my_handle</span><span class="p">;</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="n">nvs_open_from_partition</span><span class="p">(</span><span class="s">"nvs"</span><span class="p">,</span> <span class="s">"storage"</span><span class="p">,</span> <span class="n">NVS_READWRITE</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">my_handle</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">ret</span> <span class="o">!=</span> <span class="n">ESP_OK</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ESP_LOGE</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Error (%s) opening NVS handle!</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">esp_err_to_name</span><span class="p">(</span><span class="n">ret</span><span class="p">));</span>
+        <span class="k">return</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"The NVS handle successfully opened"</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>Následně můžeme začít číst jednotlivé hodnoty:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="kt">char</span> <span class="n">ssid</span><span class="p">[</span><span class="mi">32</span><span class="p">];</span>
+<span class="kt">char</span> <span class="n">password</span><span class="p">[</span><span class="mi">64</span><span class="p">];</span>
+
+<span class="n">esp_err_t</span> <span class="nf">get_wifi_credentials</span><span class="p">(</span><span class="kt">void</span><span class="p">){</span>
+
+	<span class="n">esp_err_t</span> <span class="n">err</span><span class="p">;</span>
+
+	<span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Opening Non-Volatile Storage (NVS) handle"</span><span class="p">);</span>
+    <span class="n">nvs_handle_t</span> <span class="n">nvs_mem_handle</span><span class="p">;</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n">nvs_open_from_partition</span><span class="p">(</span><span class="s">"nvs"</span><span class="p">,</span> <span class="s">"storage"</span><span class="p">,</span> <span class="n">NVS_READWRITE</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">nvs_mem_handle</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">err</span> <span class="o">!=</span> <span class="n">ESP_OK</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ESP_LOGE</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Error (%s) opening NVS handle!</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">esp_err_to_name</span><span class="p">(</span><span class="n">err</span><span class="p">));</span>
+        <span class="k">return</span> <span class="n">err</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"The NVS handle successfully opened"</span><span class="p">);</span>
+
+	<span class="kt">size_t</span> <span class="n">ssid_len</span> <span class="o">=</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">ssid</span><span class="p">);</span>
+	<span class="kt">size_t</span> <span class="n">pass_len</span> <span class="o">=</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">password</span><span class="p">);</span>
+
+    <span class="n">err</span> <span class="o">=</span> <span class="n">nvs_get_str</span><span class="p">(</span><span class="n">nvs_mem_handle</span><span class="p">,</span> <span class="s">"ssid"</span><span class="p">,</span> <span class="n">ssid</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">ssid_len</span><span class="p">);</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">err</span><span class="p">);</span>
+
+    <span class="n">err</span> <span class="o">=</span> <span class="n">nvs_get_str</span><span class="p">(</span><span class="n">nvs_mem_handle</span><span class="p">,</span> <span class="s">"password"</span><span class="p">,</span> <span class="n">password</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">pass_len</span><span class="p">);</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">err</span><span class="p">);</span>
+
+    <span class="n">nvs_close</span><span class="p">(</span><span class="n">nvs_mem_handle</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">ESP_OK</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>Nyní ještě potřebujeme předat SSID a heslo do konfigurační struktury:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">wifi_config_t</span> <span class="n">wifi_config</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="p">.</span><span class="n">sta</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="p">.</span><span class="n">ssid</span> <span class="o">=</span> <span class="s">""</span><span class="p">,</span>
+            <span class="p">.</span><span class="n">password</span> <span class="o">=</span> <span class="s">""</span><span class="p">,</span>
+            <span class="p">.</span><span class="n">threshold</span><span class="p">.</span><span class="n">authmode</span> <span class="o">=</span> <span class="n">WIFI_AUTH_WPA2_WPA3_PSK</span><span class="p">,</span>
+            <span class="p">.</span><span class="n">sae_pwe_h2e</span> <span class="o">=</span> <span class="n">WPA3_SAE_PWE_BOTH</span><span class="p">,</span>
+            <span class="p">.</span><span class="n">sae_h2e_identifier</span> <span class="o">=</span> <span class="s">""</span><span class="p">,</span>
+        <span class="p">},</span>
+    <span class="p">};</span>
+
+    <span class="n">strncpy</span><span class="p">((</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="n">wifi_config</span><span class="p">.</span><span class="n">sta</span><span class="p">.</span><span class="n">ssid</span><span class="p">,</span> <span class="n">ssid</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">wifi_config</span><span class="p">.</span><span class="n">sta</span><span class="p">.</span><span class="n">ssid</span><span class="p">));</span>
+    <span class="n">strncpy</span><span class="p">((</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="n">wifi_config</span><span class="p">.</span><span class="n">sta</span><span class="p">.</span><span class="n">password</span><span class="p">,</span> <span class="n">password</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">wifi_config</span><span class="p">.</span><span class="n">sta</span><span class="p">.</span><span class="n">password</span><span class="p">));</span>
+</code></pre></div></div>
+
+<p>Naši nově vytvořenou funkci <code class="language-plaintext highlighter-rouge">get_wifi_credentials</code> nezapomeňte zavolat před <code class="language-plaintext highlighter-rouge">wifi_init_sta</code> v hlavní funkci <code class="language-plaintext highlighter-rouge">app_main</code>:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">get_wifi_credentials</span><span class="p">());</span>
+</code></pre></div></div>
+
+<ol>
+  <li><strong>Konfigurace sestavení (build)</strong></li>
+</ol>
+
+<p>Jelikož používáme vlastní <em>partition table</em> a NVS, musíme změnit pár věcí i v CMake, specificky v souboru <code class="language-plaintext highlighter-rouge">main/CMakeLists.txt</code> zavoláme funkci, která přidá NVS tabulku na své místo (<code class="language-plaintext highlighter-rouge">nvs_create_partition_image</code>):</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">idf_component_register</span><span class="p">(</span>
+    <span class="n">SRCS</span> <span class="n">main</span><span class="p">.</span><span class="n">c</span>         <span class="err">#</span> <span class="n">list</span> <span class="n">the</span> <span class="n">source</span> <span class="n">files</span> <span class="n">of</span> <span class="n">this</span> <span class="n">component</span>
+    <span class="n">INCLUDE_DIRS</span>        <span class="err">#</span> <span class="n">optional</span><span class="p">,</span> <span class="n">add</span> <span class="n">here</span> <span class="n">public</span> <span class="n">include</span> <span class="n">directories</span>
+    <span class="n">PRIV_INCLUDE_DIRS</span>   <span class="err">#</span> <span class="n">optional</span><span class="p">,</span> <span class="n">add</span> <span class="n">here</span> <span class="n">private</span> <span class="n">include</span> <span class="n">directories</span>
+    <span class="n">REQUIRES</span>            <span class="n">esp_wifi</span> <span class="n">esp_netif</span> <span class="n">esp_event</span> <span class="n">nvs_flash</span> <span class="n">led_strip</span> <span class="err">#</span> <span class="n">optional</span><span class="p">,</span> <span class="n">list</span> <span class="n">the</span> <span class="n">public</span> <span class="n">requirements</span> <span class="p">(</span><span class="n">component</span> <span class="n">names</span><span class="p">)</span>
+    <span class="n">PRIV_REQUIRES</span>       <span class="err">#</span> <span class="n">optional</span><span class="p">,</span> <span class="n">list</span> <span class="n">the</span> <span class="n">private</span> <span class="n">requirements</span>
+<span class="p">)</span>
+<span class="n">nvs_create_partition_image</span><span class="p">(</span><span class="n">nvs</span> <span class="p">..</span><span class="o">/</span><span class="n">nvs</span><span class="p">.</span><span class="n">csv</span> <span class="n">FLASH_IN_PROJECT</span><span class="p">)</span>
+</code></pre></div></div>
+
+<ol>
+  <li><strong>Konfigurace partition table</strong></li>
+</ol>
+
+<p>Nyní ještě musíme ESP-IDF říct, ať používá naši partition table. To provedeme tak, že otevřeme soubor <code class="language-plaintext highlighter-rouge">sdkconfig.defaults</code> v kořenovém adresáři projektu (pokud tam není, vytvoříme ho) a přidáme do něj následující hodnoty:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">CONFIG_PARTITION_TABLE_CUSTOM</span><span class="o">=</span><span class="n">y</span>
+<span class="n">CONFIG_PARTITION_TABLE_CUSTOM_FILENAME</span><span class="o">=</span><span class="s">"partitions.csv"</span>
+<span class="n">CONFIG_PARTITION_TABLE_FILENAME</span><span class="o">=</span><span class="s">"partitions.csv"</span>
+</code></pre></div></div>
+
+<p>Nyní můžeme měnit SSID a heslo bez nutnosti zasahovat přímo do zdrojového kódu aplikace.</p>
+
+<h4 id="kompletní-kód">Kompletní kód</h4>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include &lt;stdio.h&gt;
+#include "led_strip.h"
+#include "esp_log.h"
+#include "esp_err.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/event_groups.h"
+#include "esp_system.h"
+#include "esp_wifi.h"
+#include "esp_event.h"
+#include "nvs.h"
+#include "nvs_flash.h"
+#include "lwip/err.h"
+#include "lwip/sys.h"
+</span>
+<span class="cp">#define LED_STRIP_GPIO        27
+#define LED_STRIP_RMT_RES_HZ  (10 * 1000 * 1000)
+</span>
+<span class="cp">#define WIFI_CONNECTED_BIT BIT0
+#define WIFI_FAIL_BIT      BIT1
+</span>
+<span class="kt">char</span> <span class="n">ssid</span><span class="p">[</span><span class="mi">32</span><span class="p">];</span>
+<span class="kt">char</span> <span class="n">password</span><span class="p">[</span><span class="mi">64</span><span class="p">];</span>
+
+<span class="k">static</span> <span class="n">led_strip_handle_t</span> <span class="n">led_strip</span><span class="p">;</span>
+
+<span class="k">static</span> <span class="n">EventGroupHandle_t</span> <span class="n">s_wifi_event_group</span><span class="p">;</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="n">s_retry_num</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+<span class="k">static</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">TAG</span> <span class="o">=</span> <span class="s">"workshop"</span><span class="p">;</span>
+
+<span class="n">led_strip_handle_t</span> <span class="nf">configure_led</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">led_strip_handle_t</span> <span class="n">strip</span><span class="p">;</span>
+    <span class="n">led_strip_config_t</span> <span class="n">strip_config</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="p">.</span><span class="n">strip_gpio_num</span> <span class="o">=</span> <span class="n">LED_STRIP_GPIO</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">max_leds</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">color_component_format</span> <span class="o">=</span> <span class="n">LED_STRIP_COLOR_COMPONENT_FMT_GRB</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">led_model</span> <span class="o">=</span> <span class="n">LED_MODEL_WS2812</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">flags</span><span class="p">.</span><span class="n">invert_out</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
+    <span class="p">};</span>
+    <span class="n">led_strip_rmt_config_t</span> <span class="n">rmt_config</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="p">.</span><span class="n">clk_src</span> <span class="o">=</span> <span class="n">RMT_CLK_SRC_DEFAULT</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">resolution_hz</span> <span class="o">=</span> <span class="n">LED_STRIP_RMT_RES_HZ</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">mem_block_symbols</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">flags</span><span class="p">.</span><span class="n">with_dma</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
+    <span class="p">};</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">led_strip_new_rmt_device</span><span class="p">(</span><span class="o">&amp;</span><span class="n">strip_config</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">rmt_config</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">strip</span><span class="p">));</span>
+    <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"LED strip initialized successfully"</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">strip</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">led_set_color</span><span class="p">(</span><span class="kt">uint8_t</span> <span class="n">r</span><span class="p">,</span> <span class="kt">uint8_t</span> <span class="n">g</span><span class="p">,</span> <span class="kt">uint8_t</span> <span class="n">b</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">led_strip_set_pixel</span><span class="p">(</span><span class="n">led_strip</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">));</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">led_strip_refresh</span><span class="p">(</span><span class="n">led_strip</span><span class="p">));</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">event_handler</span><span class="p">(</span><span class="kt">void</span><span class="o">*</span> <span class="n">arg</span><span class="p">,</span> <span class="n">esp_event_base_t</span> <span class="n">event_base</span><span class="p">,</span>
+                                <span class="kt">int32_t</span> <span class="n">event_id</span><span class="p">,</span> <span class="kt">void</span><span class="o">*</span> <span class="n">event_data</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">event_base</span> <span class="o">==</span> <span class="n">WIFI_EVENT</span> <span class="o">&amp;&amp;</span> <span class="n">event_id</span> <span class="o">==</span> <span class="n">WIFI_EVENT_STA_START</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">esp_wifi_connect</span><span class="p">();</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">event_base</span> <span class="o">==</span> <span class="n">WIFI_EVENT</span> <span class="o">&amp;&amp;</span> <span class="n">event_id</span> <span class="o">==</span> <span class="n">WIFI_EVENT_STA_DISCONNECTED</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">s_retry_num</span> <span class="o">&lt;</span> <span class="mi">30</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">esp_wifi_connect</span><span class="p">();</span>
+            <span class="n">s_retry_num</span><span class="o">++</span><span class="p">;</span>
+            <span class="n">ESP_LOGW</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Trying to connect to WiFi"</span><span class="p">);</span>
+            <span class="n">led_set_color</span><span class="p">(</span><span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x20</span><span class="p">);</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="n">xEventGroupSetBits</span><span class="p">(</span><span class="n">s_wifi_event_group</span><span class="p">,</span> <span class="n">WIFI_FAIL_BIT</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="n">ESP_LOGE</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Failed to connect to WiFi"</span><span class="p">);</span>
+        <span class="n">led_set_color</span><span class="p">(</span><span class="mh">0x20</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">event_base</span> <span class="o">==</span> <span class="n">IP_EVENT</span> <span class="o">&amp;&amp;</span> <span class="n">event_id</span> <span class="o">==</span> <span class="n">IP_EVENT_STA_GOT_IP</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ip_event_got_ip_t</span><span class="o">*</span> <span class="n">event</span> <span class="o">=</span> <span class="p">(</span><span class="n">ip_event_got_ip_t</span><span class="o">*</span><span class="p">)</span> <span class="n">event_data</span><span class="p">;</span>
+        <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"got ip:"</span> <span class="n">IPSTR</span><span class="p">,</span> <span class="n">IP2STR</span><span class="p">(</span><span class="o">&amp;</span><span class="n">event</span><span class="o">-&gt;</span><span class="n">ip_info</span><span class="p">.</span><span class="n">ip</span><span class="p">));</span>
+        <span class="n">led_set_color</span><span class="p">(</span><span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x20</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">);</span>
+        <span class="n">s_retry_num</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="n">xEventGroupSetBits</span><span class="p">(</span><span class="n">s_wifi_event_group</span><span class="p">,</span> <span class="n">WIFI_CONNECTED_BIT</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">wifi_init_sta</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">s_wifi_event_group</span> <span class="o">=</span> <span class="n">xEventGroupCreate</span><span class="p">();</span>
+
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_netif_init</span><span class="p">());</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_event_loop_create_default</span><span class="p">());</span>
+    <span class="n">esp_netif_create_default_wifi_sta</span><span class="p">();</span>
+
+    <span class="n">wifi_init_config_t</span> <span class="n">cfg</span> <span class="o">=</span> <span class="n">WIFI_INIT_CONFIG_DEFAULT</span><span class="p">();</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_wifi_init</span><span class="p">(</span><span class="o">&amp;</span><span class="n">cfg</span><span class="p">));</span>
+
+    <span class="n">esp_event_handler_instance_t</span> <span class="n">instance_any_id</span><span class="p">;</span>
+    <span class="n">esp_event_handler_instance_t</span> <span class="n">instance_got_ip</span><span class="p">;</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_event_handler_instance_register</span><span class="p">(</span><span class="n">WIFI_EVENT</span><span class="p">,</span>
+            <span class="n">ESP_EVENT_ANY_ID</span><span class="p">,</span>
+            <span class="o">&amp;</span><span class="n">event_handler</span><span class="p">,</span>
+            <span class="nb">NULL</span><span class="p">,</span>
+            <span class="o">&amp;</span><span class="n">instance_any_id</span><span class="p">));</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_event_handler_instance_register</span><span class="p">(</span><span class="n">IP_EVENT</span><span class="p">,</span>
+            <span class="n">IP_EVENT_STA_GOT_IP</span><span class="p">,</span>
+            <span class="o">&amp;</span><span class="n">event_handler</span><span class="p">,</span>
+            <span class="nb">NULL</span><span class="p">,</span>
+            <span class="o">&amp;</span><span class="n">instance_got_ip</span><span class="p">));</span>
+
+    <span class="n">wifi_config_t</span> <span class="n">wifi_config</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="p">.</span><span class="n">sta</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="p">.</span><span class="n">ssid</span> <span class="o">=</span> <span class="s">""</span><span class="p">,</span>
+            <span class="p">.</span><span class="n">password</span> <span class="o">=</span> <span class="s">""</span><span class="p">,</span>
+            <span class="p">.</span><span class="n">threshold</span><span class="p">.</span><span class="n">authmode</span> <span class="o">=</span> <span class="n">WIFI_AUTH_WPA2_WPA3_PSK</span><span class="p">,</span>
+            <span class="p">.</span><span class="n">sae_pwe_h2e</span> <span class="o">=</span> <span class="n">WPA3_SAE_PWE_BOTH</span><span class="p">,</span>
+            <span class="p">.</span><span class="n">sae_h2e_identifier</span> <span class="o">=</span> <span class="s">""</span><span class="p">,</span>
+        <span class="p">},</span>
+    <span class="p">};</span>
+
+    <span class="n">strncpy</span><span class="p">((</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="n">wifi_config</span><span class="p">.</span><span class="n">sta</span><span class="p">.</span><span class="n">ssid</span><span class="p">,</span> <span class="n">ssid</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">wifi_config</span><span class="p">.</span><span class="n">sta</span><span class="p">.</span><span class="n">ssid</span><span class="p">));</span>
+    <span class="n">strncpy</span><span class="p">((</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="n">wifi_config</span><span class="p">.</span><span class="n">sta</span><span class="p">.</span><span class="n">password</span><span class="p">,</span> <span class="n">password</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">wifi_config</span><span class="p">.</span><span class="n">sta</span><span class="p">.</span><span class="n">password</span><span class="p">));</span>
+
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_wifi_set_mode</span><span class="p">(</span><span class="n">WIFI_MODE_STA</span><span class="p">));</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_wifi_set_config</span><span class="p">(</span><span class="n">WIFI_IF_STA</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">wifi_config</span><span class="p">));</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_wifi_start</span><span class="p">());</span>
+
+    <span class="n">EventBits_t</span> <span class="n">bits</span> <span class="o">=</span> <span class="n">xEventGroupWaitBits</span><span class="p">(</span><span class="n">s_wifi_event_group</span><span class="p">,</span>
+            <span class="n">WIFI_CONNECTED_BIT</span> <span class="o">|</span> <span class="n">WIFI_FAIL_BIT</span><span class="p">,</span>
+            <span class="n">pdFALSE</span><span class="p">,</span>
+            <span class="n">pdFALSE</span><span class="p">,</span>
+            <span class="n">portMAX_DELAY</span><span class="p">);</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">bits</span> <span class="o">&amp;</span> <span class="n">WIFI_CONNECTED_BIT</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Connected!"</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">bits</span> <span class="o">&amp;</span> <span class="n">WIFI_FAIL_BIT</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ESP_LOGE</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Failed to connect!"</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="n">esp_err_t</span> <span class="nf">get_wifi_credentials</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">esp_err_t</span> <span class="n">err</span><span class="p">;</span>
+
+    <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Opening Non-Volatile Storage (NVS) handle"</span><span class="p">);</span>
+    <span class="n">nvs_handle_t</span> <span class="n">nvs_mem_handle</span><span class="p">;</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n">nvs_open_from_partition</span><span class="p">(</span><span class="s">"nvs"</span><span class="p">,</span> <span class="s">"storage"</span><span class="p">,</span> <span class="n">NVS_READWRITE</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">nvs_mem_handle</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">err</span> <span class="o">!=</span> <span class="n">ESP_OK</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ESP_LOGE</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Error (%s) opening NVS handle!</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">esp_err_to_name</span><span class="p">(</span><span class="n">err</span><span class="p">));</span>
+        <span class="k">return</span> <span class="n">err</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"The NVS handle successfully opened"</span><span class="p">);</span>
+
+    <span class="kt">size_t</span> <span class="n">ssid_len</span> <span class="o">=</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">ssid</span><span class="p">);</span>
+    <span class="kt">size_t</span> <span class="n">pass_len</span> <span class="o">=</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">password</span><span class="p">);</span>
+
+    <span class="n">err</span> <span class="o">=</span> <span class="n">nvs_get_str</span><span class="p">(</span><span class="n">nvs_mem_handle</span><span class="p">,</span> <span class="s">"ssid"</span><span class="p">,</span> <span class="n">ssid</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">ssid_len</span><span class="p">);</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">err</span><span class="p">);</span>
+
+    <span class="n">err</span> <span class="o">=</span> <span class="n">nvs_get_str</span><span class="p">(</span><span class="n">nvs_mem_handle</span><span class="p">,</span> <span class="s">"password"</span><span class="p">,</span> <span class="n">password</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">pass_len</span><span class="p">);</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">err</span><span class="p">);</span>
+
+    <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Retrieved ssid: %s, password: %s"</span><span class="p">,</span> <span class="n">ssid</span><span class="p">,</span> <span class="n">password</span><span class="p">);</span>
+
+    <span class="n">nvs_close</span><span class="p">(</span><span class="n">nvs_mem_handle</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">ESP_OK</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">app_main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">esp_err_t</span> <span class="n">ret</span> <span class="o">=</span> <span class="n">nvs_flash_init</span><span class="p">();</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">ret</span> <span class="o">==</span> <span class="n">ESP_ERR_NVS_NO_FREE_PAGES</span> <span class="o">||</span> <span class="n">ret</span> <span class="o">==</span> <span class="n">ESP_ERR_NVS_NEW_VERSION_FOUND</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">nvs_flash_erase</span><span class="p">());</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="n">nvs_flash_init</span><span class="p">();</span>
+    <span class="p">}</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">ret</span><span class="p">);</span>
+
+    <span class="n">led_strip</span> <span class="o">=</span> <span class="n">configure_led</span><span class="p">();</span>
+    <span class="n">led_set_color</span><span class="p">(</span><span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x20</span><span class="p">);</span>
+
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">get_wifi_credentials</span><span class="p">());</span>
+
+    <span class="n">wifi_init_sta</span><span class="p">();</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h2 id="další-krok">Další krok</h2>
+
+<p>Zdá se vám to komplikované? Tak si to pojďme zjednodušit!</p>
+
+<p><a href="../assignment-5">Úkol 5: Wi-Fi provisioning</a></p>
+
+      </section>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/assets/css/style.css?v=2244da98f21a89a4a6f49a27d5ca89d075a17535">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup theme-color -->
+<!-- start theme color meta headers -->
+<meta name="theme-color" content="#151515">
+<meta name="msapplication-navbutton-color" content="#151515">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- end theme color meta headers -->
+
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+
+<!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>ESP-IDF and ESP32-C6 Workshop - Assignment 6 | Honza0297.github.io</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="ESP-IDF and ESP32-C6 Workshop - Assignment 6" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="http://localhost:4000/EN/assignment-6/" />
+<meta property="og:url" content="http://localhost:4000/EN/assignment-6/" />
+<meta property="og:site_name" content="Honza0297.github.io" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2024-09-30T01:00:00+02:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="ESP-IDF and ESP32-C6 Workshop - Assignment 6" />
+<script type="application/ld+json">
+{"datePublished":"2024-09-30T01:00:00+02:00","@type":"BlogPosting","headline":"ESP-IDF and ESP32-C6 Workshop - Assignment 6","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/EN/assignment-6/"},"url":"http://localhost:4000/EN/assignment-6/","dateModified":"2024-09-30T01:00:00+02:00","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <a id="a-title" href="/">
+          <h1>Honza0297.github.io</h1>
+        </a>
+        <h2></h2>
+
+        <section id="downloads">
+          
+          <a href="https://github.com/Honza0297/Honza0297.github.io" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <h2 id="assignment-6-low-power-core">Assignment 6: Low Power core</h2>
+
+<hr />
+
+<p>The ESP32-C6 features two cores: a high-power (HP) core for standard use (networking, complex computations) and a low-power (LP) RISC-V core designed to minimize energy consumption.</p>
+
+<p>The LP core (often called the <strong>ULP - Ultra Low Power core</strong>) is designed to handle simple tasks while the main HP core is in deep sleep mode. This significantly reduces battery consumption, making it perfect for battery-powered projects. The LP core can collect data from sensors, control GPIOs, or increment a counter, waking up the HP core only when a threshold is met.</p>
+
+<h3 id="1-the-sleep-cycle">1. The Sleep Cycle</h3>
+
+<p>In this assignment, we will configure the HP core to go into Deep Sleep. The LP core will continue to run, perform a basic task, and eventually wake the HP core back up.</p>
+
+<p>To use the LP core, we need to create a special sub-folder in our project called <code class="language-plaintext highlighter-rouge">main/ulp</code> and write the code that will run on the LP core there.</p>
+
+<h3 id="2-configuration-via-menuconfig">2. Configuration via menuconfig</h3>
+
+<p>Run:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>idf.py menuconfig
+</code></pre></div></div>
+
+<p>Navigate to:</p>
+<ul>
+  <li><strong>Component config —&gt; Ultra Low Power (ULP) Co-processor</strong>
+    <ul>
+      <li><strong>Enable Ultra Low Power (ULP) Coprocessor</strong>: Select <code class="language-plaintext highlighter-rouge">LP-core</code></li>
+      <li>Leave other settings as default.</li>
+    </ul>
+  </li>
+</ul>
+
+<p>Press <code class="language-plaintext highlighter-rouge">Q</code> to quit and <code class="language-plaintext highlighter-rouge">Y</code> to save.</p>
+
+<h3 id="3-writing-the-lp-core-code">3. Writing the LP Core Code</h3>
+
+<p>Create a file named <code class="language-plaintext highlighter-rouge">main/ulp/main.c</code>. This code runs <em>only</em> on the LP core!</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include &lt;stdint.h&gt;
+#include "ulp_lp_core.h"
+#include "ulp_lp_core_utils.h"
+</span>
+<span class="c1">// Variables shared between HP and LP core</span>
+<span class="k">volatile</span> <span class="kt">uint32_t</span> <span class="n">counter</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="c1">// Increment our counter</span>
+    <span class="n">counter</span><span class="o">++</span><span class="p">;</span>
+
+    <span class="c1">// Wake the main CPU once the counter reaches 5</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">counter</span> <span class="o">&gt;=</span> <span class="mi">5</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ulp_lp_core_wakeup_main_processor</span><span class="p">();</span>
+        <span class="n">counter</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="c1">// Go back to sleep until the LP timer wakes us again</span>
+    <span class="n">ulp_lp_core_halt</span><span class="p">();</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="4-writing-the-hp-core-code-app_main">4. Writing the HP Core Code (app_main)</h3>
+
+<p>In your <code class="language-plaintext highlighter-rouge">main/main.c</code>, initialize the LP core and then put the HP core to sleep:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include &lt;stdio.h&gt;
+#include "freertos/FreeRTOS.h"
+#include "esp_log.h"
+#include "esp_sleep.h"
+#include "ulp_lp_core.h"
+</span>
+<span class="k">extern</span> <span class="k">const</span> <span class="kt">uint8_t</span> <span class="n">ulp_main_bin_start</span><span class="p">[]</span> <span class="n">asm</span><span class="p">(</span><span class="s">"_binary_ulp_main_bin_start"</span><span class="p">);</span>
+<span class="k">extern</span> <span class="k">const</span> <span class="kt">uint8_t</span> <span class="n">ulp_main_bin_end</span><span class="p">[]</span>   <span class="n">asm</span><span class="p">(</span><span class="s">"_binary_ulp_main_bin_end"</span><span class="p">);</span>
+
+<span class="c1">// This variable is mapped to the one in the LP core code!</span>
+<span class="k">extern</span> <span class="kt">uint32_t</span> <span class="n">ulp_counter</span><span class="p">;</span>
+
+<span class="k">static</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">TAG</span> <span class="o">=</span> <span class="s">"lp_core"</span><span class="p">;</span>
+
+<span class="kt">void</span> <span class="nf">app_main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">esp_sleep_wakeup_cause_t</span> <span class="n">cause</span> <span class="o">=</span> <span class="n">esp_sleep_get_wakeup_cause</span><span class="p">();</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">cause</span> <span class="o">==</span> <span class="n">ESP_SLEEP_WAKEUP_ULP</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Woken up by LP core! LP Counter: %lu"</span><span class="p">,</span> <span class="n">ulp_counter</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Regular boot. Starting LP core..."</span><span class="p">);</span>
+
+        <span class="c1">// Load the LP core binary</span>
+        <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">ulp_lp_core_load_binary</span><span class="p">(</span><span class="n">ulp_main_bin_start</span><span class="p">,</span>
+                                                <span class="p">(</span><span class="n">ulp_main_bin_end</span> <span class="o">-</span> <span class="n">ulp_main_bin_start</span><span class="p">)));</span>
+
+        <span class="c1">// Configure the LP core to wake up every 1 second</span>
+        <span class="n">ulp_lp_core_cfg_t</span> <span class="n">cfg</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="p">.</span><span class="n">wakeup_source</span> <span class="o">=</span> <span class="n">ULP_LP_CORE_WAKEUP_SOURCE_HP_TIMER</span><span class="p">,</span>
+            <span class="p">.</span><span class="n">hp_timer_sleep_duration_us</span> <span class="o">=</span> <span class="mi">1000000</span><span class="p">,</span>
+        <span class="p">};</span>
+        <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">ulp_lp_core_run</span><span class="p">(</span><span class="o">&amp;</span><span class="n">cfg</span><span class="p">));</span>
+    <span class="p">}</span>
+
+    <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"HP Core going to deep sleep for 10 seconds, but ULP might wake us sooner..."</span><span class="p">);</span>
+    
+    <span class="c1">// Allow ULP to wake the main processor</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_sleep_enable_ulp_wakeup</span><span class="p">());</span>
+    
+    <span class="c1">// Go to deep sleep</span>
+    <span class="n">esp_deep_sleep_start</span><span class="p">();</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="5-cmake-configuration">5. CMake Configuration</h3>
+
+<p>The build system needs to know about the LP core code. Open <code class="language-plaintext highlighter-rouge">main/CMakeLists.txt</code> and add the following lines at the end:</p>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nf">ulp_embed_binary</span><span class="p">(</span>ulp_main <span class="s2">"ulp/main.c"</span><span class="p">)</span>
+</code></pre></div></div>
+
+<h3 id="6-build-flash-and-monitor">6. Build, Flash, and Monitor</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>idf.py build flash monitor
+</code></pre></div></div>
+
+<p>You should see the HP core boot, start the LP core, and go to sleep. After 5 seconds, the LP core will wake the HP core back up, and you’ll see the message: <code class="language-plaintext highlighter-rouge">Woken up by LP core!</code></p>
+
+<h2 id="conclusion">Conclusion</h2>
+
+<p>Congratulations! You have completed the ESP32-C6 workshop. You’ve learned how to connect to Wi-Fi, perform OTA updates, use ESP-NOW for peer-to-peer communication, and utilize the LP core to save battery life.</p>
+
+<p>Thank you for participating!</p>
+
+      </section>
+    </div>
+  </body>
+</html>

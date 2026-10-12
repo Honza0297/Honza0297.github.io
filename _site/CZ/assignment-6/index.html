@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/assets/css/style.css?v=2244da98f21a89a4a6f49a27d5ca89d075a17535">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup theme-color -->
+<!-- start theme color meta headers -->
+<meta name="theme-color" content="#151515">
+<meta name="msapplication-navbutton-color" content="#151515">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- end theme color meta headers -->
+
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+
+<!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>Workshop: ESP-IDF a ESP32-C6 - Úkol 6 | Honza0297.github.io</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="Workshop: ESP-IDF a ESP32-C6 - Úkol 6" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="http://localhost:4000/CZ/assignment-6/" />
+<meta property="og:url" content="http://localhost:4000/CZ/assignment-6/" />
+<meta property="og:site_name" content="Honza0297.github.io" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2024-09-30T01:00:00+02:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Workshop: ESP-IDF a ESP32-C6 - Úkol 6" />
+<script type="application/ld+json">
+{"datePublished":"2024-09-30T01:00:00+02:00","@type":"BlogPosting","headline":"Workshop: ESP-IDF a ESP32-C6 - Úkol 6","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/CZ/assignment-6/"},"url":"http://localhost:4000/CZ/assignment-6/","dateModified":"2024-09-30T01:00:00+02:00","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <a id="a-title" href="/">
+          <h1>Honza0297.github.io</h1>
+        </a>
+        <h2></h2>
+
+        <section id="downloads">
+          
+          <a href="https://github.com/Honza0297/Honza0297.github.io" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <h2 id="úkol-6-protokoly">Úkol 6: Protokoly</h2>
+
+<p>V současné chvíli ESP-IDF podporuje hromadu porotokolů, jako například:</p>
+
+<ul>
+  <li>HTTP and HTTPS</li>
+  <li>ICMP</li>
+  <li>CoAP</li>
+  <li>MQTT and MQTT5</li>
+  <li>PPP (Point-to-Point Protocol) včetně PPPoS</li>
+  <li>Sockets</li>
+  <li>Modbus</li>
+  <li>SMTP</li>
+  <li>SNTP</li>
+  <li>…a mnoho dalších</li>
+</ul>
+
+<p>Můžete prozkoumat, jak se s protokoly pracuje přímo na základě příkladů ve složkách <a href="https://github.com/espressif/esp-idf/tree/master/examples">ESP-IDF examples</a>, <a href="https://github.com/espressif/esp-protocols">esp-protocols</a>, nebo v <a href="https://components.espressif.com">ESP Registry</a>.</p>
+
+<h3 id="praktický-příklad-s-protokoly">Praktický příklad s protokoly</h3>
+
+<p>V tomhle příkladu budeme používat <em>ESP x509 Certificate Bundle</em>, abychom si trochu zjednodušili práci s některými protokoly, které vyžadují certifikáty, jako trřeba HTTPS.</p>
+
+<p><a href="https://docs.espressif.com/projects/esp-idf/en/release-v5.2/esp32/api-reference/protocols/esp_crt_bundle.html?highlight=bundle#esp-x509-certificate-bundle">ESP x509 Certificate Bundle API</a> poskytuje kolekci certifikátů pro ověření na TLS serveru, které jsou automaticky generované z <a href="https://wiki.mozilla.org/CA/Included_Certificates">kořenových NSS certifikátů Mozilly</a>. Tento balík obsahuje víc než 130 certifikátů a je konstantně aktualizován.</p>
+
+<p>Díky využití tohoto balíku nemusíme pro bezpečné HTTPS spojení s využitím TLS (ESP-TLS) ručně nahrávat žádné kořenové certifikáty, ani je nemusíme v případě jejich expirace obnovovat.</p>
+
+<ol>
+  <li><strong>Ověření, že předchozí kroky fungují, jak mají</strong></li>
+</ol>
+
+<p>V tomto úkolu budeme dále upravovat projekt, na kterém jsme pracovali doteď. Je proto dobré ověřit, že v tuhle chvíli jde projekt sestavit, nahrát a že se deska úspěšně připojí k Wi-Fi.</p>
+
+<blockquote>
+  <p>Během tohoto úkolu budeme potřebovat připojení k Internetu.</p>
+</blockquote>
+
+<ol>
+  <li><strong>Úprava konfigurace</strong></li>
+</ol>
+
+<p>Otevřete si konfigurační menu (Ctrl + Shift + P a vyhledat <em>SDK Configuration Editor</em>) a v konfiguračním menu přejděte do <code class="language-plaintext highlighter-rouge">Component config</code> -&gt; <code class="language-plaintext highlighter-rouge">mbedTLS</code> -&gt; <code class="language-plaintext highlighter-rouge">Certificate Bundle</code>. Tam zkontroluje, že:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">Enable trusted root certificate bundle</code> je zaškrtnuté</li>
+  <li>V nabídce <code class="language-plaintext highlighter-rouge">Default certificate bundle options</code> je vybraná možnost <code class="language-plaintext highlighter-rouge">Use the full default certificate bundle</code></li>
+</ul>
+
+<ol>
+  <li><strong>Kód pro TLS spojení</strong></li>
+</ol>
+
+<p>Přidáme nezbytné <code class="language-plaintext highlighter-rouge">#include</code>s…</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include "lwip/err.h"
+#include "lwip/sockets.h"
+#include "lwip/sys.h"
+#include "lwip/netdb.h"
+#include "lwip/dns.h"
+#include "esp_tls.h"
+#include "esp_crt_bundle.h"
+</span></code></pre></div></div>
+
+<p>…a definice URL odkazů, ke kterým se zkusíme pomocí certifikátu připojit:</p>
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#define MAX_URLS    4
+</span>
+<span class="k">static</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">web_urls</span><span class="p">[</span><span class="n">MAX_URLS</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">"https://www.github.com"</span><span class="p">,</span>
+    <span class="s">"https://espressif.com"</span><span class="p">,</span>
+    <span class="s">"https://youtube.com"</span><span class="p">,</span>
+    <span class="s">"https://seznam.cz"</span><span class="p">,</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<p>Pokud chcete, můžete seznam změnit a umístit tam i vlastní stránky.</p>
+
+<ol>
+  <li><strong>Vytvoření tasku, který se pokusí připojit k URL z předchozího kroku</strong></li>
+</ol>
+
+<p>Tento task se pokusí připojit ke každé z URL ze seznamu výše.</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">static</span> <span class="kt">void</span> <span class="nf">event_handler</span><span class="p">(</span><span class="kt">void</span><span class="o">*</span> <span class="n">arg</span><span class="p">,</span> <span class="n">esp_event_base_t</span> <span class="n">event_base</span><span class="p">,</span>
+                                <span class="kt">int32_t</span> <span class="n">event_id</span><span class="p">,</span> <span class="kt">void</span><span class="o">*</span> <span class="n">event_data</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">event_base</span> <span class="o">==</span> <span class="n">WIFI_EVENT</span> <span class="o">&amp;&amp;</span> <span class="n">event_id</span> <span class="o">==</span> <span class="n">WIFI_EVENT_STA_START</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">esp_wifi_connect</span><span class="p">();</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">event_base</span> <span class="o">==</span> <span class="n">WIFI_EVENT</span> <span class="o">&amp;&amp;</span> <span class="n">event_id</span> <span class="o">==</span> <span class="n">WIFI_EVENT_STA_DISCONNECTED</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">s_retry_num</span> <span class="o">&lt;</span> <span class="mi">100</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">esp_wifi_connect</span><span class="p">();</span>
+            <span class="n">s_retry_num</span><span class="o">++</span><span class="p">;</span>
+            <span class="n">ESP_LOGW</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Trying to connect to WiFi"</span><span class="p">);</span>
+			<span class="n">led_indicator_set_rgb</span><span class="p">(</span><span class="n">leds</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">SET_IRGB</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x20</span><span class="p">));</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="n">xEventGroupSetBits</span><span class="p">(</span><span class="n">s_wifi_event_group</span><span class="p">,</span> <span class="n">WIFI_FAIL_BIT</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="n">ESP_LOGE</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Failed to connect to WiFi"</span><span class="p">);</span>
+		<span class="n">led_indicator_set_rgb</span><span class="p">(</span><span class="n">leds</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">SET_IRGB</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mh">0x20</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">));</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">event_base</span> <span class="o">==</span> <span class="n">IP_EVENT</span> <span class="o">&amp;&amp;</span> <span class="n">event_id</span> <span class="o">==</span> <span class="n">IP_EVENT_STA_GOT_IP</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ip_event_got_ip_t</span><span class="o">*</span> <span class="n">event</span> <span class="o">=</span> <span class="p">(</span><span class="n">ip_event_got_ip_t</span><span class="o">*</span><span class="p">)</span> <span class="n">event_data</span><span class="p">;</span>
+        <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"got ip:"</span> <span class="n">IPSTR</span><span class="p">,</span> <span class="n">IP2STR</span><span class="p">(</span><span class="o">&amp;</span><span class="n">event</span><span class="o">-&gt;</span><span class="n">ip_info</span><span class="p">.</span><span class="n">ip</span><span class="p">));</span>
+		<span class="n">led_indicator_set_rgb</span><span class="p">(</span><span class="n">leds</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">SET_IRGB</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x20</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">));</span>
+        <span class="n">s_retry_num</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="n">xEventGroupSetBits</span><span class="p">(</span><span class="n">s_wifi_event_group</span><span class="p">,</span> <span class="n">WIFI_CONNECTED_BIT</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>Task vytvoříme po zavolání funkce <code class="language-plaintext highlighter-rouge">wifi_init_sta</code>:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">xTaskCreate</span><span class="p">(</span><span class="o">&amp;</span><span class="n">https_get_task</span><span class="p">,</span> <span class="s">"https_get_task"</span><span class="p">,</span> <span class="mi">8192</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+</code></pre></div></div>
+
+<h4 id="kompletní-kód">Kompletní kód</h4>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include &lt;stdio.h&gt;
+#include "bsp/esp-bsp.h"
+#include "led_indicator_blink_default.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/event_groups.h"
+#include "esp_system.h"
+#include "esp_wifi.h"
+#include "esp_event.h"
+#include "esp_log.h"
+#include "nvs.h"
+#include "nvs_flash.h"
+#include "lwip/err.h"
+#include "lwip/sys.h"
+</span>
+<span class="cp">#include "lwip/err.h"
+#include "lwip/sockets.h"
+#include "lwip/sys.h"
+#include "lwip/netdb.h"
+#include "lwip/dns.h"
+</span>
+<span class="cp">#include "esp_tls.h"
+#include "esp_crt_bundle.h"
+</span>
+<span class="cp">#define WIFI_CONNECTED_BIT BIT0
+#define WIFI_FAIL_BIT      BIT1
+</span>
+<span class="cp">#define MAX_URLS    4
+</span>
+<span class="k">static</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">web_urls</span><span class="p">[</span><span class="n">MAX_URLS</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">"https://www.github.com"</span><span class="p">,</span>
+    <span class="s">"https://espressif.com"</span><span class="p">,</span>
+    <span class="s">"https://youtube.com"</span><span class="p">,</span>
+    <span class="s">"https://acesso.gov.br"</span><span class="p">,</span>
+<span class="p">};</span>
+
+<span class="kt">char</span> <span class="n">ssid</span><span class="p">[</span><span class="mi">32</span><span class="p">];</span>
+<span class="kt">char</span> <span class="n">password</span><span class="p">[</span><span class="mi">64</span><span class="p">];</span>
+
+<span class="k">static</span> <span class="n">led_indicator_handle_t</span> <span class="n">leds</span><span class="p">[</span><span class="n">BSP_LED_NUM</span><span class="p">];</span>
+
+<span class="k">static</span> <span class="n">EventGroupHandle_t</span> <span class="n">s_wifi_event_group</span><span class="p">;</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="n">s_retry_num</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+<span class="k">static</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">TAG</span> <span class="o">=</span> <span class="s">"workshop"</span><span class="p">;</span>
+
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">event_handler</span><span class="p">(</span><span class="kt">void</span><span class="o">*</span> <span class="n">arg</span><span class="p">,</span> <span class="n">esp_event_base_t</span> <span class="n">event_base</span><span class="p">,</span>
+                                <span class="kt">int32_t</span> <span class="n">event_id</span><span class="p">,</span> <span class="kt">void</span><span class="o">*</span> <span class="n">event_data</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">event_base</span> <span class="o">==</span> <span class="n">WIFI_EVENT</span> <span class="o">&amp;&amp;</span> <span class="n">event_id</span> <span class="o">==</span> <span class="n">WIFI_EVENT_STA_START</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">esp_wifi_connect</span><span class="p">();</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">event_base</span> <span class="o">==</span> <span class="n">WIFI_EVENT</span> <span class="o">&amp;&amp;</span> <span class="n">event_id</span> <span class="o">==</span> <span class="n">WIFI_EVENT_STA_DISCONNECTED</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">s_retry_num</span> <span class="o">&lt;</span> <span class="mi">100</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">esp_wifi_connect</span><span class="p">();</span>
+            <span class="n">s_retry_num</span><span class="o">++</span><span class="p">;</span>
+            <span class="n">ESP_LOGW</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Trying to connect to WiFi"</span><span class="p">);</span>
+			<span class="n">led_indicator_set_rgb</span><span class="p">(</span><span class="n">leds</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">SET_IRGB</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x20</span><span class="p">));</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="n">xEventGroupSetBits</span><span class="p">(</span><span class="n">s_wifi_event_group</span><span class="p">,</span> <span class="n">WIFI_FAIL_BIT</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="n">ESP_LOGE</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Failed to connect to WiFi"</span><span class="p">);</span>
+		<span class="n">led_indicator_set_rgb</span><span class="p">(</span><span class="n">leds</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">SET_IRGB</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mh">0x20</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">));</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">event_base</span> <span class="o">==</span> <span class="n">IP_EVENT</span> <span class="o">&amp;&amp;</span> <span class="n">event_id</span> <span class="o">==</span> <span class="n">IP_EVENT_STA_GOT_IP</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ip_event_got_ip_t</span><span class="o">*</span> <span class="n">event</span> <span class="o">=</span> <span class="p">(</span><span class="n">ip_event_got_ip_t</span><span class="o">*</span><span class="p">)</span> <span class="n">event_data</span><span class="p">;</span>
+        <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"got ip:"</span> <span class="n">IPSTR</span><span class="p">,</span> <span class="n">IP2STR</span><span class="p">(</span><span class="o">&amp;</span><span class="n">event</span><span class="o">-&gt;</span><span class="n">ip_info</span><span class="p">.</span><span class="n">ip</span><span class="p">));</span>
+		<span class="n">led_indicator_set_rgb</span><span class="p">(</span><span class="n">leds</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">SET_IRGB</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x20</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">));</span>
+        <span class="n">s_retry_num</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="n">xEventGroupSetBits</span><span class="p">(</span><span class="n">s_wifi_event_group</span><span class="p">,</span> <span class="n">WIFI_CONNECTED_BIT</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">wifi_init_sta</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">s_wifi_event_group</span> <span class="o">=</span> <span class="n">xEventGroupCreate</span><span class="p">();</span>
+
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_netif_init</span><span class="p">());</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_event_loop_create_default</span><span class="p">());</span>
+    <span class="n">esp_netif_create_default_wifi_sta</span><span class="p">();</span>
+
+    <span class="n">wifi_init_config_t</span> <span class="n">cfg</span> <span class="o">=</span> <span class="n">WIFI_INIT_CONFIG_DEFAULT</span><span class="p">();</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_wifi_init</span><span class="p">(</span><span class="o">&amp;</span><span class="n">cfg</span><span class="p">));</span>
+
+    <span class="n">esp_event_handler_instance_t</span> <span class="n">instance_any_id</span><span class="p">;</span>
+    <span class="n">esp_event_handler_instance_t</span> <span class="n">instance_got_ip</span><span class="p">;</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_event_handler_instance_register</span><span class="p">(</span><span class="n">WIFI_EVENT</span><span class="p">,</span>
+            <span class="n">ESP_EVENT_ANY_ID</span><span class="p">,</span>
+            <span class="o">&amp;</span><span class="n">event_handler</span><span class="p">,</span>
+            <span class="nb">NULL</span><span class="p">,</span>
+            <span class="o">&amp;</span><span class="n">instance_any_id</span><span class="p">));</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_event_handler_instance_register</span><span class="p">(</span><span class="n">IP_EVENT</span><span class="p">,</span>
+            <span class="n">IP_EVENT_STA_GOT_IP</span><span class="p">,</span>
+            <span class="o">&amp;</span><span class="n">event_handler</span><span class="p">,</span>
+            <span class="nb">NULL</span><span class="p">,</span>
+            <span class="o">&amp;</span><span class="n">instance_got_ip</span><span class="p">));</span>
+
+	<span class="n">wifi_config_t</span> <span class="n">wifi_config</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="p">.</span><span class="n">sta</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="p">.</span><span class="n">ssid</span> <span class="o">=</span> <span class="s">""</span><span class="p">,</span>
+            <span class="p">.</span><span class="n">password</span> <span class="o">=</span> <span class="s">""</span><span class="p">,</span>
+            <span class="p">.</span><span class="n">threshold</span><span class="p">.</span><span class="n">authmode</span> <span class="o">=</span> <span class="n">WIFI_AUTH_WPA2_WPA3_PSK</span><span class="p">,</span>
+            <span class="p">.</span><span class="n">sae_pwe_h2e</span> <span class="o">=</span> <span class="n">WPA3_SAE_PWE_BOTH</span><span class="p">,</span>
+            <span class="p">.</span><span class="n">sae_h2e_identifier</span> <span class="o">=</span> <span class="s">""</span><span class="p">,</span>
+        <span class="p">},</span>
+    <span class="p">};</span>
+
+    <span class="n">strncpy</span><span class="p">((</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="n">wifi_config</span><span class="p">.</span><span class="n">sta</span><span class="p">.</span><span class="n">ssid</span><span class="p">,</span> <span class="n">ssid</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">wifi_config</span><span class="p">.</span><span class="n">sta</span><span class="p">.</span><span class="n">ssid</span><span class="p">));</span>
+    <span class="n">strncpy</span><span class="p">((</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="n">wifi_config</span><span class="p">.</span><span class="n">sta</span><span class="p">.</span><span class="n">password</span><span class="p">,</span> <span class="n">password</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">wifi_config</span><span class="p">.</span><span class="n">sta</span><span class="p">.</span><span class="n">password</span><span class="p">));</span>
+
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_wifi_set_mode</span><span class="p">(</span><span class="n">WIFI_MODE_STA</span><span class="p">)</span> <span class="p">);</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_wifi_set_config</span><span class="p">(</span><span class="n">WIFI_IF_STA</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">wifi_config</span><span class="p">)</span> <span class="p">);</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_wifi_start</span><span class="p">()</span> <span class="p">);</span>
+
+    <span class="n">EventBits_t</span> <span class="n">bits</span> <span class="o">=</span> <span class="n">xEventGroupWaitBits</span><span class="p">(</span><span class="n">s_wifi_event_group</span><span class="p">,</span>
+            <span class="n">WIFI_CONNECTED_BIT</span> <span class="o">|</span> <span class="n">WIFI_FAIL_BIT</span><span class="p">,</span>
+            <span class="n">pdFALSE</span><span class="p">,</span>
+            <span class="n">pdFALSE</span><span class="p">,</span>
+            <span class="n">portMAX_DELAY</span><span class="p">);</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">bits</span> <span class="o">&amp;</span> <span class="n">WIFI_CONNECTED_BIT</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Connected!"</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">bits</span> <span class="o">&amp;</span> <span class="n">WIFI_FAIL_BIT</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ESP_LOGE</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Failed to connect!"</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="n">esp_err_t</span> <span class="nf">get_wifi_credentials</span><span class="p">(</span><span class="kt">void</span><span class="p">){</span>
+
+	<span class="n">esp_err_t</span> <span class="n">err</span><span class="p">;</span>
+
+	<span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Opening Non-Volatile Storage (NVS) handle"</span><span class="p">);</span>
+    <span class="n">nvs_handle_t</span> <span class="n">nvs_mem_handle</span><span class="p">;</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n">nvs_open_from_partition</span><span class="p">(</span><span class="s">"nvs"</span><span class="p">,</span> <span class="s">"storage"</span><span class="p">,</span> <span class="n">NVS_READWRITE</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">nvs_mem_handle</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">err</span> <span class="o">!=</span> <span class="n">ESP_OK</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ESP_LOGE</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Error (%s) opening NVS handle!</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">esp_err_to_name</span><span class="p">(</span><span class="n">err</span><span class="p">));</span>
+        <span class="k">return</span> <span class="n">err</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"The NVS handle successfully opened"</span><span class="p">);</span>
+
+	<span class="kt">size_t</span> <span class="n">ssid_len</span> <span class="o">=</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">ssid</span><span class="p">);</span>
+	<span class="kt">size_t</span> <span class="n">pass_len</span> <span class="o">=</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">password</span><span class="p">);</span>
+
+    <span class="n">err</span> <span class="o">=</span> <span class="n">nvs_get_str</span><span class="p">(</span><span class="n">nvs_mem_handle</span><span class="p">,</span> <span class="s">"ssid"</span><span class="p">,</span> <span class="n">ssid</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">ssid_len</span><span class="p">);</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">err</span><span class="p">);</span>
+
+    <span class="n">err</span> <span class="o">=</span> <span class="n">nvs_get_str</span><span class="p">(</span><span class="n">nvs_mem_handle</span><span class="p">,</span> <span class="s">"password"</span><span class="p">,</span> <span class="n">password</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">pass_len</span><span class="p">);</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">err</span><span class="p">);</span>
+
+    <span class="n">nvs_close</span><span class="p">(</span><span class="n">nvs_mem_handle</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">ESP_OK</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">https_get_task</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">pvParameters</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kt">int</span> <span class="n">conn_count</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Connecting to %d URLs"</span><span class="p">,</span> <span class="n">MAX_URLS</span><span class="p">);</span>
+
+        <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">MAX_URLS</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">esp_tls_cfg_t</span> <span class="n">cfg</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="p">.</span><span class="n">crt_bundle_attach</span> <span class="o">=</span> <span class="n">esp_crt_bundle_attach</span><span class="p">,</span>
+            <span class="p">};</span>
+
+            <span class="n">esp_tls_t</span> <span class="o">*</span><span class="n">tls</span> <span class="o">=</span> <span class="n">esp_tls_init</span><span class="p">();</span>
+            <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">tls</span><span class="p">)</span> <span class="p">{</span>
+                <span class="n">ESP_LOGE</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Failed to allocate esp_tls handle!"</span><span class="p">);</span>
+                <span class="k">goto</span> <span class="n">end</span><span class="p">;</span>
+            <span class="p">}</span>
+
+            <span class="k">if</span> <span class="p">(</span><span class="n">esp_tls_conn_http_new_sync</span><span class="p">(</span><span class="n">web_urls</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="o">&amp;</span><span class="n">cfg</span><span class="p">,</span> <span class="n">tls</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+                <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Connection established to %s"</span><span class="p">,</span> <span class="n">web_urls</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+                <span class="n">conn_count</span><span class="o">++</span><span class="p">;</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                <span class="n">ESP_LOGE</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Could not connect to %s"</span><span class="p">,</span> <span class="n">web_urls</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+            <span class="p">}</span>
+
+            <span class="n">esp_tls_conn_destroy</span><span class="p">(</span><span class="n">tls</span><span class="p">);</span>
+<span class="nl">end:</span>
+            <span class="n">vTaskDelay</span><span class="p">(</span><span class="mi">1000</span> <span class="o">/</span> <span class="n">portTICK_PERIOD_MS</span><span class="p">);</span>
+        <span class="p">}</span>
+
+        <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Completed %d connections"</span><span class="p">,</span> <span class="n">conn_count</span><span class="p">);</span>
+        <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Starting over again..."</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">app_main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+
+    <span class="n">esp_err_t</span> <span class="n">ret</span> <span class="o">=</span> <span class="n">nvs_flash_init</span><span class="p">();</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">ret</span> <span class="o">==</span> <span class="n">ESP_ERR_NVS_NO_FREE_PAGES</span> <span class="o">||</span> <span class="n">ret</span> <span class="o">==</span> <span class="n">ESP_ERR_NVS_NEW_VERSION_FOUND</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">nvs_flash_erase</span><span class="p">());</span>
+      <span class="n">ret</span> <span class="o">=</span> <span class="n">nvs_flash_init</span><span class="p">();</span>
+    <span class="p">}</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">ret</span><span class="p">);</span>
+
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">bsp_led_indicator_create</span><span class="p">(</span><span class="n">leds</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="n">BSP_LED_NUM</span><span class="p">));</span>
+    <span class="n">led_indicator_set_rgb</span><span class="p">(</span><span class="n">leds</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">SET_IRGB</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x20</span><span class="p">));</span>
+
+	<span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">get_wifi_credentials</span><span class="p">());</span>
+
+    <span class="n">wifi_init_sta</span><span class="p">();</span>
+
+    <span class="n">xTaskCreate</span><span class="p">(</span><span class="o">&amp;</span><span class="n">https_get_task</span><span class="p">,</span> <span class="s">"https_get_task"</span><span class="p">,</span> <span class="mi">8192</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h2 id="další-krok">Další krok</h2>
+
+<p>Už jste vyčerpali všechnu energii? Tak ji pojďme trošku uspořit!</p>
+
+<p><a href="../assignment-7">Úkol 7: Low Power Core</a></p>
+
+      </section>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/assets/css/style.css?v=2244da98f21a89a4a6f49a27d5ca89d075a17535">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup theme-color -->
+<!-- start theme color meta headers -->
+<meta name="theme-color" content="#151515">
+<meta name="msapplication-navbutton-color" content="#151515">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- end theme color meta headers -->
+
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+
+<!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>ESP-IDF and ESP32-C6 Workshop - Introduction | Honza0297.github.io</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="ESP-IDF and ESP32-C6 Workshop - Introduction" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="http://localhost:4000/EN/introduction/" />
+<meta property="og:url" content="http://localhost:4000/EN/introduction/" />
+<meta property="og:site_name" content="Honza0297.github.io" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2024-07-01T01:00:00+02:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="ESP-IDF and ESP32-C6 Workshop - Introduction" />
+<script type="application/ld+json">
+{"datePublished":"2024-07-01T01:00:00+02:00","@type":"BlogPosting","headline":"ESP-IDF and ESP32-C6 Workshop - Introduction","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/EN/introduction/"},"url":"http://localhost:4000/EN/introduction/","dateModified":"2024-07-01T01:00:00+02:00","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <a id="a-title" href="/">
+          <h1>Honza0297.github.io</h1>
+        </a>
+        <h2></h2>
+
+        <section id="downloads">
+          
+          <a href="https://github.com/Honza0297/Honza0297.github.io" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <h2 id="lecture-esp-idf-introduction">Lecture: ESP-IDF introduction</h2>
+
+<blockquote>
+  <p><strong>Info:</strong> Compared to the ESP32-C6 version of this workshop, the ESP32-C6 track intentionally
+skips the dedicated protocols/TLS chapter. If you want to explore that topic in depth, use the
+ESP-IDF examples, <a href="https://github.com/espressif/esp-protocols">esp-protocols</a>, or the ESP32-C6
+workshop.</p>
+</blockquote>
+
+<p>The ESP-IDF (Espressif IoT Development Framework) is the official operating system and development
+framework for the ESP32 series of microcontrollers by Espressif Systems. It provides a
+comprehensive environment for building IoT applications with robust networking, security, and
+reliability features.</p>
+
+<p>ESP-IDF framework includes FreeRTOS that allows developers to create real-time, multitasking
+applications. With extensive libraries, components, protocols, tools, and documentation, ESP-IDF
+simplifies the development process enabling seamless integration with hardware peripherals, such as
+Wi-Fi, Bluetooth, Thread, ZigBee, and cloud services.</p>
+
+<p>ESP-IDF includes almost 400 examples, covering a wide range of use cases and helping developers
+quickly get started on their projects.</p>
+
+<h3 id="architecture">Architecture</h3>
+
+<p>The ESP-IDF platform architecture is mainly divided into 3 layers:</p>
+
+<ul>
+  <li><strong>ESP-IDF platform</strong>
+    <ul>
+      <li>Contains the core components required and all the operating system. Includes the FreeRTOS,
+drivers, build system, protocols, etc.</li>
+    </ul>
+  </li>
+  <li><strong>Middleware</strong>
+    <ul>
+      <li>Adds new features to the ESP-IDF, for example the audio framework and HMI.</li>
+    </ul>
+  </li>
+  <li><strong>AIoT Application</strong>
+    <ul>
+      <li>This is your application.</li>
+    </ul>
+  </li>
+</ul>
+
+<p><img src="/EN/introduction/assets/esp-idf-highlevel.webp" alt="ESP-IDF high-level architecture" /></p>
+
+<p>All the necessary blocks for building your application will be included on the ESP-IDF platform.</p>
+
+<h3 id="frameworks">Frameworks</h3>
+
+<p>Several other frameworks use ESP-IDF as a base, including:</p>
+
+<ul>
+  <li><strong>Arduino for ESP32</strong></li>
+  <li><strong>ESP-ADF</strong> (Audio Development Framework): Designed for audio applications.</li>
+  <li><strong>ESP-WHO</strong> (AI Development Framework): Focused on face detection and recognition.</li>
+  <li><strong>ESP-RainMaker</strong>: Simplifies building connected devices with cloud capabilities.</li>
+  <li><strong>ESP-Matter SDK</strong>: Espressif’s SDK for Matter is the official Matter development framework for
+ESP32 series SoCs.</li>
+</ul>
+
+<p>To see all the supported frameworks, please visit our
+<a href="https://github.com/espressif">GitHub organization page</a>.</p>
+
+<h3 id="current-supported-versions">Current supported versions</h3>
+
+<p>Visit the ESP-IDF project on GitHub to get the updated list of supported versions and the
+maintenance period.</p>
+
+<p><a href="https://github.com/espressif/esp-idf">espressif/esp-idf on GitHub</a></p>
+
+<h2 id="introduction-to-the-esp32-c6">Introduction to the ESP32-C6</h2>
+
+<p>The ESP32-C6 is a Ultra-low-power SoC with RISC-V single-core microprocessor, 2.4 GHz Wi-Fi 6
+(802.11ax), Bluetooth® 5 (LE), Zigbee and Thread (802.15.4). It has an optional 4 MB flash in the
+chip’s package, 30 or 22 GPIOs, rich set of peripherals including:</p>
+
+<p><img src="assets/esp32-c6-diagram.webp" alt="ESP32-C6 block diagram" /></p>
+
+<ul>
+  <li>30 GPIOs (QFN40), or 22 GPIOs (QFN32)</li>
+  <li>5 strapping GPIOs</li>
+  <li>6 GPIOs needed for in-package flash</li>
+  <li><strong>Analog interfaces:</strong>
+    <ul>
+      <li>12-bit SAR ADC, up to 7 channels</li>
+      <li>Temperature sensor</li>
+    </ul>
+  </li>
+  <li><strong>Digital interfaces:</strong>
+    <ul>
+      <li>Two UARTs</li>
+      <li>Low-power (LP) UART</li>
+      <li>Two SPI ports for communication with flash</li>
+      <li>General purpose SPI port</li>
+      <li>I2C</li>
+      <li>Low-power (LP) I2C</li>
+      <li>I2S</li>
+      <li>Pulse count controller</li>
+      <li>USB Serial/JTAG controller</li>
+      <li>Two TWAI® controllers, compatible with ISO 11898-1 (CAN Specification 2.0)</li>
+      <li>SDIO 2.0 slave controller</li>
+      <li>LED PWM controller, up to 6 channels</li>
+      <li>Motor Control PWM (MCPWM)</li>
+      <li>Remote control peripheral (TX/RX)</li>
+      <li>Parallel IO interface (PARLIO)</li>
+      <li>General DMA controller, with 3 transmit channels and 3 receive channels</li>
+      <li>Event task matrix (ETM)</li>
+    </ul>
+  </li>
+  <li><strong>Timers:</strong>
+    <ul>
+      <li>52-bit system timer</li>
+      <li>Two 54-bit general-purpose timers</li>
+      <li>Three digital watchdog timers</li>
+      <li>Analog watchdog timer</li>
+    </ul>
+  </li>
+</ul>
+
+<p>For more details, please see the product
+<a href="https://www.espressif.com/sites/default/files/documentation/esp32-c6_datasheet_en.pdf">ESP32-C6 Datasheet</a>.</p>
+
+<h3 id="wi-fi-6-ieee-80211ax">Wi-Fi 6 (IEEE 802.11ax)</h3>
+
+<p>Wi-Fi 6, also known as IEEE 802.11ax, represents the latest generation of Wi-Fi technology,
+designed to improve efficiency, capacity, and performance in various environments. Key features of
+Wi-Fi 6, as seen in devices like the ESP32-C6, include:</p>
+
+<ul>
+  <li><strong>20 MHz-only Non-AP Mode</strong>: This mode operates in a non-access point capacity, utilizing a 20
+MHz channel width.</li>
+  <li><strong>MCS0 ~ MCS9</strong>: Support for modulation and coding schemes ranging from MCS0 to MCS9, which
+dictate data rates and signal robustness.</li>
+  <li><strong>Uplink and Downlink OFDMA</strong>: Orthogonal Frequency Division Multiple Access enables efficient
+simultaneous connections, particularly beneficial in high-density environments.</li>
+  <li><strong>Downlink MU-MIMO</strong>: Multi-user, multiple input, multiple output technology increases network
+capacity by allowing the transmission of data to multiple devices at the same time.</li>
+  <li><strong>Beamforming</strong>: This feature enhances signal quality by focusing the Wi-Fi signal towards the
+receiving device.</li>
+  <li><strong>Channel Quality Indication (CQI)</strong>: Provides real-time feedback on the channel conditions,
+aiding in dynamic adjustments for optimal performance.</li>
+  <li><strong>DCM (Dual Carrier Modulation)</strong>: Enhances link robustness by using dual carriers.</li>
+  <li><strong>Spatial Reuse</strong>: Maximizes parallel transmissions by allowing multiple devices to communicate
+simultaneously on the same frequency without significant interference.</li>
+  <li><strong>Target Wake Time (TWT)</strong>: Optimizes power-saving mechanisms by scheduling specific times for
+devices to wake up and communicate, extending battery life.</li>
+</ul>
+
+<p><strong>Wi-Fi MAC support for the 802.11ax:</strong></p>
+
+<ul>
+  <li>Target wake time (TWT) requester</li>
+  <li>Multiple BSSIDs</li>
+  <li>Triggered response scheduling</li>
+  <li>Uplink power headroom</li>
+  <li>Operating mode</li>
+  <li>Buffer status report</li>
+  <li>Multi-user Request-to-Send (MU-RTS), Multi-user Block ACK Request (MU-BAR), and Multi-STA
+Block ACK (M-BA) frame</li>
+  <li>Intra-PPDU power saving mechanism</li>
+  <li>Two network allocation vectors (NAV)</li>
+  <li>BSS coloring</li>
+  <li>Spatial reuse</li>
+  <li>TXOP duration RTS threshold</li>
+  <li>UL-OFDMA random access (UORA)</li>
+</ul>
+
+<h3 id="resources">Resources</h3>
+
+<ul>
+  <li><a href="https://www.espressif.com/sites/default/files/documentation/esp32-c6_datasheet_en.pdf">ESP32-C6 Datasheet</a></li>
+  <li><a href="https://docs.espressif.com/projects/esp-idf/en/release-v5.5/esp32c6/index.html">ESP32-C6 Documentation</a></li>
+  <li><a href="https://docs.espressif.com/projects/espressif-esp-dev-kits/en/latest/esp32c6/esp32-c6-devkitc-1/user_guide.html">ESP32-C6-DevKit-C Documentation</a></li>
+</ul>
+
+<h2 id="introduction-to-the-esp32-c6-devkit-c">Introduction to the ESP32-C6-DevKit-C</h2>
+
+<p>The ESP32-C6-DevKitC-1 is a beginner-friendly development board featuring the ESP32-C6-WROOM-1(U)
+module, which includes an 8 MB SPI flash. This board offers comprehensive Wi-Fi, Bluetooth LE,
+Zigbee, and Thread capabilities.</p>
+
+<p>To facilitate easy interfacing, most of the I/O pins are accessible through pin headers on both
+sides. Developers can connect peripherals using jumper wires or mount the ESP32-C6-DevKitC-1 on a
+breadboard.</p>
+
+<h3 id="features">Features</h3>
+
+<p>Here is the development board feature list:</p>
+
+<ul>
+  <li>ESP32-C6-WROOM-1 module</li>
+  <li>Pin Header</li>
+  <li>5 V to 3.3 V LDO</li>
+  <li>3.3 V Power On LED</li>
+  <li>USB-to-UART Bridge</li>
+  <li>ESP32-C6 USB Type-C Port for flashing and debug</li>
+  <li>Boot Button</li>
+  <li>Reset Button</li>
+  <li>USB Type-C to UART Port</li>
+  <li>RGB LED connected to the GPIO8</li>
+  <li>J5 jumper used for current measurement.</li>
+</ul>
+
+<h4 id="board-description">Board description</h4>
+
+<p><img src="assets/esp32-c6-devkitc-1-v1.2-annotated-photo.webp" alt="ESP32-C6-DevKitC-1 annotated photo" /></p>
+
+<p><img src="assets/esp32-c6-devkitc-1-v1.2-block-diagram.webp" alt="ESP32-C6-DevKitC-1 block diagram" /></p>
+
+<h4 id="board-pin-layout">Board pin-layout</h4>
+
+<p><img src="assets/esp32-c6-devkitc-1-pin-layout.webp" alt="ESP32-C6-DevKitC-1 pin layout" /></p>
+
+<h4 id="j1-connector">J1 connector</h4>
+
+<table>
+  <thead>
+    <tr>
+      <th>No.</th>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Function</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td>3V3</td>
+      <td>P</td>
+      <td>3.3 V power supply</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>RST</td>
+      <td>I</td>
+      <td>High: enables the chip; Low: disables the chip.</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>2</td>
+      <td>I/O/T</td>
+      <td>MTMS, GPIO2, <strong>LP_GPIO2</strong>, <strong>LP_UART_RTSN</strong>, <strong>LP_I2C_SDA</strong>, ADC1_CH1, FSPIQ</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>3</td>
+      <td>I/O/T</td>
+      <td>MTDI, GPIO3, <strong>LP_GPIO3</strong>, <strong>LP_UART_CTSN</strong>, <strong>LP_I2C_SCL</strong>, ADC1_CH2</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>0</td>
+      <td>I/O/T</td>
+      <td>GPIO0, XTAL_32K_P, <strong>LP_GPIO0</strong>, <strong>LP_UART_DTRN</strong></td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td>1</td>
+      <td>I/O/T</td>
+      <td>GPIO1, XTAL_32K_N, <strong>LP_GPIO1</strong>, <strong>LP_UART_DSRN</strong>, ADC1_CH0</td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td>6</td>
+      <td>I/O/T</td>
+      <td>GPIO6, <strong>LP_GPIO6</strong>, ADC1_CH5, FSPICLK</td>
+    </tr>
+    <tr>
+      <td>8</td>
+      <td>7</td>
+      <td>I/O/T</td>
+      <td>GPIO7, FSPID, SDIO_DATA1</td>
+    </tr>
+    <tr>
+      <td>9</td>
+      <td>8</td>
+      <td>I/O/T</td>
+      <td>GPIO8, PAD_COMP0, SDIO_DATA0</td>
+    </tr>
+    <tr>
+      <td>10</td>
+      <td>9</td>
+      <td>I/O/T</td>
+      <td>GPIO9, PAD_COMP1, SDIO_CLK</td>
+    </tr>
+    <tr>
+      <td>11</td>
+      <td>10</td>
+      <td>I/O/T</td>
+      <td>GPIO10, FSPICS0, SDIO_CMD</td>
+    </tr>
+    <tr>
+      <td>12</td>
+      <td>26</td>
+      <td>I/O/T</td>
+      <td>GPIO26</td>
+    </tr>
+    <tr>
+      <td>13</td>
+      <td>25</td>
+      <td>I/O/T</td>
+      <td>GPIO25</td>
+    </tr>
+    <tr>
+      <td>14</td>
+      <td>5V</td>
+      <td>P</td>
+      <td>5 V power supply</td>
+    </tr>
+    <tr>
+      <td>15</td>
+      <td>G</td>
+      <td>G</td>
+      <td>Ground</td>
+    </tr>
+    <tr>
+      <td>16</td>
+      <td>NC</td>
+      <td>–</td>
+      <td>No connection</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4 id="j3-connector">J3 connector</h4>
+
+<table>
+  <thead>
+    <tr>
+      <th>No.</th>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Function</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td>G</td>
+      <td>G</td>
+      <td>Ground</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>TX</td>
+      <td>I/O/T</td>
+      <td>U0TXD, GPIO11</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>RX</td>
+      <td>I/O/T</td>
+      <td>U0RXD, GPIO12</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>24</td>
+      <td>I/O/T</td>
+      <td>GPIO24</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>23</td>
+      <td>I/O/T</td>
+      <td>GPIO23</td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td>NC/15</td>
+      <td>I/O/T</td>
+      <td>No connection/GPIO15</td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td>27</td>
+      <td>I/O/T</td>
+      <td>GPIO27</td>
+    </tr>
+    <tr>
+      <td>8</td>
+      <td>4</td>
+      <td>I/O/T</td>
+      <td>MTCK, GPIO4, <strong>LP_GPIO4</strong>, <strong>LP_UART_RXD</strong>, ADC1_CH3, FSPIHD</td>
+    </tr>
+    <tr>
+      <td>9</td>
+      <td>5</td>
+      <td>I/O/T</td>
+      <td>MTDO, GPIO5, <strong>LP_GPIO5</strong>, <strong>LP_UART_TXD</strong>, ADC1_CH4, FSPIWP</td>
+    </tr>
+    <tr>
+      <td>10</td>
+      <td>NC</td>
+      <td>–</td>
+      <td>No connection</td>
+    </tr>
+    <tr>
+      <td>11</td>
+      <td>28</td>
+      <td>I/O/T</td>
+      <td>GPIO28</td>
+    </tr>
+    <tr>
+      <td>12</td>
+      <td>G</td>
+      <td>G</td>
+      <td>Ground</td>
+    </tr>
+    <tr>
+      <td>13</td>
+      <td>14</td>
+      <td>I/O/T</td>
+      <td>GPIO14, USB_D+, SDIO_DATA2</td>
+    </tr>
+    <tr>
+      <td>14</td>
+      <td>13</td>
+      <td>I/O/T</td>
+      <td>GPIO13, USB_D-, SDIO_DATA3</td>
+    </tr>
+    <tr>
+      <td>15</td>
+      <td>G</td>
+      <td>G</td>
+      <td>Ground</td>
+    </tr>
+    <tr>
+      <td>16</td>
+      <td>NC</td>
+      <td>–</td>
+      <td>No connection</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="next-step">Next step</h2>
+
+<p>After this introduction, it’s time to get started and install the development environment.</p>
+
+<p><a href="../assignment-1/">Assignment 1: Install the Espressif-IDE</a></p>
+
+      </section>
+    </div>
+  </body>
+</html>

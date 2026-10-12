@@ -1,54 +1,19 @@
 # ESP-IDF workshop examples — ESP32-C5
 
-Reference ESP-IDF projects aligned with the **published** [ESP32-C5 workshop](../../content/workshops/esp-idf-with-esp32-c5/_index.md) chapters (introduction + assignments **1–6**). Assignment **6** in that workshop is the **low-power / LP core** chapter.
+Reference ESP-IDF projects aligned with the **published** [ESP32-C5 workshop](../../C5/EN/) chapters (introduction + assignments **1–6**).
 
-## Environment
+This sets the target to **esp32c5** and builds each project.
 
-From a shell where ESP-IDF is installed, you should have `idf.py` on your `PATH`. If you rely on the Espressif installer helpers, a typical sequence is:
-
-```bash
-idfinstall && idfexport
-```
-
-Then:
-
-```bash
-./build-all.sh
-```
-
-This sets the target to **esp32c5** and builds each project under `c5-workshop/` and the optional parity project under `c5-extra/`.
-
-## Layout (no missing numbers for the workshop track)
+## Layout
 
 | Workshop chapter | Directory |
 | --- | --- |
-| (after intro / env ready) | `c5-workshop/assignment-01-install-verify` |
-| Assignment 2 | `c5-workshop/assignment-02-led-components` |
-| Assignment 3 | `c5-workshop/assignment-03-wifi-station` |
-| Assignment 4 | `c5-workshop/assignment-04-nvs` |
-| Assignment 5 | `c5-workshop/assignment-05-wifi-provisioning` |
-| Assignment 6 (LP core) | `c5-workshop/assignment-06-low-power` |
+| Assignment 1: Install ESP-IDF | *(no companion project - installation only)* |
+| Assignment 2: Basics: Hello World & LED | [`assignment-02-led-components`](assignment-02-led-components/) |
+| Assignment 3: Wi-Fi & Provisioning | [`assignment-03-wifi-provisioning`](assignment-03-wifi-provisioning/) |
+| Assignment 4: OTA Updates | [`assignment-04-ota`](assignment-04-ota/) |
+| Assignment 5: ESP-NOW Chat Room | [`assignment-05-esp-now`](assignment-05-esp-now/) |
+| Assignment 6: LP-core | [`assignment-06-low-power`](assignment-06-low-power/) |
 
-### Optional: protocols + TLS (same idea as ESP32-C6 workshop assignment 6)
+Starting with Assignment 4, these projects assume you have a push-button wired to **GPIO0** (with an external pull-down resistor, other leg to **3V3**) and are using the onboard WS2812 LED on **GPIO27** for status — see Assignment 4's "Connecting a Button" section for the wiring diagram. The same button is reused unchanged in Assignments 5 and 6.
 
-The C5 workshop text skips the dedicated protocols chapter, but you can still build the **HTTPS + ESP x509 certificate bundle** flow for **ESP32-C5** here:
-
-| Role | Directory |
-| --- | --- |
-| Parity with **ESP32-C6** workshop *Assignment 6: Protocols* | `c5-extra/c6-ch06-protocols-tls-parity` |
-
-Set Wi-Fi SSID and password via `idf.py menuconfig` → **Workshop example: Wi-Fi** before flashing.
-
----
-
-## Příklady k workshopu ESP32-C5 (CZ)
-
-Adresáře pod `c5-workshop/` odpovídají **oficiálnímu** workshopu (úvod + úkoly **1–6** na webu). Úkol **6** na webu je kapitola o **low-power / LP jádru**.
-
-### Volitelně: protokoly a TLS
-
-Text workshopu pro C5 záměrně vynechává samostatný úkol o protokolech, ale kompletní příklad **HTTPS + ESP x509 certificate bundle** pro čip **ESP32-C5** je v:
-
-`c5-extra/c6-ch06-protocols-tls-parity`
-
-…tj. stejný typ úlohy jako **úkol 6 (Protokoly)** u verze workshopu pro **ESP32-C6**. Před flashnutím nastavte SSID a heslo v menuconfig (**Workshop example: Wi-Fi**).

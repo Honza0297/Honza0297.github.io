@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/assets/css/style.css?v=2244da98f21a89a4a6f49a27d5ca89d075a17535">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup theme-color -->
+<!-- start theme color meta headers -->
+<meta name="theme-color" content="#151515">
+<meta name="msapplication-navbutton-color" content="#151515">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- end theme color meta headers -->
+
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+
+<!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>ESP-IDF and ESP32-C5 Workshop - Assignment 6 | Honza0297.github.io</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="ESP-IDF and ESP32-C5 Workshop - Assignment 6" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="http://localhost:4000/C5/EN/assignment-6/" />
+<meta property="og:url" content="http://localhost:4000/C5/EN/assignment-6/" />
+<meta property="og:site_name" content="Honza0297.github.io" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2024-09-30T01:00:00+02:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="ESP-IDF and ESP32-C5 Workshop - Assignment 6" />
+<script type="application/ld+json">
+{"datePublished":"2024-09-30T01:00:00+02:00","@type":"BlogPosting","headline":"ESP-IDF and ESP32-C5 Workshop - Assignment 6","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/C5/EN/assignment-6/"},"url":"http://localhost:4000/C5/EN/assignment-6/","dateModified":"2024-09-30T01:00:00+02:00","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <a id="a-title" href="/">
+          <h1>Honza0297.github.io</h1>
+        </a>
+        <h2></h2>
+
+        <section id="downloads">
+          
+          <a href="https://github.com/Honza0297/Honza0297.github.io" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <h2 id="assignment-6-low-power-core">Assignment 6: Low Power core</h2>
+
+<hr />
+
+<p>The ESP32-C5 features two cores: a high-power (HP) core for standard use (networking, complex computations) and a low-power (LP) RISC-V core designed to minimize energy consumption.</p>
+
+<p>The LP core (often called the <strong>ULP - Ultra Low Power core</strong>) is designed to handle simple tasks while the main HP core is in deep sleep mode. This significantly reduces battery consumption, making it perfect for battery-powered projects. The LP core can collect data from sensors, control GPIOs, or increment a counter, waking up the HP core only when a threshold is met.</p>
+
+<blockquote>
+  <p><strong>Start a fresh project again</strong> — the LP-core toolchain and deep-sleep flow don’t share anything with the Wi-Fi/ESP-NOW code from before. But <strong>keep the button from Assignment 4 wired up</strong> (GPIO0, pull-down to GND, other leg to 3V3 — see <a href="../assignment-4/#3-connecting-a-button">Assignment 4, step 3</a> if you need a reminder of the wiring). We’re going to give it a second job here: waking the board up on demand, in addition to the LP core’s own periodic wake-up.</p>
+</blockquote>
+
+<h3 id="1-the-sleep-cycle">1. The Sleep Cycle</h3>
+
+<p>In this assignment, we will configure the HP core to go into Deep Sleep. The LP core will continue to run, perform a basic task, and eventually wake the HP core back up — or you can just press the button yourself to wake it immediately.</p>
+
+<p>To use the LP core, we need to create a special sub-folder in our project called <code class="language-plaintext highlighter-rouge">main/ulp</code> and write the code that will run on the LP core there.</p>
+
+<h3 id="2-configuration-via-menuconfig">2. Configuration via menuconfig</h3>
+
+<p>Run:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>idf.py menuconfig
+</code></pre></div></div>
+
+<p>Navigate to:</p>
+<ul>
+  <li><strong>Component config —&gt; Ultra Low Power (ULP) Co-processor</strong>
+    <ul>
+      <li><strong>Enable Ultra Low Power (ULP) Coprocessor</strong>: Select <code class="language-plaintext highlighter-rouge">LP-core</code></li>
+      <li>Leave other settings as default.</li>
+    </ul>
+  </li>
+</ul>
+
+<p>Press <code class="language-plaintext highlighter-rouge">Q</code> to quit and <code class="language-plaintext highlighter-rouge">Y</code> to save.</p>
+
+<h3 id="3-writing-the-lp-core-code">3. Writing the LP Core Code</h3>
+
+<p>Create a file named <code class="language-plaintext highlighter-rouge">main/ulp/main.c</code>. This code runs <em>only</em> on the LP core!</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include &lt;stdint.h&gt;
+#include "ulp_lp_core.h"
+#include "ulp_lp_core_utils.h"
+</span>
+<span class="c1">// Variables shared between HP and LP core</span>
+<span class="k">volatile</span> <span class="kt">uint32_t</span> <span class="n">counter</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="c1">// Increment our counter</span>
+    <span class="n">counter</span><span class="o">++</span><span class="p">;</span>
+
+    <span class="c1">// Wake the main CPU once the counter reaches 5</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">counter</span> <span class="o">&gt;=</span> <span class="mi">5</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ulp_lp_core_wakeup_main_processor</span><span class="p">();</span>
+        <span class="n">counter</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="c1">// Go back to sleep until the LP timer wakes us again</span>
+    <span class="n">ulp_lp_core_halt</span><span class="p">();</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="4-writing-the-hp-core-code-app_main">4. Writing the HP Core Code (app_main)</h3>
+
+<p>In your <code class="language-plaintext highlighter-rouge">main/main.c</code>, initialize the LP core, arm the button as an extra wake-up source, and then put the HP core to sleep. Let’s build it up piece by piece.</p>
+
+<h4 id="41-skeleton">4.1 Skeleton</h4>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include &lt;stdio.h&gt;
+#include "freertos/FreeRTOS.h"
+#include "esp_log.h"
+#include "esp_sleep.h"
+#include "ulp_lp_core.h"
+#include "driver/gpio.h"
+</span>
+<span class="cp">#define BUTTON_GPIO GPIO_NUM_0
+</span>
+<span class="k">extern</span> <span class="k">const</span> <span class="kt">uint8_t</span> <span class="n">ulp_main_bin_start</span><span class="p">[]</span> <span class="n">asm</span><span class="p">(</span><span class="s">"_binary_ulp_main_bin_start"</span><span class="p">);</span>
+<span class="k">extern</span> <span class="k">const</span> <span class="kt">uint8_t</span> <span class="n">ulp_main_bin_end</span><span class="p">[]</span>   <span class="n">asm</span><span class="p">(</span><span class="s">"_binary_ulp_main_bin_end"</span><span class="p">);</span>
+
+<span class="c1">// This variable is mapped to the one in the LP core code!</span>
+<span class="k">extern</span> <span class="kt">uint32_t</span> <span class="n">ulp_counter</span><span class="p">;</span>
+
+<span class="k">static</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">TAG</span> <span class="o">=</span> <span class="s">"lp_core"</span><span class="p">;</span>
+
+<span class="c1">// (A) Button setup, so it survives into deep sleep as a wake-up source</span>
+<span class="c1">// (B) Figure out why we woke up (first boot? LP core? the button?)</span>
+<span class="c1">// (C) On first boot only: load and start the LP core program</span>
+<span class="c1">// (D) Arm both wake-up sources and go to sleep</span>
+<span class="kt">void</span> <span class="nf">app_main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="c1">// ...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h4 id="42-part-a-arming-the-button-as-a-wake-up-source">4.2 Part (A): arming the button as a wake-up source</h4>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">static</span> <span class="kt">void</span> <span class="nf">configure_button_wakeup</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">gpio_config_t</span> <span class="n">io_conf</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="p">.</span><span class="n">pin_bit_mask</span> <span class="o">=</span> <span class="mi">1ULL</span> <span class="o">&lt;&lt;</span> <span class="n">BUTTON_GPIO</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">mode</span> <span class="o">=</span> <span class="n">GPIO_MODE_INPUT</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">pull_up_en</span> <span class="o">=</span> <span class="n">GPIO_PULLUP_DISABLE</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">pull_down_en</span> <span class="o">=</span> <span class="n">GPIO_PULLDOWN_DISABLE</span><span class="p">,</span> <span class="c1">// external pull-down resistor, same as Assignment 4</span>
+    <span class="p">};</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">gpio_config</span><span class="p">(</span><span class="o">&amp;</span><span class="n">io_conf</span><span class="p">));</span>
+
+    <span class="c1">// Wake up as soon as the button pulls GPIO0 high, even while deep asleep</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_deep_sleep_enable_gpio_wakeup</span><span class="p">(</span><span class="mi">1ULL</span> <span class="o">&lt;&lt;</span> <span class="n">BUTTON_GPIO</span><span class="p">,</span> <span class="n">ESP_GPIO_WAKEUP_GPIO_HIGH</span><span class="p">));</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>Unlike a regular <code class="language-plaintext highlighter-rouge">gpio_config</code>, deep sleep wake-up sources need to be explicitly re-armed with <code class="language-plaintext highlighter-rouge">esp_deep_sleep_enable_gpio_wakeup</code> on every boot, since the chip forgets about them once it wakes up.</p>
+
+<h4 id="43-parts-b-d-app_main">4.3 Parts (B)-(D): <code class="language-plaintext highlighter-rouge">app_main</code></h4>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">app_main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">configure_button_wakeup</span><span class="p">();</span>
+
+    <span class="n">esp_sleep_wakeup_cause_t</span> <span class="n">cause</span> <span class="o">=</span> <span class="n">esp_sleep_get_wakeup_cause</span><span class="p">();</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">cause</span> <span class="o">==</span> <span class="n">ESP_SLEEP_WAKEUP_ULP</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Woken up by the LP core! LP Counter: %lu"</span><span class="p">,</span> <span class="n">ulp_counter</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">cause</span> <span class="o">==</span> <span class="n">ESP_SLEEP_WAKEUP_GPIO</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Woken up by the button!"</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"Regular boot. Starting LP core..."</span><span class="p">);</span>
+
+        <span class="c1">// Load the LP core binary</span>
+        <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">ulp_lp_core_load_binary</span><span class="p">(</span><span class="n">ulp_main_bin_start</span><span class="p">,</span>
+                                                <span class="p">(</span><span class="n">ulp_main_bin_end</span> <span class="o">-</span> <span class="n">ulp_main_bin_start</span><span class="p">)));</span>
+
+        <span class="c1">// Configure the LP core to wake up every 1 second</span>
+        <span class="n">ulp_lp_core_cfg_t</span> <span class="n">cfg</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="p">.</span><span class="n">wakeup_source</span> <span class="o">=</span> <span class="n">ULP_LP_CORE_WAKEUP_SOURCE_LP_TIMER</span><span class="p">,</span>
+            <span class="p">.</span><span class="n">lp_timer_sleep_duration_us</span> <span class="o">=</span> <span class="mi">1000000</span><span class="p">,</span>
+        <span class="p">};</span>
+        <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">ulp_lp_core_run</span><span class="p">(</span><span class="o">&amp;</span><span class="n">cfg</span><span class="p">));</span>
+    <span class="p">}</span>
+
+    <span class="n">ESP_LOGI</span><span class="p">(</span><span class="n">TAG</span><span class="p">,</span> <span class="s">"HP Core going to deep sleep. The LP core will wake us up after 5 counts, or press the button to wake up right away."</span><span class="p">);</span>
+
+    <span class="c1">// Allow the LP core to wake the main processor too</span>
+    <span class="n">ESP_ERROR_CHECK</span><span class="p">(</span><span class="n">esp_sleep_enable_ulp_wakeup</span><span class="p">());</span>
+
+    <span class="c1">// Go to deep sleep</span>
+    <span class="n">esp_deep_sleep_start</span><span class="p">();</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>The LP core keeps counting and waking us up on its own schedule either way — the button is just an extra, immediate way to wake up without waiting for it, which is handy whenever you’re debugging and don’t want to sit around for the LP core’s timer.</p>
+
+<h3 id="5-cmake-configuration">5. CMake Configuration</h3>
+
+<p>The build system needs to know about the LP core code. Open <code class="language-plaintext highlighter-rouge">main/CMakeLists.txt</code> and add the following lines at the end:</p>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nf">ulp_embed_binary</span><span class="p">(</span>ulp_main <span class="s2">"ulp/main.c"</span><span class="p">)</span>
+</code></pre></div></div>
+
+<h3 id="6-build-flash-and-monitor">6. Build, Flash, and Monitor</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>idf.py build flash monitor
+</code></pre></div></div>
+
+<p>You should see the HP core boot, start the LP core, and go to sleep. After 5 seconds, the LP core will wake the HP core back up, and you’ll see the message: <code class="language-plaintext highlighter-rouge">Woken up by the LP core!</code>. Press the button any time while the board is asleep, and you’ll see <code class="language-plaintext highlighter-rouge">Woken up by the button!</code> instead — right away, without waiting for the counter.</p>
+
+<p>The full project (including <code class="language-plaintext highlighter-rouge">main/ulp/main.c</code> and the <code class="language-plaintext highlighter-rouge">CMakeLists.txt</code> changes) is available at <a href="../../../examples/C5/assignment-06-low-power/"><code class="language-plaintext highlighter-rouge">examples/C5/assignment-06-low-power</code></a>.</p>
+
+<h3 id="bonus-measuring-the-power-savings">Bonus: measuring the power savings</h3>
+
+<p>Why go through all this trouble instead of just blinking an LED from a FreeRTOS task on the HP core? Power consumption. We measured both approaches on the same board using a <a href="https://www.nordicsemi.com/Products/Development-hardware/Power-Profiler-Kit-2">PPK2</a> power profiler hooked up to the devkit’s <code class="language-plaintext highlighter-rouge">J5</code> current-measurement connector:</p>
+
+<p><strong>Blinking from the HP core</strong> (a busy task that never sleeps) averages about <strong>22.32 mA</strong>:</p>
+
+<p><img src="/C5/EN/assignment-6/assets/ulp-hp-core.webp" alt="Power consumption graph with the HP core doing the blinking" /></p>
+
+<p><strong>Handing the same job to the LP core</strong> (while the HP core deep-sleeps) drops that to about <strong>2.97 mA</strong>:</p>
+
+<p><img src="/C5/EN/assignment-6/assets/ulp-lp-core.webp" alt="Power consumption graph with the LP core doing the blinking" /></p>
+
+<p>That’s roughly <strong>86.7% less current draw</strong> for the exact same periodic task — the kind of difference that turns a battery lasting a day into one lasting a week.</p>
+
+<h2 id="conclusion">Conclusion</h2>
+
+<p>Congratulations! You have completed the ESP32-C5 workshop. You’ve learned how to connect to Wi-Fi, perform OTA updates, use ESP-NOW for peer-to-peer communication, and utilize the LP core to save battery life.</p>
+
+<p>Thank you for participating!</p>
+
+      </section>
+    </div>
+  </body>
+</html>

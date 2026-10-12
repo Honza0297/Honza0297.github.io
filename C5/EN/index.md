@@ -59,14 +59,14 @@ Required hardware:
 - Computer running Linux, Windows or macOS operating system
 - ESP32-C5-DevKitC or ESP32-C5-DevKitM
 - USB cable (supporting power + data) compatible with the devkit above
-- Visual Studio Code
 
 Required software:
 
-- [Visual Studio Code](https://code.visualstudio.com/download)
+- [Visual Studio Code](https://code.visualstudio.com/download) or other IDE capable of editing C/C++. This workshop will suppose the usage of Visual Studio Code.
 - **ESP BLE Prov** app:
   - Android: [ESP BLE Prov](https://play.google.com/store/apps/details?id=com.espressif.provble&pcampaignid=web_share)
   - iOS: [ESP BLE Prov](https://apps.apple.com/us/app/esp-ble-provisioning/id1473590141)
+- ESP-IDF, which you'll learn how to install in the [Assignment 1: Install ESP-IDF](assignment-1/)
 
 ## Time Requirements
 
@@ -74,8 +74,7 @@ Required software:
 
 ## Feedback
 
-If you have any feedback about the workshop, feel free to start a new
-[discussion on GitHub](https://github.com/espressif/developer-portal/discussions).
+If you have any feedback about the workshop, feel free to e-mail me directly to jan.beran@espressif.com.
 
 ## Conclusion
 

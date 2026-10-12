@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/assets/css/style.css?v=2244da98f21a89a4a6f49a27d5ca89d075a17535">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup theme-color -->
+<!-- start theme color meta headers -->
+<meta name="theme-color" content="#151515">
+<meta name="msapplication-navbutton-color" content="#151515">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- end theme color meta headers -->
+
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+
+<!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>Workshop: ESP-IDF a ESP32-C6 - Úkol 5 | Honza0297.github.io</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="Workshop: ESP-IDF a ESP32-C6 - Úkol 5" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="http://localhost:4000/CZ/assignment-5/" />
+<meta property="og:url" content="http://localhost:4000/CZ/assignment-5/" />
+<meta property="og:site_name" content="Honza0297.github.io" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2024-09-30T01:00:00+02:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Workshop: ESP-IDF a ESP32-C6 - Úkol 5" />
+<script type="application/ld+json">
+{"datePublished":"2024-09-30T01:00:00+02:00","@type":"BlogPosting","headline":"Workshop: ESP-IDF a ESP32-C6 - Úkol 5","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/CZ/assignment-5/"},"url":"http://localhost:4000/CZ/assignment-5/","dateModified":"2024-09-30T01:00:00+02:00","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <a id="a-title" href="/">
+          <h1>Honza0297.github.io</h1>
+        </a>
+        <h2></h2>
+
+        <section id="downloads">
+          
+          <a href="https://github.com/Honza0297/Honza0297.github.io" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <h2 id="úkol-5-wi-fi-provisioning">Úkol 5: Wi-Fi provisioning</h2>
+
+<p>Wi-Fi <em>provisioning</em> je jedním z nejdůležitějších aspektů jakéhokoli IoT zařízení. Když si domů přinesete třeba chytrou zásuvku, také nemusíte od výrobce stahovat kód a ručně měnit SSID a heslo, ale všechno je řešené zpravidla přes nějakou aplikaci, která všechny tyhle údaje zásuvce poskytne. Zpravidla procházíme Wi-Fi provisioningem jen jednou při počátečním nastavení našeho zařízení, ale může se hodit i v situaci, kdy dojde např. k továrnímu resetu.</p>
+
+<p>Existuje několik metod, jak Wi-Fi provisioning zajistit. Některá zařízení lze do tzv. provisioning módu přepnout stiskem nějakého tlačítka, jiná fungují přes zmíněnou aplikaci nebo webovou stránku, a některá podporují automatický provisioning pomocí jiné technologie, třeba Bluetooth Low Energy (BLE).</p>
+
+<p>ESP32 samozřejmě tuhle možnost také podporuje. Můžete se s ní setkat v projektech, jakými je třeba náš <a href="https://rainmaker.espressif.com/">ESP RainMaker</a>.</p>
+
+<h3 id="praktická-ukázka-jak-na-wi-fi-provisioning">Praktická ukázka: Jak na Wi-Fi provisioning</h3>
+
+<p>V kapitole 3 jsme SSID a heslo zapisovali přímo do kódu, což je sice nejrychlejší, ale také nejkomplikovanější varianta (při každé změně musíme zkompilovat a nahrát celý projekt).</p>
+
+<p>Ukládání dat do NVS v kapitole 4 ukazuje sice poněkud praktičtější verzi, kdy si kód sám vyčte data z paměti, ale my je tam stále musíme ručně zapsat, což rozhodně ideální není.</p>
+
+<p>Teď si ukážeme, jak s pomocí mobilního telefonu s Androidem nebo iOS nastavit Wi-Fi údaje přes BLE (Bluetooth Low Energy).</p>
+
+<ol>
+  <li><strong>Instalace mobilní aplikace</strong></li>
+</ol>
+
+<p>Nejdříve si potřebujete stáhnout aplikaci pro BLE provisioning:</p>
+
+<ul>
+  <li>Android: <a href="https://play.google.com/store/apps/details?id=com.espressif.provble&amp;pcampaignid=web_share">ESP BLE Provisioning</a></li>
+  <li>iOS: <a href="https://apps.apple.com/us/app/esp-ble-provisioning/id1473590141">ESP BLE Provisioning</a></li>
+</ul>
+
+<ol>
+  <li><strong>Vytvoření nového projektu</strong></li>
+</ol>
+
+<p>Vytvoříme nový projekt s využitím příkladu <code class="language-plaintext highlighter-rouge">provisioning</code> -&gt; <code class="language-plaintext highlighter-rouge">wifi_prov_mgr</code>. Buď lze vytvořit pomocí příkazu níže:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>idf.py create-project-from-example <span class="s2">"espressif/network_provisioning^1.2.0:wifi_prov"</span>
+</code></pre></div></div>
+
+<p>…nebo pomocí GUI:</p>
+
+<ol>
+  <li>Otevřeme si ESP-IDF Component Registry</li>
+  <li>Vyhledáme <code class="language-plaintext highlighter-rouge">espressif/network_provisioning</code></li>
+  <li>Najedeme do záložky <em>Examples</em></li>
+  <li>Vybereme <code class="language-plaintext highlighter-rouge">wifi_prov</code></li>
+  <li>A zvolíme <code class="language-plaintext highlighter-rouge">Create Project from this Example</code>. V následujícím okně již stačí jen zvolit, kam projekt uložíme.</li>
+</ol>
+
+<blockquote>
+  <p>Pro vaše existující projekty můžete použít komponentu <a href="https://components.espressif.com/components/espressif/network_provisioning">espressif/network_provisioning</a>.</p>
+
+  <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>idf.py add-dependency <span class="s2">"espressif/network_provisioning^0.2.0"</span>
+</code></pre></div>  </div>
+</blockquote>
+
+<ol>
+  <li><strong>Build, flash, a monitor</strong></li>
+</ol>
+
+<p>V příkladu nebudeme nic měnit, jen  ověříme, že máme správný target, <strong>vymažeme flash paměť</strong> (příkazem <em>Erase Flash</em>), aplikaci sestavíme (build) a naflashujeme.</p>
+
+<blockquote>
+  <p>Pokud jste přidávali komponenty manuálně (přes CLI), budete potřebovat nejprve vyčistit projekt, aby se vše korektně sestavilo:</p>
+
+  <p><code class="language-plaintext highlighter-rouge">idf.py fullclean</code></p>
+</blockquote>
+
+<p>Po sestavení a nahrání aplikace si otevřeme <code class="language-plaintext highlighter-rouge">ESP-IDF Serial Monitor</code>.</p>
+
+<ol>
+  <li><strong>Provisioning</strong></li>
+</ol>
+
+<p>V aplikaci <code class="language-plaintext highlighter-rouge">ESP BLE provisioning</code> na vašem mobilním telefonu následujte kroky tak, jak jsou zobrazené níže:</p>
+
+<p><img src="../assets/provisioning-app-1.webp" class="grid-w33" />
+  <img src="../assets/provisioning-app-2.webp" class="grid-w33" />
+  <img src="../assets/provisioning-app-3.webp" class="grid-w33" />
+  <img src="../assets/provisioning-app-4.webp" class="grid-w33" />
+  <img src="../assets/provisioning-app-5.webp" class="grid-w33" /></p>
+
+<p>QR kód vám vaše vývojová deska vypíše do seriové linky (seriový monitor otevřete příkazem <em>Monitor</em> v <em>ESP-IDF Exploreru</em>).</p>
+
+<p>Poté, co se dokončí provisioning proces, se zařízení připojí ke zvolené Wi-Fi síti.</p>
+
+<h2 id="další-krok">Další krok</h2>
+
+<p>Když už víme, jak se jednoduše připojovat na Wi-Fi, pojďme si to udělat bezpečnější!</p>
+
+<p><a href="../assignment-6">Úkol 6: Protokoly</a></p>
+
+      </section>
+    </div>
+  </body>
+</html>
