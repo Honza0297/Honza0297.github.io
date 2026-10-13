@@ -35,6 +35,9 @@ jobs:
         run: bundle exec jekyll build
         env:
           JEKYLL_ENV: production
+          # jekyll-github-metadata needs to know the repo (there is no git remote in CI)
+          PAGES_REPO_NWO: ${{ github.repository }}
+          JEKYLL_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/upload-pages-artifact@v3
 
