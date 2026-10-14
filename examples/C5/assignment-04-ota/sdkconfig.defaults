@@ -7,3 +7,6 @@ CONFIG_PARTITION_TABLE_FILENAME="partitions.csv"
 # default 2MB flash size assumption. The ESP32-C5-DevKitC-1 module ships with
 # 8MB of flash, so 4MB is a safe, conservative setting here.
 CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+
+# The companion board (assignment-04-ota-server) serves the image over plain HTTP.
+CONFIG_ESP_HTTPS_OTA_ALLOW_HTTP=y

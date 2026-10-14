@@ -21,7 +21,7 @@ idf.py create-project my_first_project
 cd my_first_project
 ```
 
-This creates a basic directory structure with a `CMakeLists.txt` and a `main` folder containing `main.c`.
+This creates a basic directory structure with a `CMakeLists.txt` and a `main` folder. The source file is named after the project, so this one is `main/my_first_project.c`.
 
 ### 2. Setting the target
 
@@ -54,7 +54,7 @@ This creates a `main/idf_component.yml` file. When we build the project, ESP-IDF
 
 ### 4. Writing the Code
 
-Rather than pasting a wall of code and hoping it makes sense, let's build it up piece by piece. Open `main/main.c` in VS Code — we'll replace its contents step by step.
+Rather than pasting a wall of code and hoping it makes sense, let's build it up piece by piece. Open `main/my_first_project.c` in VS Code — we'll replace its contents step by step.
 
 #### 4.1 Skeleton
 
@@ -143,7 +143,7 @@ void app_main(void)
 
 #### 4.4 Complete code
 
-Putting it all together gives you the full `main/main.c`. If you'd rather not type it out, the finished project also lives in [`examples/C5/assignment-02-led-components`](../../../examples/C5/assignment-02-led-components/) — you can diff your file against it or copy it directly.
+Putting it all together gives you the full `main/my_first_project.c`. If you'd rather not type it out, the finished project also lives in [`examples/C5/assignment-02-led-components`](../../../examples/C5/assignment-02-led-components/) — you can diff your file against it or copy it directly.
 
 ```c
 #include <stdio.h>

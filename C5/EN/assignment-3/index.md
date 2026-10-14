@@ -14,7 +14,7 @@ In a real-world product, you cannot hardcode the Wi-Fi credentials (SSID and pas
 
 In this assignment, we will use the **ESP BLE Prov** mobile application to provision our board. Each board prints a **QR code** in the terminal; scanning it tells the app which device to connect to (every board gets a unique name) and the secret needed to talk to it, so there is nothing to type or pick from a list of dozens of devices. The credentials will be saved in NVS (Non-Volatile Storage) so the board automatically reconnects after a reboot.
 
-> **Reuse the Assignment 2 project.** Open the same `my_first_project` folder you created in Assignment 2 — don't create a new one. We're going to replace the *contents* of `main/main.c` entirely with the Wi-Fi/provisioning logic below. We won't need the LED code from Assignment 2 in this particular assignment (no harm in deleting it from `main.c`, the `led_strip` dependency can simply stay unused in `idf_component.yml`) — we'll bring the LED back in Assignment 5.
+> **Reuse the Assignment 2 project.** Open the same `my_first_project` folder you created in Assignment 2 — don't create a new one. We're going to replace the *contents* of `main/my_first_project.c` entirely with the Wi-Fi/provisioning logic below. We won't need the LED code from Assignment 2 in this particular assignment (no harm in deleting it from that file, the `led_strip` dependency can simply stay unused in `idf_component.yml`) — we'll bring the LED back in Assignment 5.
 
 ### 1. Enabling required components
 
@@ -52,7 +52,7 @@ Press `Q` to quit and `Y` to save.
 
 ### 3. Writing the Code
 
-Let's build `main/main.c` piece by piece instead of dropping the whole thing on you at once.
+Let's build `main/my_first_project.c` piece by piece instead of dropping the whole thing on you at once.
 
 #### 3.1 Skeleton
 

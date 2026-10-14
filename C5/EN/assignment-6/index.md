@@ -65,7 +65,7 @@ int main(void)
 
 ### 4. Writing the HP Core Code (app_main)
 
-In your `main/main.c`, initialize the LP core, arm the button as an extra wake-up source, and then put the HP core to sleep. Let's build it up piece by piece.
+In the C file under `main/` (`idf.py create-project` names it after the project, not `main.c`), initialize the LP core, arm the button as an extra wake-up source, and then put the HP core to sleep. Let's build it up piece by piece.
 
 #### 4.1 Skeleton
 

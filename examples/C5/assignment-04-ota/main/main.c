@@ -13,8 +13,10 @@
 #include "driver/gpio.h"
 #include "led_strip.h"
 
-#define BUTTON_GPIO GPIO_NUM_0
-#define LED_GPIO    27
+#define BUTTON_GPIO       GPIO_NUM_0
+#define LED_GPIO          27
+#define FALLBACK_SSID     "ESP32"
+#define FALLBACK_PASSWORD "ESP32"
 
 static const char *TAG = "ota_example";
 static led_strip_handle_t led_strip;
@@ -101,10 +103,9 @@ static void ota_task(void *pvParameter)
         led_set_color(20, 20, 20); // white: downloading
 
         esp_http_client_config_t config = {
-            .url = "https://example.com/firmware.bin",
-            // In production, always provide a certificate!
-            // .cert_pem = (char *)server_cert_pem_start,
-            .crt_bundle_attach = esp_crt_bundle_attach,
+            .url = "http://192.168.4.1/firmware.bin",
+            // In production, serve this over HTTPS and check the server certificate:
+            // .crt_bundle_attach = esp_crt_bundle_attach,
         };
         esp_https_ota_config_t ota_config = {
             .http_config = &config,
@@ -118,7 +119,7 @@ static void ota_task(void *pvParameter)
             vTaskDelay(pdMS_TO_TICKS(1000));
             esp_restart();
         } else {
-            ESP_LOGE(TAG, "Firmware upgrade failed (expected if example.com is used)");
+            ESP_LOGE(TAG, "Firmware upgrade failed");
             led_set_color(20, 0, 0); // red: failed
             vTaskDelay(pdMS_TO_TICKS(3000));
             led_set_color(0, 0, 20); // back to blue: ready, feel free to try again
@@ -128,6 +129,8 @@ static void ota_task(void *pvParameter)
 
 void app_main(void)
 {
+    ESP_LOGI(TAG, "Running firmware v1!");
+
     // Initialize NVS
     esp_err_t err = nvs_flash_init();
     if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -150,7 +153,22 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL));
 
-    // Relies on credentials already stored in NVS by the Assignment 3 provisioning step
+    // Prefer credentials stored in NVS by the Assignment 3 provisioning step.
+    // If that never happened, connect to the fallback network instead.
+    wifi_config_t wifi_config = { 0 };
+    ESP_ERROR_CHECK(esp_wifi_get_config(WIFI_IF_STA, &wifi_config));
+    if (wifi_config.sta.ssid[0] == '\0') {
+        ESP_LOGW(TAG, "No Wi-Fi credentials in NVS, using fallback SSID \"%s\"", FALLBACK_SSID);
+        wifi_config_t fallback = {
+            .sta = {
+                .ssid = FALLBACK_SSID,
+                .password = FALLBACK_PASSWORD,
+                .threshold.authmode = WIFI_AUTH_WEP, // "ESP32" is 5 characters; WPA2 needs 8
+            },
+        };
+        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &fallback));
+    }
+
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_start());
 

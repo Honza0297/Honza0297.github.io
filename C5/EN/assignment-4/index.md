@@ -12,7 +12,9 @@ layout: default
 
 In a real-world deployment, you won't have physical access to a USB port to flash new firmware. Over-The-Air (OTA) updates allow you to download and install new firmware over a network connection like Wi-Fi.
 
-> **Keep reusing the project.** Continue in the same project you provisioned in Assignment 3 — OTA needs a device that can already connect to your Wi-Fi, and we rely on the credentials you stored in NVS back then. We'll replace `main.c` again, but keep `idf_component.yml` as-is: it already pulls in `led_strip` from Assignment 2, and we're about to need it again.
+**How OTA works on the ESP32 in a nutshell:** the flash holds two app slots instead of one. The device always runs from one of them (the *active* slot) and never overwrites it. A new firmware is written into the *other*, inactive slot, and only after it has been downloaded completely (and verified) does the device switch a small "boot from this slot" record and reboot into it. If anything goes wrong during the download, the old firmware is still intact and keeps running. With rollback enabled (see the bonus at the end), the bootloader goes one step further: if the new firmware doesn't confirm that it works after booting, the bootloader falls back to the previous slot, so a bad update can't leave the device bricked.
+
+> **Keep reusing the project.** Continue in the same project you provisioned in Assignment 3 — OTA needs a device that can already connect to your Wi-Fi. If that step stored credentials in NVS, those are used; if not, the board joins an `ESP32` access point. A second board, flashed with the server project, hosts that access point and the update file. We'll replace `main/my_first_project.c` again, but keep `idf_component.yml` as-is: it already pulls in `led_strip` from Assignment 2, and we're about to need it again.
 
 ### 1. Partition Tables
 
@@ -58,16 +60,22 @@ Navigate to:
   - **Custom partition CSV file**: Type `partitions.csv`
 - **Serial Flasher Config**
   - **Flash size**: Select `4 MB` — two 1500K app slots plus `nvs`/`otadata`/`phy_init` no longer fit in the default 2 MB assumption.
+- **Component config**
+  - **ESP HTTPS OTA**
+    - **Allow HTTP for OTA**: Enable it. The server in this assignment speaks plain HTTP, and `esp_https_ota()` refuses an `http://` URL until this option is on. Leave it off if you later point `.url` at a real HTTPS host.
 
 Press `Q` to quit and `Y` to save.
 
-> If you'd rather not click through menuconfig for this, drop both settings into a `sdkconfig.defaults` file in your project root instead:
+> If you'd rather not click through menuconfig for this, drop these settings into a `sdkconfig.defaults` file in your project root instead:
 > ```text
 > CONFIG_PARTITION_TABLE_CUSTOM=y
 > CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
 > CONFIG_PARTITION_TABLE_FILENAME="partitions.csv"
 > CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+> CONFIG_ESP_HTTPS_OTA_ALLOW_HTTP=y
 > ```
+>
+> `CONFIG_ESP_HTTPS_OTA_ALLOW_HTTP` lets `esp_https_ota()` download from the plain HTTP server on the companion board. Leave it off if you later point `.url` at a real HTTPS host.
 
 ### 3. Connecting a Button
 
@@ -108,8 +116,12 @@ As before, let's build this up instead of pasting it all at once.
 #include "driver/gpio.h"
 #include "led_strip.h"
 
-#define BUTTON_GPIO GPIO_NUM_0
-#define LED_GPIO    27
+#define BUTTON_GPIO       GPIO_NUM_0
+#define LED_GPIO          27
+#define FALLBACK_SSID     "ESP32"
+#define FALLBACK_PASSWORD "ESP32"
+
+static const char *TAG = "ota_example";
 
 // (A) LED helpers - reused from Assignment 2
 // (B) Button GPIO setup
@@ -229,10 +241,9 @@ static void ota_task(void *pvParameter)
         led_set_color(20, 20, 20); // white: downloading
 
         esp_http_client_config_t config = {
-            .url = "https://example.com/firmware.bin",
-            // In production, always provide a certificate!
-            // .cert_pem = (char *)server_cert_pem_start,
-            .crt_bundle_attach = esp_crt_bundle_attach,
+            .url = "http://192.168.4.1/firmware.bin",
+            // In production, serve this over HTTPS and check the server certificate:
+            // .crt_bundle_attach = esp_crt_bundle_attach,
         };
         esp_https_ota_config_t ota_config = {
             .http_config = &config,
@@ -246,7 +257,7 @@ static void ota_task(void *pvParameter)
             vTaskDelay(pdMS_TO_TICKS(1000));
             esp_restart();
         } else {
-            ESP_LOGE(TAG, "Firmware upgrade failed (expected if example.com is used)");
+            ESP_LOGE(TAG, "Firmware upgrade failed");
             led_set_color(20, 0, 0); // red: failed
             vTaskDelay(pdMS_TO_TICKS(3000));
             led_set_color(0, 0, 20); // back to blue: ready, feel free to try again
@@ -255,13 +266,15 @@ static void ota_task(void *pvParameter)
 }
 ```
 
-`ulTaskNotifyTake(pdTRUE, portMAX_DELAY)` is the key change from before: the task just sleeps until `button_task` notifies it, instead of starting the download automatically after a fixed delay. Everything else — the `esp_https_ota` call itself — is unchanged from how OTA always worked.
+`ulTaskNotifyTake(pdTRUE, portMAX_DELAY)` sleeps until `button_task` notifies it, instead of starting the download on boot. The URL is the server project at [`examples/C5/assignment-04-ota-server`](../../../examples/C5/assignment-04-ota-server/): that board is the `ESP32` access point, and it serves the image at `http://192.168.4.1/firmware.bin`. `esp_https_ota()` rejects plain HTTP unless `CONFIG_ESP_HTTPS_OTA_ALLOW_HTTP` is set. A product should serve the image over HTTPS and set `.crt_bundle_attach` instead.
 
 #### 4.6 Part (F): `app_main`
 
 ```c
 void app_main(void)
 {
+    ESP_LOGI(TAG, "Running firmware v1!");
+
     // Initialize NVS
     esp_err_t err = nvs_flash_init();
     if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -284,7 +297,22 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL));
 
-    // Relies on credentials already stored in NVS by the Assignment 3 provisioning step
+    // Prefer credentials stored in NVS by the Assignment 3 provisioning step.
+    // If that never happened, connect to the fallback network instead.
+    wifi_config_t wifi_config = { 0 };
+    ESP_ERROR_CHECK(esp_wifi_get_config(WIFI_IF_STA, &wifi_config));
+    if (wifi_config.sta.ssid[0] == '\0') {
+        ESP_LOGW(TAG, "No Wi-Fi credentials in NVS, using fallback SSID \"%s\"", FALLBACK_SSID);
+        wifi_config_t fallback = {
+            .sta = {
+                .ssid = FALLBACK_SSID,
+                .password = FALLBACK_PASSWORD,
+                .threshold.authmode = WIFI_AUTH_WEP, // "ESP32" is 5 characters; WPA2 needs 8
+            },
+        };
+        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &fallback));
+    }
+
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_start());
 
@@ -293,6 +321,8 @@ void app_main(void)
     xTaskCreate(&button_task, "button_task", 2048, NULL, 5, NULL);
 }
 ```
+
+`esp_wifi_get_config()` reads the station config the Wi-Fi driver restored from NVS. A stored SSID is left as-is. An empty SSID means the board was never provisioned (or NVS was erased), so `esp_wifi_set_config()` installs `FALLBACK_SSID` and `FALLBACK_PASSWORD` — both `"ESP32"` — and the driver saves that into NVS the same way a provisioned config is saved.
 
 #### 4.7 Complete code
 
@@ -304,42 +334,27 @@ The full file lives at [`examples/C5/assignment-04-ota`](../../../examples/C5/as
 idf.py build flash monitor
 ```
 
-Watch the LED: it should turn **yellow** while connecting, then **blue** once Wi-Fi comes up. Press the button — the LED turns **white** while it attempts the download, then either **green** (and the board reboots) or **red** for a few seconds before returning to blue, since `https://example.com/firmware.bin` isn't a real firmware file. See [step 7](#7-building-and-hosting-a-real-update-binary-self-paced-readers) below for how to point `config.url` at a `.bin` you actually built, to see the full happy path.
+Flash the [server project](../../../examples/C5/assignment-04-ota-server/) onto a second board first. Watch the student board's LED: **yellow** while it connects, then **blue** once Wi-Fi is up. With no credentials in NVS it joins the server's `ESP32` access point. Press the button — the LED turns **white** while the image downloads, then **green** and the board reboots into that image. The monitor should then show `Running firmware v2!`. If the server board is off, or this board is still using a network stored in Assignment 3, the LED goes **red** and returns to blue. See [step 7](#7-the-update-image) for how that image was built and how to replace it.
 
-### 6. Rollback (Bonus)
+### 7. Where the new firmware lives
 
-ESP-IDF also supports App Rollback. If a newly flashed firmware panics or fails to connect to the server within a certain time frame, the bootloader will mark it as invalid and boot back into the previous, working firmware partition.
+> If you are running this workshop with a tutor, they will instruct you where to find it and you can consider this chapter as purely informational. However, if you are running this workshop alone, continue. 
 
-### 7. Building and Hosting a Real Update Binary (Self-Paced Readers)
-
-> **Running this workshop with a tutor?** They've likely already set up a server and will give you a URL to use — you can skip this section and just update `config.url` with whatever you're given.
-
-If you're going through this on your own and want to see a real update happen (not just a failed download against `example.com`), here's the shortest path:
-
-**1. Make a visible change.** So you can actually tell the update worked, change something obvious before rebuilding — for example, bump a version string:
-
-```c
-ESP_LOGI(TAG, "Running firmware v2!");
-```
-
-**2. Build it.**
+The image the button downloads is already built. It lives in the server project as `firmware.bin`, and it is this same program with the log line changed to `Running firmware v2!`. Flash that project onto a second board:
 
 ```bash
-idf.py build
+cd examples/C5/assignment-04-ota-server
+idf.py build flash monitor
 ```
 
-The binary you need is `build/<your-project-name>.bin` (the same file `idf.py flash` normally uses).
+The server opens an access point named `ESP32` with password `ESP32` and serves the file at `http://192.168.4.1/firmware.bin`. The student board joins that access point only when NVS has no Wi-Fi credentials. If Assignment 3 already stored a network, erase flash and flash the student project again before this demo, or the board stays on that network and never reaches `192.168.4.1`.
 
-**3. Host it somewhere with a real HTTPS certificate.** The code in this assignment uses `.crt_bundle_attach = esp_crt_bundle_attach`, which checks the server's certificate against a bundle of well-known public Certificate Authorities. This means the easiest option is to put the `.bin` somewhere that already has valid HTTPS, without running any server yourself — for example:
-- Push it to a (public or private-but-accessible) GitHub repo and use the `raw.githubusercontent.com` link to the file.
-- Upload it to any cloud storage bucket that serves files over HTTPS (S3, Google Cloud Storage, etc.) with public read access.
+**Replacing the image.** Change the version line in the student project, build it, and copy `build/assignment_04_ota.bin` over `firmware.bin` in the server project. Flash the server again. The image has to be built for ESP32-C5 and must fit in the server's `fw` partition (1536 KB).
 
-Point `config.url` at that link, rebuild and reflash with your *original* (v1) firmware, and press the button. You should see the LED go white, then green, and the board should reboot running the new binary — check the log line you changed in step 1 to confirm.
-
-> **Want to do it fully offline instead?** You can run a local HTTPS server (e.g. `python -m http.server` wrapped with a self-signed TLS certificate) but then `esp_crt_bundle_attach` won't trust it — a self-signed cert isn't in the public CA bundle. You'd need to switch `esp_https_ota_config_t` from `.crt_bundle_attach` to `.cert_pem`, embedding your self-signed certificate into the firmware as the one it should trust. This works, but it's more moving parts than most self-paced readers need just to see OTA work once.
+**Hosting it on the public internet instead.** Put the `.bin` somewhere that already has HTTPS from a public certificate authority (a `raw.githubusercontent.com` link, or an S3/GCS object with public read). Uncomment `.crt_bundle_attach = esp_crt_bundle_attach`, drop `CONFIG_ESP_HTTPS_OTA_ALLOW_HTTP`, and point `.url` at that `https://` address. A self-signed certificate is not in that bundle — embed it with `.cert_pem` if you need a local HTTPS server.
 
 ## Next step
 
-Let's dive into an entirely different wireless technology: ESP-NOW! The button and LED you just wired up are coming with us.
+Let's dive into an entirely different wireless technology: ESP-NOW! The LED you just set up is coming with us.
 
 [Assignment 5: ESP-NOW Chat Room](../assignment-5/)
