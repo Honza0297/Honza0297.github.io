@@ -29,16 +29,10 @@ build_dir() {
 
 status=0
 
-# Published C5 workshop track (introduction + assignments 1–6 on the site)
-for d in "$SCRIPT_DIR"/c5-workshop/assignment-*; do
+# Published C5 workshop track (assignments 1–6)
+for d in "$SCRIPT_DIR"/assignment-*; do
   [ -d "$d" ] || continue
   build_dir "$d" || status=1
 done
-
-# Optional: same protocols/TLS flow as the ESP32-C6 workshop chapter 6, built for ESP32-C5
-extra="$SCRIPT_DIR/c5-extra/c6-ch06-protocols-tls-parity"
-if [ -d "$extra" ]; then
-  build_dir "$extra" || status=1
-fi
 
 exit "$status"

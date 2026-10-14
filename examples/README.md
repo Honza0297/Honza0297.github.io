@@ -6,13 +6,13 @@ Complete ESP-IDF reference projects for both workshops.
 
 | Folder | Assignment |
 |---|---|
-| `assignment-01-install-verify/` | Assignment 1: Hello World / verify toolchain |
-| `assignment-02-led-components/` | Assignment 2: LED strip with led_strip component |
-| `assignment-03-wifi-station/` | Assignment 3: Wi-Fi station mode |
-| `assignment-04-nvs/` | Assignment 4: NVS credentials storage |
-| `assignment-05-wifi-provisioning/` | Assignment 5: BLE Wi-Fi provisioning |
-| `assignment-06-low-power/` | Assignment 6: ULP / LP core |
-| `extra-protocols-tls/` | Extra: HTTPS/TLS parity example (C6 ch06 equivalent) |
+| `assignment-01-install-verify/` | Assignment 1: verify the ESP-IDF toolchain |
+| `assignment-02-led-components/` | Assignment 2: Hello World & LED |
+| `assignment-03-wifi-provisioning/` | Assignment 3: Wi-Fi & provisioning |
+| `assignment-04-ota/` | Assignment 4: OTA updates (student board) |
+| `assignment-04-ota-server/` | Assignment 4: OTA server (second board) |
+| `assignment-05-esp-now/` | Assignment 5: ESP-NOW chat room |
+| `assignment-06-low-power/` | Assignment 6: LP core |
 
 ## ESP32-C6 — [examples/C6/](C6/)
 

@@ -2,13 +2,13 @@
 
 Reference ESP-IDF projects aligned with the **published** [ESP32-C5 workshop](../../C5/EN/) chapters (introduction + assignments **1–6**).
 
-This sets the target to **esp32c5** and builds each project.
+From this directory, `./build-all.sh` sets the target to **esp32c5** and builds each project.
 
 ## Layout
 
 | Workshop chapter | Directory |
 | --- | --- |
-| Assignment 1: Install ESP-IDF | *(no companion project - installation only)* |
+| Assignment 1: Install ESP-IDF | [`assignment-01-install-verify`](assignment-01-install-verify/) |
 | Assignment 2: Basics: Hello World & LED | [`assignment-02-led-components`](assignment-02-led-components/) |
 | Assignment 3: Wi-Fi & Provisioning | [`assignment-03-wifi-provisioning`](assignment-03-wifi-provisioning/) |
 | Assignment 4: OTA Updates (student board) | [`assignment-04-ota`](assignment-04-ota/) |
