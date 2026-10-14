@@ -16,7 +16,7 @@ void chatroom_start(const char *node_name);
  * `data` is not a C string; `len` is the number of bytes. */
 void chatroom_on_recv(const uint8_t src_mac[6], const uint8_t *data, int len);
 
-/* Implemented in main.c. These are the only ESP-NOW operations the chat room uses. */
+/* Implemented in esp_now_chat.c. These are the only ESP-NOW operations the chat room uses. */
 esp_err_t espnow_broadcast(const uint8_t *data, size_t len);
 esp_err_t espnow_send(const uint8_t mac[6], const uint8_t *data, size_t len);
 esp_err_t espnow_add_peer(const uint8_t mac[6]);

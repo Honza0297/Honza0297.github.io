@@ -8,189 +8,331 @@ layout: default
 
 ---
 
-The ESP32-C5 features two cores: a high-power (HP) core for standard use (networking, complex computations) and a low-power (LP) RISC-V core designed to minimize energy consumption.
+The ESP32-C5 has two cores: a high-power (HP) core for ordinary use, and a low-power (LP) core to keep consumption down.
 
-The LP core (often called the **ULP - Ultra Low Power core**) is designed to handle simple tasks while the main HP core is in deep sleep mode. This significantly reduces battery consumption, making it perfect for battery-powered projects. The LP core can collect data from sensors, control GPIOs, or increment a counter, waking up the HP core only when a threshold is met.
+The second core is usually called the **Ultra-Low-Power (ULP) core**. It is meant to handle simple tasks while the main (HP) core is asleep, which cuts power draw sharply. That matters for battery-powered projects, where efficiency counts for more than raw performance.
 
-> **Start a fresh project again** — the LP-core toolchain and deep-sleep flow don't share anything with the Wi-Fi/ESP-NOW code from before. But **keep the button from Assignment 4 wired up** (GPIO0, pull-down to GND, other leg to 3V3 — see [Assignment 4, step 3](../assignment-4/#3-connecting-a-button) if you need a reminder of the wiring). We're going to give it a second job here: waking the board up on demand, in addition to the LP core's own periodic wake-up.
+The ULP core can run on its own: collect sensor data and do basic processing, or drive GPIOs, all at very low power and a 20 MHz clock, comparable to an Arduino UNO. For the full picture of what this core can do, see
+[ULP LP-Core Coprocessor Programming](https://docs.espressif.com/projects/esp-idf/en/latest/esp32c5/api-reference/system/ulp-lp-core.html#).
 
-### 1. The Sleep Cycle
+### The (U)LP core
 
-In this assignment, we will configure the HP core to go into Deep Sleep. The LP core will continue to run, perform a basic task, and eventually wake the HP core back up — or you can just press the button yourself to wake it immediately.
+- 32-bit RISC-V core at 40 MHz (up to 48 MHz depending on the crystal)
+- 16 KB LP SRAM
+- RISC-V IMAC instruction set (**I**nteger, **M**ultiplication/Division, **A**tomic, **C**ompressed)
+- Runs as a coprocessor
+- Can reach a subset of the peripherals
+  - LP IO (LPGPIO0–LPGPIO6)
+  - UART
+  - I2C
 
-To use the LP core, we need to create a special sub-folder in our project called `main/ulp` and write the code that will run on the LP core there.
+The DevCon23 talk "Low-Power Features of ESP32-C6: Target Wake Time + LP Core" covers some of the LP core and TWT:
 
-### 2. Configuration via menuconfig
+[Watch on YouTube](https://www.youtube.com/watch?v=FpTwQlGtV0k)
 
-Run:
+#### ULP pinout
+
+The ULP core uses its own set of pins. Use the [board pinout](../introduction/#board-pin-layout) when you need to see which pins the LP core can drive.
+
+### Hands-on with the LP core
+
+In this exercise we blink an LED twice: once from the "big" HP core, and once from the ULP core, and compare the power draw.
+
+> **Note:** **Create a new project for this assignment.**
+
 ```bash
-idf.py menuconfig
+idf.py create-project lp_core
+cd lp_core
+idf.py set-target esp32c5
 ```
 
-Navigate to:
-- **Component config ---> Ultra Low Power (ULP) Co-processor**
-  - **Enable Ultra Low Power (ULP) Coprocessor**: Select `LP-core`
-  - Leave other settings as default.
+> `idf.py create-project` names the source file after the project, so the HP core code belongs in `main/lp_core.c`. The LP core code goes in `main/ulp/main.c`. The project also contains several `CMakeLists.txt` files — edit the one in the `main/` folder.
 
-Press `Q` to quit and `Y` to save.
-
-### 3. Writing the LP Core Code
-
-Create a file named `main/ulp/main.c`. This code runs *only* on the LP core!
+1. **Create a `main/ulp` folder and a `main.c` file inside it**
 
 ```c
 #include <stdint.h>
+#include <stdbool.h>
 #include "ulp_lp_core.h"
 #include "ulp_lp_core_utils.h"
+#include "ulp_lp_core_gpio.h"
+#include "ulp_lp_core_interrupts.h"
 
-// Variables shared between HP and LP core
-volatile uint32_t counter = 0;
+#define WAKEUP_PIN LP_IO_NUM_0
+#define BLUE_PIN    LP_IO_NUM_4
+#define GREEN_PIN  LP_IO_NUM_5
 
-int main(void)
+static uint32_t wakeup_count;
+uint32_t start_toggle;
+
+void LP_CORE_ISR_ATTR ulp_lp_core_lp_io_intr_handler(void)
 {
-    // Increment our counter
-    counter++;
+    ulp_lp_core_gpio_clear_intr_status();
+    wakeup_count++;
+}
 
-    // Wake the main CPU once the counter reaches 5
-    if (counter >= 5) {
-        ulp_lp_core_wakeup_main_processor();
-        counter = 0;
+int main (void)
+{
+    /* Register interrupt for the wakeup pin */
+    ulp_lp_core_intr_enable();
+    ulp_lp_core_gpio_intr_enable(WAKEUP_PIN, LP_IO_INTR_POSEDGE);
+
+    int level = 0;
+    while (1) {
+        /* Toggle the Red LED GPIO */
+        ulp_lp_core_gpio_set_level(GREEN_PIN, 0);
+        ulp_lp_core_gpio_set_level(BLUE_PIN, level);
+        level = level ? 0 : 1;
+        ulp_lp_core_delay_us(1000000);
+
+        /* Wakeup the main processor after 4 toggles of the button */
+        if (wakeup_count >= 4) {
+            ulp_lp_core_gpio_set_level(BLUE_PIN, 0);
+            ulp_lp_core_wakeup_main_processor();
+            wakeup_count = 0;
+        }
     }
-
-    // Go back to sleep until the LP timer wakes us again
-    ulp_lp_core_halt();
+    /* ulp_lp_core_halt() is called automatically when main exits */
     return 0;
 }
 ```
 
-### 4. Writing the HP Core Code (app_main)
+This code enables interrupts on the LP core with `ulp_lp_core_intr_enable`, and sets `GPIO0` as an input that fires on a rising edge (the signal going from LOW to HIGH). `ulp_lp_core_gpio_intr_enable` connects that pin to the interrupt. The wake-up counter is handled by the interrupt handler `ulp_lp_core_lp_io_intr_handler`.
 
-In the C file under `main/` (`idf.py create-project` names it after the project, not `main.c`), initialize the LP core, arm the button as an extra wake-up source, and then put the HP core to sleep. Let's build it up piece by piece.
+A loop then blinks the LED and checks the wake-up counter. `ulp_lp_core_gpio_set_level` drives the GPIO. Once the button has been pressed 4 times or more, `ulp_lp_core_wakeup_main_processor` starts the HP core.
 
-#### 4.1 Skeleton
+2. **Changes in `main/CMakeLists.txt`**
+
+CMake needs the ULP application name, its source files, and a few related settings:
+
+```text
+# Set usual component variables
+set(app_sources "lp_core.c")
+idf_component_register(SRCS ${app_sources}
+                       REQUIRES ulp
+                       WHOLE_ARCHIVE)
+#
+# ULP support additions to component CMakeLists.txt.
+#
+# 1. The ULP app name must be unique (if multiple components use ULP).
+set(ulp_app_name ulp_${COMPONENT_NAME})
+#
+# 2. Specify all C and Assembly source files.
+#    Files should be placed into a separate directory (in this case, ulp/),
+#    which should not be added to COMPONENT_SRCS.
+set(ulp_sources "ulp/main.c")
+#
+# 3. List all the component source files which include automatically
+#    generated ULP export file, ${ulp_app_name}.h:
+set(ulp_exp_dep_srcs ${app_sources})
+#
+# 4. Call function to build ULP binary and embed in project using the argument
+#    values above.
+ulp_embed_binary(${ulp_app_name} "${ulp_sources}" "${ulp_exp_dep_srcs}")
+
+```
+
+3. **HP core code in `main/lp_core.c`**
 
 ```c
 #include <stdio.h>
-#include "freertos/FreeRTOS.h"
-#include "esp_log.h"
 #include "esp_sleep.h"
-#include "ulp_lp_core.h"
 #include "driver/gpio.h"
-
-#define BUTTON_GPIO GPIO_NUM_0
+#include "driver/rtc_io.h"
+#include "ulp_lp_core.h"
+#include "ulp_main.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 extern const uint8_t ulp_main_bin_start[] asm("_binary_ulp_main_bin_start");
 extern const uint8_t ulp_main_bin_end[]   asm("_binary_ulp_main_bin_end");
 
-// This variable is mapped to the one in the LP core code!
-extern uint32_t ulp_counter;
+static void init_ulp_program(void);
 
-static const char *TAG = "lp_core";
+#define WAKEUP_PIN  GPIO_NUM_0
+#define BLUE_PIN    GPIO_NUM_4
+#define GREEN_PIN   GPIO_NUM_5
 
-// (A) Button setup, so it survives into deep sleep as a wake-up source
-// (B) Figure out why we woke up (first boot? LP core? the button?)
-// (C) On first boot only: load and start the LP core program
-// (D) Arm both wake-up sources and go to sleep
 void app_main(void)
 {
-    // ...
-}
-```
-
-#### 4.2 Part (A): arming the button as a wake-up source
-
-```c
-static void configure_button_wakeup(void)
-{
-    gpio_config_t io_conf = {
-        .pin_bit_mask = 1ULL << BUTTON_GPIO,
-        .mode = GPIO_MODE_INPUT,
-        .pull_up_en = GPIO_PULLUP_DISABLE,
-        .pull_down_en = GPIO_PULLDOWN_DISABLE, // external pull-down resistor, same as Assignment 4
-    };
-    ESP_ERROR_CHECK(gpio_config(&io_conf));
-
-    // Wake up as soon as the button pulls GPIO0 high, even while deep asleep
-    ESP_ERROR_CHECK(esp_deep_sleep_enable_gpio_wakeup(1ULL << BUTTON_GPIO, ESP_GPIO_WAKEUP_GPIO_HIGH));
-}
-```
-
-Unlike a regular `gpio_config`, deep sleep wake-up sources need to be explicitly re-armed with `esp_deep_sleep_enable_gpio_wakeup` on every boot, since the chip forgets about them once it wakes up.
-
-#### 4.3 Parts (B)-(D): `app_main`
-
-```c
-void app_main(void)
-{
-    configure_button_wakeup();
+    vTaskDelay(pdMS_TO_TICKS(1000));
 
     esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
-
     if (cause == ESP_SLEEP_WAKEUP_ULP) {
-        ESP_LOGI(TAG, "Woken up by the LP core! LP Counter: %lu", ulp_counter);
-    } else if (cause == ESP_SLEEP_WAKEUP_GPIO) {
-        ESP_LOGI(TAG, "Woken up by the button!");
-    } else {
-        ESP_LOGI(TAG, "Regular boot. Starting LP core...");
-
-        // Load the LP core binary
-        ESP_ERROR_CHECK(ulp_lp_core_load_binary(ulp_main_bin_start,
-                                                (ulp_main_bin_end - ulp_main_bin_start)));
-
-        // Configure the LP core to wake up every 1 second
-        ulp_lp_core_cfg_t cfg = {
-            .wakeup_source = ULP_LP_CORE_WAKEUP_SOURCE_LP_TIMER,
-            .lp_timer_sleep_duration_us = 1000000,
-        };
-        ESP_ERROR_CHECK(ulp_lp_core_run(&cfg));
+        printf("ULP woke up the main CPU! \n");
+        ulp_lp_core_stop();
     }
 
-    ESP_LOGI(TAG, "HP Core going to deep sleep. The LP core will wake us up after 5 counts, or press the button to wake up right away.");
+    printf("In active mode\n");
+    printf("Long press the wake button to put the chip to sleep and run the ULP\n");
 
-    // Allow the LP core to wake the main processor too
-    ESP_ERROR_CHECK(esp_sleep_enable_ulp_wakeup());
+    rtc_gpio_init(WAKEUP_PIN);
+    rtc_gpio_set_direction(WAKEUP_PIN, RTC_GPIO_MODE_INPUT_ONLY);
+    rtc_gpio_pulldown_dis(WAKEUP_PIN);
+    rtc_gpio_pullup_dis(WAKEUP_PIN);
 
-    // Go to deep sleep
+    rtc_gpio_init(BLUE_PIN);
+    rtc_gpio_set_direction(BLUE_PIN, RTC_GPIO_MODE_OUTPUT_ONLY);
+    rtc_gpio_pulldown_dis(BLUE_PIN);
+    rtc_gpio_pullup_dis(BLUE_PIN);
+
+    rtc_gpio_init(GREEN_PIN);
+    rtc_gpio_set_direction(GREEN_PIN, RTC_GPIO_MODE_OUTPUT_ONLY);
+    rtc_gpio_pulldown_dis(GREEN_PIN);
+    rtc_gpio_pullup_dis(GREEN_PIN);
+
+    int gpio_level = 0;
+    int previous_gpio_level = 0;
+    int cnt = 0;
+
+    while (1) {
+        rtc_gpio_set_level(BLUE_PIN, 0);
+        rtc_gpio_set_level(GREEN_PIN, 1);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        rtc_gpio_set_level(GREEN_PIN, 0);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+
+        gpio_level = rtc_gpio_get_level(WAKEUP_PIN);
+        if (gpio_level != previous_gpio_level) {
+            previous_gpio_level = gpio_level;
+            cnt++;
+            if (cnt > 1) {
+                rtc_gpio_set_level(GREEN_PIN, 0);
+                cnt = 0;
+                break;
+            }
+        }
+    }
+
+    init_ulp_program();
+
+    printf("Entering Deep-sleep mode\n\n");
+    printf("Press the wake button at least 3 or 4 times to wake up the main CPU again\n");
+    vTaskDelay(10);
+
+    ESP_ERROR_CHECK( esp_sleep_enable_ulp_wakeup());
+
     esp_deep_sleep_start();
+}
+
+static void init_ulp_program(void)
+{
+    esp_err_t err = ulp_lp_core_load_binary(ulp_main_bin_start,
+                        (ulp_main_bin_end - ulp_main_bin_start));
+    ESP_ERROR_CHECK(err);
+
+    ulp_lp_core_cfg_t cfg = {
+        .wakeup_source = ULP_LP_CORE_WAKEUP_SOURCE_HP_CPU,
+    };
+
+    err = ulp_lp_core_run(&cfg);
+    ESP_ERROR_CHECK(err);
 }
 ```
 
-The LP core keeps counting and waking us up on its own schedule either way — the button is just an extra, immediate way to wake up without waiting for it, which is handy whenever you're debugging and don't want to sit around for the LP core's timer.
+The same program is in [`examples/C5/assignment-06-low-power`](../../../examples/C5/assignment-06-low-power/), as `main/lp_core.c` and `main/ulp/main.c`, with the matching `CMakeLists.txt` and `sdkconfig.defaults`.
 
-### 5. CMake Configuration
+4. **Enable the LP core in the configuration**
 
-The build system needs to know about the LP core code. Open `main/CMakeLists.txt` and add the following lines at the end:
+The LP core has to be switched on before the project can build code for it. One way is to create `sdkconfig.defaults` with:
 
-```cmake
-ulp_embed_binary(ulp_main "ulp/main.c")
+```text
+# Enable ULP
+CONFIG_ULP_COPROC_ENABLED=y
+CONFIG_ULP_COPROC_TYPE_LP_CORE=y
+CONFIG_ULP_COPROC_RESERVE_MEM=4096
+# Set log level to Warning to produce clean output
+CONFIG_BOOTLOADER_LOG_LEVEL_WARN=y
+CONFIG_BOOTLOADER_LOG_LEVEL=2
+CONFIG_LOG_DEFAULT_LEVEL_WARN=y
+CONFIG_LOG_DEFAULT_LEVEL=2
 ```
 
-### 6. Build, Flash, and Monitor
+5. **Hardware setup**
 
-```bash
-idf.py build flash monitor
+This example needs two extra LEDs and one button, on these pins:
+
+- Blue LED -> **GPIO4**
+- Green LED -> **GPIO5**
+- Button (pull-down, active high) -> **GPIO0**. One side of the button goes to **3.3 V**, the other to **GPIO0**. Also put a resistor between **GPIO0** and **GND**.
+
+![Button wiring](assets/button.webp)
+
+*Button wiring*
+
+![Complete wiring diagram](assets/schematics.webp)
+
+*Complete diagram showing how to connect both LEDs (GPIO4, GPIO5) and the button (GPIO0) to the ESP32-C5-DevKitC-1.*
+
+6. **Build, flash, and monitor**
+
+Use the USB port labeled **UART** for flashing and for the monitor. Erasing flash (*Erase Flash*) before you flash this example is safe.
+
+#### What should happen...
+
+After flashing, the green LED should blink once a second, with this output:
+
+```text
+In active mode
+Long press the wake button to put the chip to sleep and run the ULP
 ```
 
-You should see the HP core boot, start the LP core, and go to sleep. After 5 seconds, the LP core will wake the HP core back up, and you'll see the message: `Woken up by the LP core!`. Press the button any time while the board is asleep, and you'll see `Woken up by the button!` instead — right away, without waiting for the counter.
+A long press on the button starts the LP core and puts the HP core into deep sleep. The blue LED then blinks once a second, with this output:
 
-The full project (including `main/ulp/main.c` and the `CMakeLists.txt` changes) is available at [`examples/C5/assignment-06-low-power`](../../../examples/C5/assignment-06-low-power/).
+```text
+Entering Deep-sleep mode
+Press the wake button at least 3 or 4 times to wake up the main CPU again
+```
 
-### Bonus: measuring the power savings
+Four clicks of the button wake the chip from deep sleep:
 
-Why go through all this trouble instead of just blinking an LED from a FreeRTOS task on the HP core? Power consumption. We measured both approaches on the same board using a [PPK2](https://www.nordicsemi.com/Products/Development-hardware/Power-Profiler-Kit-2) power profiler hooked up to the devkit's `J5` current-measurement connector:
+```text
+ULP woke up the main CPU!
+In active mode
+Long press the wake button to put the chip to sleep and run the ULP
+```
 
-**Blinking from the HP core** (a busy task that never sleeps) averages about **22.32 mA**:
+Power is measured on the J5 header with a suitable tool, for example a [JouleScope](https://www.joulescope.com/) or a [PPK2](https://www.nordicsemi.com/Products/Development-hardware/Power-Profiler-Kit-2).
 
-![Power consumption graph with the HP core doing the blinking](assets/ulp-hp-core.webp)
+**Blinking the LED from the HP core**
 
-**Handing the same job to the LP core** (while the HP core deep-sleeps) drops that to about **2.97 mA**:
+With the "big" HP core doing the work, average consumption over 10 seconds is about **22.32 mA**.
 
-![Power consumption graph with the LP core doing the blinking](assets/ulp-lp-core.webp)
+![HP core power graph](assets/ulp-hp-core.webp)
 
-That's roughly **86.7% less current draw** for the exact same periodic task — the kind of difference that turns a battery lasting a day into one lasting a week.
+**Blinking the LED from the LP core**
+
+Moving the same job to the LP core drops that by about an order of magnitude, to **2.97 mA**.
+
+![LP core power graph](assets/ulp-lp-core.webp)
+
+Switching cores saves up to **86.7%** for the same task. Treat the numbers as a guide; real results will differ.
+
+More LP core examples:
+
+- [LP Core simple example with GPIO Polling](https://github.com/espressif/esp-idf/tree/master/examples/system/ulp/lp_core/gpio)
+- [LP Core Pulse Counting Example](https://github.com/espressif/esp-idf/tree/master/examples/system/ulp/lp_core/gpio_intr_pulse_counter)
+- [LP-Core example with interrupt triggered from HP-Core](https://github.com/espressif/esp-idf/tree/master/examples/system/ulp/lp_core/interrupt)
+- [LP I2C Example](https://github.com/espressif/esp-idf/tree/master/examples/system/ulp/lp_core/lp_i2c)
+- [LP UART Examples](https://github.com/espressif/esp-idf/tree/master/examples/system/ulp/lp_core/lp_uart)
 
 ## Conclusion
 
-Congratulations! You have completed the ESP32-C5 workshop. You've learned how to connect to Wi-Fi, perform OTA updates, use ESP-NOW for peer-to-peer communication, and utilize the LP core to save battery life.
+Thank you for taking part in the workshop. We hope it was useful.
 
-Thank you for participating!
+Along the way we covered:
+
+- **Assignment 1**: Installed ESP-IDF and learned the basics of using it.
+- **Assignment 2**: Created a project, learned what components are, and used one to light the onboard LED.
+- **Assignment 3**: Connected to Wi-Fi with BLE provisioning.
+- **Assignment 4**: Tried an OTA update and the partition table.
+- **Assignment 5**: Built an ESP-NOW chat room.
+- **Assignment 6**: Ran code on the LP core and learned how to control power consumption.
+
+That is still only a skim of the surface. Both the ESP32 and ESP-IDF offer much more. We hope the workshop gave you a solid base to keep building your own projects on.
+
+Thank you again, and we look forward to your projects.
+
+---
+
+[← Back to the C5 workshop home](../)

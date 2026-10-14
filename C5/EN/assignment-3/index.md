@@ -196,7 +196,7 @@ NVS has to come first because both Wi-Fi (calibration data) and the provisioning
 
 We use **security 1**: the session between the phone and the board is encrypted, and the phone must prove it knows the *proof-of-possession* (`PROV_POP`). The ESP BLE Prov app expects exactly this when it works from a QR code, which is why security 0 produced a "security does not match" error.
 
-The QR code is just a small JSON text with the device name, the PoP and the transport (`ble`). Generating and drawing it is not interesting for us, so here is the helper to paste into `main.c` above `app_main`:
+The QR code is just a small JSON text with the device name, the PoP and the transport (`ble`). Generating and drawing it is not interesting for us, so here is the helper to paste into `main/my_first_project.c` above `app_main`:
 
 ```c
 static void print_qr(const char *service_name)

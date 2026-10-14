@@ -1,22 +1,44 @@
 #include <stdint.h>
+#include <stdbool.h>
 #include "ulp_lp_core.h"
 #include "ulp_lp_core_utils.h"
+#include "ulp_lp_core_gpio.h"
+#include "ulp_lp_core_interrupts.h"
 
-// Variables shared between HP and LP core
-volatile uint32_t counter = 0;
+#define WAKEUP_PIN LP_IO_NUM_0
+#define BLUE_PIN    LP_IO_NUM_4
+#define GREEN_PIN  LP_IO_NUM_5
 
-int main(void)
+static uint32_t wakeup_count;
+uint32_t start_toggle;
+
+void LP_CORE_ISR_ATTR ulp_lp_core_lp_io_intr_handler(void)
 {
-    // Increment our counter
-    counter++;
+    ulp_lp_core_gpio_clear_intr_status();
+    wakeup_count++;
+}
 
-    // Wake the main CPU once the counter reaches 5
-    if (counter >= 5) {
-        ulp_lp_core_wakeup_main_processor();
-        counter = 0;
+int main (void)
+{
+    /* Register interrupt for the wakeup pin */
+    ulp_lp_core_intr_enable();
+    ulp_lp_core_gpio_intr_enable(WAKEUP_PIN, LP_IO_INTR_POSEDGE);
+
+    int level = 0;
+    while (1) {
+        /* Toggle the Red LED GPIO */
+        ulp_lp_core_gpio_set_level(GREEN_PIN, 0);
+        ulp_lp_core_gpio_set_level(BLUE_PIN, level);
+        level = level ? 0 : 1;
+        ulp_lp_core_delay_us(1000000);
+
+        /* Wakeup the main processor after 4 toggles of the button */
+        if (wakeup_count >= 4) {
+            ulp_lp_core_gpio_set_level(BLUE_PIN, 0);
+            ulp_lp_core_wakeup_main_processor();
+            wakeup_count = 0;
+        }
     }
-
-    // Go back to sleep until the LP timer wakes us again
-    ulp_lp_core_halt();
+    /* ulp_lp_core_halt() is called automatically when main exits */
     return 0;
 }

@@ -49,11 +49,17 @@ spolupracovat.
 V této ukázce si napíšeme kód, který rozbliká LED. Jednou se o řízení bude starat "velké" HP
 jádro, podruhé tutéž práci zastane ULP jádro. Zkusíme přitom porovnat spotřebu.
 
-> **Poznámka:** **Pro tento úkol vytvoříme nový prázdný projekt.** Pro podrobnější instrukce
-> navštivte 1. kapitolu (vytváření projektu z příkladu `sample_project`).
->
-> Také bude důležité, abyste vždy upravovali správný soubor - v projektu bude několik
-> stejnojmenných souborů ``main.c`` a ``CMakeLists.txt``.
+> **Poznámka:** **Pro tento úkol vytvořte nový projekt.**
+
+```bash
+idf.py create-project lp_core
+cd lp_core
+idf.py set-target esp32c5
+```
+
+> `idf.py create-project` pojmenuje zdrojový soubor podle projektu, takže kód HP jádra patří do
+> `main/lp_core.c`. Kód LP jádra přijde do `main/ulp/main.c`. V projektu je také několik souborů
+> `CMakeLists.txt` — upravujte ten ve složce `main/`.
 
 1. **Vytvořte složku `main/ulp` a uvnitř soubor `main.c`**
 
@@ -120,7 +126,7 @@ V CMake musíme nastavit jméno ULP aplikace, zdrojové soubory a další...
 
 ```text
 # Set usual component variables
-set(app_sources "main.c")
+set(app_sources "lp_core.c")
 idf_component_register(SRCS ${app_sources}
                        REQUIRES ulp
                        WHOLE_ARCHIVE)
@@ -145,7 +151,7 @@ ulp_embed_binary(${ulp_app_name} "${ulp_sources}" "${ulp_exp_dep_srcs}")
 
 ```
 
-3. **Kód v `main/main.c` pro HP jádro**
+3. **Kód v `main/lp_core.c` pro HP jádro**
 
 ```c
 #include <stdio.h>
@@ -242,6 +248,8 @@ static void init_ulp_program(void)
     ESP_ERROR_CHECK(err);
 }
 ```
+
+Stejný program je v [`examples/C5/assignment-06-low-power`](../../../examples/C5/assignment-06-low-power/), jako `main/lp_core.c` a `main/ulp/main.c`, spolu s odpovídajícím `CMakeLists.txt` a `sdkconfig.defaults`.
 
 4. **Zapnutí LP jádra v konfiguraci**
 
@@ -345,12 +353,10 @@ Během workshopu jsme si prošli několika různými tématy:
 
 - **Úkol 1**: Úspěšně jsme nainstalovali ESP-IDF a naučili jsme se základy jeho použití.
 - **Úkol 2**: Naučili jsme se, jak vytvořit nový projekt, co to jsou komponenty a jak s nimi
-  pracovat.
-- **Úkol 3**: Připojili jsme se k Wi-Fi, což je asi nejdůležitější krok v celém IoT světě.
-- **Úkol 4**: Vyzkoušeli jsme si NVS (Non-Volatile Storage) a práci s perzistentními daty. Také
-  jsme si řekli, co to je *partition table* a jak ji upravit.
-- **Úkol 5**: Vyzkoušeli jsme si *Wi-Fi provisioning* a naučili jsme se, jak posunout konfiguraci
-  Wi-Fi na našich zařízeních o úroveň výš.
+  rozsvítit vestavěnou LED.
+- **Úkol 3**: Připojili jsme se k Wi-Fi pomocí BLE provisioningu.
+- **Úkol 4**: Vyzkoušeli jsme si OTA aktualizaci a tabulku oddílů (*partition table*).
+- **Úkol 5**: Postavili jsme ESP-NOW chatovací místnost.
 - **Úkol 6**: Vyzkoušeli jsme si LP jádro a naučili jsme se, jak ovládat spotřebu.
 
 I přesto, že jsme prošli několik vcelku různorodých témat, sotva jsme sklouzli po povrchu. Jak

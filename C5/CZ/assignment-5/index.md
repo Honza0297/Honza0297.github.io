@@ -52,7 +52,7 @@ void app_main(void)
 }
 ```
 
-`idf.py create-project` pojmenuje zdrojový soubor podle projektu, takže váš je `main/esp_now_chat.c`, ne `main/main.c`.
+`idf.py create-project` pojmenuje zdrojový soubor podle projektu, takže váš je `main/esp_now_chat.c`.
 
 ### 1. Psaní kódu
 
@@ -189,7 +189,7 @@ void app_main(void)
 
 #### 1.6 Celý kód
 
-[`examples/C5/assignment-05-esp-now`](../../../examples/C5/assignment-05-esp-now/) má tenhle program v `main/main.c` a k němu dvojici `chatroom.c` / `chatroom.h`. Příklad ten soubor jmenuje `main.c`; `create-project` ten váš pojmenoval `esp_now_chat.c`.
+[`examples/C5/assignment-05-esp-now`](../../../examples/C5/assignment-05-esp-now/) má tenhle program v `main/esp_now_chat.c` a k němu dvojici `chatroom.c` / `chatroom.h`.
 
 ### 2. Build, flash a monitor
 

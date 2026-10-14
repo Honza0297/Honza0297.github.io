@@ -186,7 +186,7 @@ void app_main(void)
 
 #### 1.6 Complete code
 
-[`examples/C5/assignment-05-esp-now`](../../../examples/C5/assignment-05-esp-now/) has this program in `main/main.c`, plus the `chatroom.c` / `chatroom.h` pair. The example names that file `main.c`; `create-project` named yours `esp_now_chat.c`.
+[`examples/C5/assignment-05-esp-now`](../../../examples/C5/assignment-05-esp-now/) has this program in `main/esp_now_chat.c`, plus the `chatroom.c` / `chatroom.h` pair.
 
 ### 2. Build, Flash, and Monitor
 

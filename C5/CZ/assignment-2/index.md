@@ -21,7 +21,7 @@ idf.py create-project my_first_project
 cd my_first_project
 ```
 
-Tím se vytvoří základní adresářová struktura se souborem `CMakeLists.txt` a složkou `main` obsahující `main.c`.
+Tím se vytvoří základní adresářová struktura se souborem `CMakeLists.txt` a složkou `main`. Zdrojový soubor se jmenuje podle projektu, takže tady je to `main/my_first_project.c`.
 
 ### 2. Nastavení targetu
 
@@ -54,7 +54,7 @@ Tím se vytvoří soubor `main/idf_component.yml`. Při buildu projektu ESP-IDF 
 
 ### 4. Psaní kódu
 
-Místo vložení celého kusu kódu a doufání, že bude dávat smysl, ho postavíme po částech. Otevřete `main/main.c` ve VS Code, jeho obsah budeme postupně nahrazovat.
+Místo vložení celého kusu kódu a doufání, že bude dávat smysl, ho postavíme po částech. Otevřete `main/my_first_project.c` ve VS Code, jeho obsah budeme postupně nahrazovat.
 
 #### 4.1 Kostra
 
@@ -143,7 +143,7 @@ void app_main(void)
 
 #### 4.4 Kompletní kód
 
-Spojením všeho dohromady získáte celý soubor `main/main.c`. Pokud ho nechcete opisovat, hotový projekt najdete také v [`examples/C5/assignment-02-led-components`](../../../examples/C5/assignment-02-led-components/). Můžete svůj soubor porovnat s ním (diff) nebo ho rovnou zkopírovat.
+Spojením všeho dohromady získáte celý soubor `main/my_first_project.c`. Pokud ho nechcete opisovat, hotový projekt najdete také v [`examples/C5/assignment-02-led-components`](../../../examples/C5/assignment-02-led-components/). Můžete svůj soubor porovnat s ním (diff) nebo ho rovnou zkopírovat.
 
 ```c
 #include <stdio.h>
