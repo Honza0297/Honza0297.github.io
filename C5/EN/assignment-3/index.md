@@ -350,23 +350,23 @@ If this is your first time running the code on this board, it will start provisi
 1. Look at the terminal (monitor) output. The board prints a QR code and its name (`PROV_xxxxxx`, unique for each board). Make sure the terminal window is large enough and uses a monospace font, otherwise the QR code gets distorted. Dark-theme terminals may need to be zoomed in a bit for the phone to read the code.
 2. Open the **ESP BLE Prov** app on your phone. You'll see its home screen with a **Provision New Device** button.
 
-   ![ESP BLE Prov app home screen](assets/provisioning-app-1.webp)
+   ![ESP BLE Prov app home screen](assets/provisioning-app-1.webp){: width="240" }
 
 3. Tap **Provision New Device** and point the camera at the QR code in your terminal. The app connects to your board over BLE by itself - no device list and no PIN to type.
 
-   ![QR code scanner screen](assets/provisioning-app-2.webp)
+   ![QR code scanner screen](assets/provisioning-app-2.webp){: width="240" }
 
 4. Select your Wi-Fi network from the list — the ESP32-C5 supports both 2.4 GHz and 5 GHz networks, so you may see both show up!
 
-   ![Selecting a Wi-Fi network in the app](assets/provisioning-app-3.webp)
+   ![Selecting a Wi-Fi network in the app](assets/provisioning-app-3.webp){: width="240" }
 
 5. Enter the Wi-Fi password and tap **Provision**.
 
-   ![Entering the Wi-Fi password](assets/provisioning-app-4.webp)
+   ![Entering the Wi-Fi password](assets/provisioning-app-4.webp){: width="240" }
 
 6. The app will show you the provisioning steps completing, finishing with a confirmation screen.
 
-   ![Provisioning finished successfully](assets/provisioning-app-5.webp)
+   ![Provisioning finished successfully](assets/provisioning-app-5.webp){: width="240" }
 
 > If the QR code cannot be scanned, the app's **I don't have a QR code** option lets you pick `PROV_xxxxxx` from the BLE device list; it will then ask for the proof-of-possession, which is `abcd1234`.
 

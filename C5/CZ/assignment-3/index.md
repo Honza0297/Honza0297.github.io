@@ -350,23 +350,23 @@ Pokud na této desce spouštíte kód poprvé, přejde do provisioning režimu a
 1. Podívejte se na výstup v terminálu (monitoru). Deska vypíše QR kód a své jméno (`PROV_xxxxxx`, unikátní pro každou desku). Dbejte na to, aby okno terminálu bylo dostatečně velké a používalo neproporcionální písmo, jinak se QR kód zdeformuje. U terminálů s tmavým motivem může být potřeba lehce přiblížit, aby telefon kód přečetl.
 2. Otevřete na telefonu aplikaci **ESP BLE Prov**. Uvidíte úvodní obrazovku s tlačítkem **Provision New Device**.
 
-   ![Úvodní obrazovka aplikace ESP BLE Prov](assets/provisioning-app-1.webp)
+   ![Úvodní obrazovka aplikace ESP BLE Prov](assets/provisioning-app-1.webp){: width="240" }
 
 3. Klepněte na **Provision New Device** a namiřte fotoaparát na QR kód v terminálu. Aplikace se k desce připojí přes BLE sama, bez seznamu zařízení a bez zadávání PINu.
 
-   ![Obrazovka se skenerem QR kódu](assets/provisioning-app-2.webp)
+   ![Obrazovka se skenerem QR kódu](assets/provisioning-app-2.webp){: width="240" }
 
 4. Ze seznamu vyberte svou Wi-Fi síť. ESP32-C5 podporuje sítě na 2.4 GHz i 5 GHz, takže se vám mohou zobrazit obě!
 
-   ![Výběr Wi-Fi sítě v aplikaci](assets/provisioning-app-3.webp)
+   ![Výběr Wi-Fi sítě v aplikaci](assets/provisioning-app-3.webp){: width="240" }
 
 5. Zadejte heslo k Wi-Fi a klepněte na **Provision**.
 
-   ![Zadání hesla k Wi-Fi](assets/provisioning-app-4.webp)
+   ![Zadání hesla k Wi-Fi](assets/provisioning-app-4.webp){: width="240" }
 
 6. Aplikace zobrazí průběh jednotlivých kroků provisioningu a skončí potvrzovací obrazovkou.
 
-   ![Provisioning byl úspěšně dokončen](assets/provisioning-app-5.webp)
+   ![Provisioning byl úspěšně dokončen](assets/provisioning-app-5.webp){: width="240" }
 
 > Pokud se QR kód nedaří naskenovat, volba **I don't have a QR code** v aplikaci umožňuje vybrat `PROV_xxxxxx` ze seznamu BLE zařízení; aplikace se pak zeptá na proof-of-possession, kterým je `abcd1234`.
 
