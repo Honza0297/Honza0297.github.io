@@ -14,7 +14,7 @@ V reálném nasazení nebudete mít fyzický přístup k USB portu, abyste nahr�
 
 **Jak OTA na ESP32 funguje v kostce:** ve flashi nejsou jeden, ale dva aplikační sloty. Zařízení vždy běží z jednoho z nich (*aktivního* slotu) a ten nikdy nepřepisuje. Nový firmware se zapíše do druhého, neaktivního slotu, a teprve když je celý stažený a ověřený, zařízení přepne malý záznam „bootuj z tohoto slotu“ a restartuje se do něj. Když se během stahování něco pokazí, starý firmware je pořád neporušený a běží dál. Když je zapnutý rollback (viz bonus na konci), jde bootloader ještě o krok dál: pokud nový firmware po startu nepotvrdí, že funguje, bootloader se vrátí k předchozímu slotu, takže špatná aktualizace zařízení neznefunkční.
 
-> **Pokračujte ve stejném projektu.** Pokračujte v projektu, který jste v Úkolu 3 naprovisionovali — OTA potřebuje zařízení, které se už umí připojit k Wi-Fi. Pokud ten krok uložil přihlašovací údaje do NVS, použijí se; pokud ne, deska se připojí k přístupovému bodu `ESP32`. Druhá deska, na kterou nahrajete serverový projekt, tento přístupový bod i aktualizační soubor poskytuje. `main/my_first_project.c` znovu nahradíme, ale `idf_component.yml` nechte být: už z Úkolu 2 tahá `led_strip` a za chvíli ho zase budeme potřebovat.
+> **Pokračujte ve stejném projektu.** Pokračujte v projektu, který jste v Úkolu 3 naprovisionovali — OTA potřebuje zařízení, které se už umí připojit k Wi-Fi. Pokud ten krok uložil přihlašovací údaje do NVS, použijí se; pokud ne, deska se připojí k přístupovému bodu `ESP32-WS`. Druhá deska, na kterou nahrajete serverový projekt, tento přístupový bod i aktualizační soubor poskytuje. `main/my_first_project.c` znovu nahradíme, ale `idf_component.yml` nechte být: už z Úkolu 2 tahá `led_strip` a za chvíli ho zase budeme potřebovat.
 
 ### 1. Tabulky oddílů (partition tables)
 
@@ -118,8 +118,8 @@ Jako předtím to postavíme po částech, místo abychom všechno vložili naje
 
 #define BUTTON_GPIO       GPIO_NUM_0
 #define LED_GPIO          27
-#define FALLBACK_SSID     "ESP32"
-#define FALLBACK_PASSWORD "ESP32"
+#define FALLBACK_SSID     "ESP32-WS"
+#define FALLBACK_PASSWORD "ESP32-WS"
 
 static const char *TAG = "ota_example";
 
@@ -266,7 +266,7 @@ static void ota_task(void *pvParameter)
 }
 ```
 
-`ulTaskNotifyTake(pdTRUE, portMAX_DELAY)` spí, dokud ho `button_task` neprobudí, místo aby stahování začalo hned po startu. URL je serverový projekt [`examples/C5/assignment-04-ota-server`](../../../examples/C5/assignment-04-ota-server/): ta deska je přístupový bod `ESP32` a poskytuje image na `http://192.168.4.1/firmware.bin`. `esp_https_ota()` odmítne čisté HTTP, dokud není nastaveno `CONFIG_ESP_HTTPS_OTA_ALLOW_HTTP`. V produktu by se image mělo podávat přes HTTPS a nastavit `.crt_bundle_attach`.
+`ulTaskNotifyTake(pdTRUE, portMAX_DELAY)` spí, dokud ho `button_task` neprobudí, místo aby stahování začalo hned po startu. URL je serverový projekt [`examples/C5/assignment-04-ota-server`](../../../examples/C5/assignment-04-ota-server/): ta deska je přístupový bod `ESP32-WS` a poskytuje image na `http://192.168.4.1/firmware.bin`. `esp_https_ota()` odmítne čisté HTTP, dokud není nastaveno `CONFIG_ESP_HTTPS_OTA_ALLOW_HTTP`. V produktu by se image mělo podávat přes HTTPS a nastavit `.crt_bundle_attach`.
 
 #### 4.6 Část (F): `app_main`
 
@@ -307,7 +307,7 @@ void app_main(void)
             .sta = {
                 .ssid = FALLBACK_SSID,
                 .password = FALLBACK_PASSWORD,
-                .threshold.authmode = WIFI_AUTH_WEP, // "ESP32" is 5 characters; WPA2 needs 8
+                .threshold.authmode = WIFI_AUTH_WPA2_PSK, // "ESP32-WS" is 8 characters, the WPA2 minimum
             },
         };
         ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &fallback));
@@ -322,7 +322,7 @@ void app_main(void)
 }
 ```
 
-`esp_wifi_get_config()` přečte konfiguraci stanice, kterou Wi-Fi ovladač obnovil z NVS. Uložené SSID nechá být. Prázdné SSID znamená, že deska nikdy nebyla naprovisionovaná (nebo že se NVS smazalo), takže `esp_wifi_set_config()` nastaví `FALLBACK_SSID` a `FALLBACK_PASSWORD` — obojí `"ESP32"` — a ovladač to uloží do NVS stejně jako naprovisionovanou konfiguraci.
+`esp_wifi_get_config()` přečte konfiguraci stanice, kterou Wi-Fi ovladač obnovil z NVS. Uložené SSID nechá být. Prázdné SSID znamená, že deska nikdy nebyla naprovisionovaná (nebo že se NVS smazalo), takže `esp_wifi_set_config()` nastaví `FALLBACK_SSID` a `FALLBACK_PASSWORD` — obojí `"ESP32-WS"` — a ovladač to uloží do NVS stejně jako naprovisionovanou konfiguraci.
 
 #### 4.7 Celý kód
 
@@ -334,7 +334,7 @@ Celý soubor je v [`examples/C5/assignment-04-ota`](../../../examples/C5/assignm
 idf.py build flash monitor
 ```
 
-Nejdřív nahrajte [serverový projekt](../../../examples/C5/assignment-04-ota-server/) na druhou desku. Sledujte LED studentské desky: **žlutá**, dokud se připojuje, potom **modrá**, jakmile Wi-Fi naběhne. Když v NVS nejsou přihlašovací údaje, připojí se k přístupovému bodu serveru `ESP32`. Stiskněte tlačítko — LED zbělá, dokud se image stahuje, potom zezelená a deska se restartuje do toho image. V monitoru by se pak mělo objevit `Running firmware v2!`. Když je serverová deska vypnutá, nebo tahle deska pořád používá síť uloženou v Úkolu 3, LED zčervená a vrátí se na modrou. Jak ten image vznikl a jak ho vyměnit, je v [kroku 7](#7-kde-lezi-novy-firmware).
+Nejdřív nahrajte [serverový projekt](../../../examples/C5/assignment-04-ota-server/) na druhou desku. Sledujte LED studentské desky: **žlutá**, dokud se připojuje, potom **modrá**, jakmile Wi-Fi naběhne. Když v NVS nejsou přihlašovací údaje, připojí se k přístupovému bodu serveru `ESP32-WS`. Stiskněte tlačítko — LED zbělá, dokud se image stahuje, potom zezelená a deska se restartuje do toho image. V monitoru by se pak mělo objevit `Running firmware v2!`. Když je serverová deska vypnutá, nebo tahle deska pořád používá síť uloženou v Úkolu 3, LED zčervená a vrátí se na modrou. Jak ten image vznikl a jak ho vyměnit, je v [kroku 7](#7-kde-lezi-novy-firmware).
 
 ### 7. Kde leží nový firmware {#7-kde-lezi-novy-firmware}
 
@@ -347,7 +347,7 @@ cd examples/C5/assignment-04-ota-server
 idf.py build flash monitor
 ```
 
-Server otevře přístupový bod se jménem `ESP32` a heslem `ESP32` a soubor poskytuje na `http://192.168.4.1/firmware.bin`. Studentská deska se k tomu přístupovému bodu připojí jen tehdy, když v NVS nemá přihlašovací údaje k Wi-Fi. Pokud Úkol 3 už nějakou síť uložil, před touhle ukázkou smažte flash a studentský projekt nahrajte znovu, jinak deska zůstane na té síti a na `192.168.4.1` se nikdy nedostane.
+Server otevře přístupový bod se jménem `ESP32-WS` a heslem `ESP32-WS` a soubor poskytuje na `http://192.168.4.1/firmware.bin`. Studentská deska se k tomu přístupovému bodu připojí jen tehdy, když v NVS nemá přihlašovací údaje k Wi-Fi. Pokud Úkol 3 už nějakou síť uložil, před touhle ukázkou smažte flash a studentský projekt nahrajte znovu, jinak deska zůstane na té síti a na `192.168.4.1` se nikdy nedostane.
 
 **Výměna image.** Změňte řádek s verzí ve studentském projektu, sestavte ho a `build/assignment_04_ota.bin` zkopírujte přes `firmware.bin` v serverovém projektu. Server znovu nahrajte. Image musí být sestavený pro ESP32-C5 a musí se vejít do partition `fw` na serveru (1536 KB).
 

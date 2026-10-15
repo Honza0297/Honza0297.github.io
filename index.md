@@ -24,6 +24,7 @@ Wi-Fi konektivitu, NVS ukládání dat, Wi-Fi provisioning a programování low-
 |---|---|
 | English | **[Start C5 Workshop (EN) →](C5/EN/)** |
 | Česky | **[Spustit C5 workshop (CZ) →](C5/CZ/)** |
+| Examples / Příklady | **[C5 examples →](examples/C5/)** |
 
 ---
 
@@ -39,6 +40,7 @@ komunikace a ultra-nízkoenergetického programování.
 |---|---|
 | English | **[Start C6 Workshop (EN) →](EN/)** |
 | Česky | **[Spustit C6 workshop (CZ) →](CZ/)** |
+| Examples / Příklady | **[C6 examples →](examples/C6/)** |
 
 ---
 

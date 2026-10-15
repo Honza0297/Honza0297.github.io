@@ -18,7 +18,7 @@ MSG
 fi
 
 status=0
-for d in "$SCRIPT_DIR"/c6-workshop/assignment-*; do
+for d in "$SCRIPT_DIR"/assignment-*; do
   [ -d "$d" ] || continue
   echo "==> Building $(basename "$d") for ${TARGET}"
   (

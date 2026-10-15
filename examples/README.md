@@ -18,13 +18,14 @@ Complete ESP-IDF reference projects for both workshops.
 
 | Folder | Assignment |
 |---|---|
-| `assignment-01-install-verify/` | Assignment 1: Hello World / verify toolchain |
-| `assignment-02-led-components/` | Assignment 2: LED strip with BSP |
-| `assignment-03-wifi-station/` | Assignment 3: Wi-Fi station mode |
-| `assignment-04-nvs/` | Assignment 4: NVS credentials storage |
-| `assignment-05-wifi-provisioning/` | Assignment 5: BLE Wi-Fi provisioning |
-| `assignment-06-protocols-tls/` | Assignment 6: HTTPS / TLS with certificate bundle |
-| `assignment-07-low-power/` | Assignment 7: ULP / LP core |
+| `assignment-01-install-verify/` | Assignment 1: verify the ESP-IDF toolchain |
+| `assignment-02-led-components/` | Assignment 2: LED strip |
+| `assignment-03-wifi-provisioning/` | Assignment 3: Wi-Fi & provisioning |
+| `assignment-04-ota/` | Assignment 4: OTA updates |
+| `assignment-05-esp-now/` | Assignment 5: ESP-NOW |
+| `assignment-06-low-power/` | Assignment 6: LP core |
+
+On the website, each project folder lists its source files, and the `.zip` next to the folder is that same project.
 
 ## Usage
 

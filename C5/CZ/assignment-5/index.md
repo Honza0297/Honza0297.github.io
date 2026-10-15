@@ -204,6 +204,7 @@ Nahrajte druhou desku s jiným jménem, třeba `node0001` na vaší a `node0002`
 - Napište `hello` a stiskněte Enter. Jejich monitor vypíše `User node0001: hello`.
 - Napište `red` (nebo `green`, `blue`, `white`, `on`, `off`). Jejich LED se změní a monitor vypíše `User node0001 set your LED to 20,0,0` (čísla, ne slovo). Každá složka je 0–255. Tahle slova jsou řádky `COMMAND_RED` a podobné na začátku `chatroom.c`; nové slovo je nový řádek v té tabulce.
 - Až jejich deska něco odešle, napište `node0002:hello` nebo `node0002:blue` a dosáhnete jen na ni. Do té doby monitor hlásí, že takový kontakt není. ESP-NOW si pamatuje 20 peerů a jeden slot zabírá broadcast adresa, takže místnost udrží 19 jmen.
+- Napište `list` a stiskněte Enter. Monitor vypíše každé jméno, které tahle deska slyšela, spolu s MAC adresou té desky. `list` zůstane na téhle desce; nikam se neodešle. Seznam je prázdný, dokud jiná deska něco neodešle.
 
 Řádek, který není ASCII, se odmítne. Paket delší než 250 bajtů se před odesláním ořízne. Deska svůj vlastní broadcast nepřijme.
 

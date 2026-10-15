@@ -8,6 +8,7 @@
 #include "esp_http_client.h"
 #include "esp_https_ota.h"
 #include "esp_wifi.h"
+#include "esp_netif.h"
 #include "esp_crt_bundle.h"
 #include "nvs_flash.h"
 #include "driver/gpio.h"
@@ -15,8 +16,8 @@
 
 #define BUTTON_GPIO       GPIO_NUM_0
 #define LED_GPIO          27
-#define FALLBACK_SSID     "ESP32"
-#define FALLBACK_PASSWORD "ESP32"
+#define FALLBACK_SSID     "ESP32-WS"
+#define FALLBACK_PASSWORD "ESP32-WS"
 
 static const char *TAG = "ota_example";
 static led_strip_handle_t led_strip;
@@ -102,8 +103,19 @@ static void ota_task(void *pvParameter)
         ESP_LOGI(TAG, "Starting OTA update");
         led_set_color(20, 20, 20); // white: downloading
 
+        esp_netif_ip_info_t local = { 0 };
+        esp_netif_t *netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+        if (netif == NULL || esp_netif_get_ip_info(netif, &local) != ESP_OK || local.ip.addr == 0) {
+            ESP_LOGE(TAG, "This board has no IP. It must be on ESP32-WS before it can reach the server.");
+            led_set_color(20, 0, 0);
+            vTaskDelay(pdMS_TO_TICKS(3000));
+            led_set_color(0, 0, 20);
+            continue;
+        }
+        ESP_LOGI(TAG, "This board's IP is " IPSTR, IP2STR(&local.ip));
+
         esp_http_client_config_t config = {
-            .url = "http://192.168.4.1/firmware.bin",
+            .url = "http://192.168.0.100/firmware.bin",
             // In production, serve this over HTTPS and check the server certificate:
             // .crt_bundle_attach = esp_crt_bundle_attach,
         };
@@ -153,23 +165,17 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL));
 
-    // Prefer credentials stored in NVS by the Assignment 3 provisioning step.
-    // If that never happened, connect to the fallback network instead.
-    wifi_config_t wifi_config = { 0 };
-    ESP_ERROR_CHECK(esp_wifi_get_config(WIFI_IF_STA, &wifi_config));
-    if (wifi_config.sta.ssid[0] == '\0') {
-        ESP_LOGW(TAG, "No Wi-Fi credentials in NVS, using fallback SSID \"%s\"", FALLBACK_SSID);
-        wifi_config_t fallback = {
-            .sta = {
-                .ssid = FALLBACK_SSID,
-                .password = FALLBACK_PASSWORD,
-                .threshold.authmode = WIFI_AUTH_WEP, // "ESP32" is 5 characters; WPA2 needs 8
-            },
-        };
-        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &fallback));
-    }
-
+    // Always join the workshop router. A network left in NVS by Assignment 3
+    // is a different subnet, and 192.168.0.100 is then unreachable.
+    wifi_config_t wifi_config = {
+        .sta = {
+            .ssid = FALLBACK_SSID,
+            .password = FALLBACK_PASSWORD,
+            .threshold.authmode = WIFI_AUTH_WPA2_PSK, // "ESP32-WS" is 8 characters, the WPA2 minimum
+        },
+    };
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
     ESP_ERROR_CHECK(esp_wifi_start());
 
     // Create the OTA task first so button_task has a valid handle to notify

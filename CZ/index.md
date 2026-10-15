@@ -17,9 +17,9 @@ Konkrétně si v tomto workshopu projdeme instalaci frameworku ESP-IDF a ESP-IDF
 
 ## Doprovodné referenční projekty
 
-Kompletní ESP-IDF projekty pro každý úkol jsou součástí tohoto repozitáře ve složce
-[examples/C6/](../examples/C6/). Viz [examples/C6/README.md](../examples/C6/README.md) a
-`build-all.sh` pro sestavení všech projektů najednou.
+Kompletní ESP-IDF projekty pro každý úkol jsou na webu ve složce
+[examples/C6/](../examples/C6/): u každého projektu je složka se zdrojáky a odkaz na `.zip`.
+Návod ke sestavení je v [examples/C6/README.md](../examples/C6/README.md).
 
 ## Agenda
 

@@ -39,6 +39,9 @@ jobs:
           PAGES_REPO_NWO: ${{ github.repository }}
           JEKYLL_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Publish example folders and zip archives
+        run: python3 script/publish_examples.py
+
       - uses: actions/upload-pages-artifact@v3
 
   deploy:

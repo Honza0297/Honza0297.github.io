@@ -1,3 +1,9 @@
 remote_theme: pages-themes/hacker@v0.2.0
 plugins:
 - jekyll-remote-theme # add this line to the plugins list if you already have one
+
+# Example sources are copied into _site by script/publish_examples.py after the
+# Jekyll build, with a folder index and a zip per project. Leaving them here
+# makes Jekyll turn README.md into the only page and every other folder 404.
+exclude:
+  - examples

@@ -18,7 +18,7 @@ Konkrétně si v tomto workshopu projdeme instalaci frameworku ESP-IDF. Poté se
 
 ## Doprovodné referenční projekty
 
-K tomuto workshopu patří doprovodné ESP-IDF projekty se stejným číslováním úkolů. Jsou součástí tohoto repozitáře ve složce [examples/C5/](../../examples/C5/) — můžete je procházet přímo na GitHubu, nebo si repozitář naklonovat a sestavit je lokálně. Návod je v [examples/C5/README.md](../../examples/C5/README.md).
+K tomuto workshopu patří doprovodné ESP-IDF projekty se stejným číslováním úkolů. Jsou na webu ve složce [examples/C5/](../../examples/C5/): u každého projektu je složka se zdrojáky a odkaz na `.zip`. Návod ke sestavení je v [examples/C5/README.md](../../examples/C5/README.md).
 
 ## Agenda
 

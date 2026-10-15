@@ -14,7 +14,7 @@ In a real-world deployment, you won't have physical access to a USB port to flas
 
 **How OTA works on the ESP32 in a nutshell:** the flash holds two app slots instead of one. The device always runs from one of them (the *active* slot) and never overwrites it. A new firmware is written into the *other*, inactive slot, and only after it has been downloaded completely (and verified) does the device switch a small "boot from this slot" record and reboot into it. If anything goes wrong during the download, the old firmware is still intact and keeps running. With rollback enabled (see the bonus at the end), the bootloader goes one step further: if the new firmware doesn't confirm that it works after booting, the bootloader falls back to the previous slot, so a bad update can't leave the device bricked.
 
-> **Keep reusing the project.** Continue in the same project you provisioned in Assignment 3 — OTA needs a device that can already connect to your Wi-Fi. If that step stored credentials in NVS, those are used; if not, the board joins an `ESP32` access point. A second board, flashed with the server project, hosts that access point and the update file. We'll replace `main/my_first_project.c` again, but keep `idf_component.yml` as-is: it already pulls in `led_strip` from Assignment 2, and we're about to need it again.
+> **Keep reusing the project.** Continue in the same project you provisioned in Assignment 3 — OTA needs a device that can already connect to your Wi-Fi. If that step stored credentials in NVS, those are used; if not, the board joins an `ESP32-WS` access point. A second board, flashed with the server project, hosts that access point and the update file. We'll replace `main/my_first_project.c` again, but keep `idf_component.yml` as-is: it already pulls in `led_strip` from Assignment 2, and we're about to need it again.
 
 ### 1. Partition Tables
 
@@ -118,8 +118,8 @@ As before, let's build this up instead of pasting it all at once.
 
 #define BUTTON_GPIO       GPIO_NUM_0
 #define LED_GPIO          27
-#define FALLBACK_SSID     "ESP32"
-#define FALLBACK_PASSWORD "ESP32"
+#define FALLBACK_SSID     "ESP32-WS"
+#define FALLBACK_PASSWORD "ESP32-WS"
 
 static const char *TAG = "ota_example";
 
@@ -266,7 +266,7 @@ static void ota_task(void *pvParameter)
 }
 ```
 
-`ulTaskNotifyTake(pdTRUE, portMAX_DELAY)` sleeps until `button_task` notifies it, instead of starting the download on boot. The URL is the server project at [`examples/C5/assignment-04-ota-server`](../../../examples/C5/assignment-04-ota-server/): that board is the `ESP32` access point, and it serves the image at `http://192.168.4.1/firmware.bin`. `esp_https_ota()` rejects plain HTTP unless `CONFIG_ESP_HTTPS_OTA_ALLOW_HTTP` is set. A product should serve the image over HTTPS and set `.crt_bundle_attach` instead.
+`ulTaskNotifyTake(pdTRUE, portMAX_DELAY)` sleeps until `button_task` notifies it, instead of starting the download on boot. The URL is the server project at [`examples/C5/assignment-04-ota-server`](../../../examples/C5/assignment-04-ota-server/): that board is the `ESP32-WS` access point, and it serves the image at `http://192.168.4.1/firmware.bin`. `esp_https_ota()` rejects plain HTTP unless `CONFIG_ESP_HTTPS_OTA_ALLOW_HTTP` is set. A product should serve the image over HTTPS and set `.crt_bundle_attach` instead.
 
 #### 4.6 Part (F): `app_main`
 
@@ -307,7 +307,7 @@ void app_main(void)
             .sta = {
                 .ssid = FALLBACK_SSID,
                 .password = FALLBACK_PASSWORD,
-                .threshold.authmode = WIFI_AUTH_WEP, // "ESP32" is 5 characters; WPA2 needs 8
+                .threshold.authmode = WIFI_AUTH_WPA2_PSK, // "ESP32-WS" is 8 characters, the WPA2 minimum
             },
         };
         ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &fallback));
@@ -322,7 +322,7 @@ void app_main(void)
 }
 ```
 
-`esp_wifi_get_config()` reads the station config the Wi-Fi driver restored from NVS. A stored SSID is left as-is. An empty SSID means the board was never provisioned (or NVS was erased), so `esp_wifi_set_config()` installs `FALLBACK_SSID` and `FALLBACK_PASSWORD` — both `"ESP32"` — and the driver saves that into NVS the same way a provisioned config is saved.
+`esp_wifi_get_config()` reads the station config the Wi-Fi driver restored from NVS. A stored SSID is left as-is. An empty SSID means the board was never provisioned (or NVS was erased), so `esp_wifi_set_config()` installs `FALLBACK_SSID` and `FALLBACK_PASSWORD` — both `"ESP32-WS"` — and the driver saves that into NVS the same way a provisioned config is saved.
 
 #### 4.7 Complete code
 
@@ -334,7 +334,7 @@ The full file lives at [`examples/C5/assignment-04-ota`](../../../examples/C5/as
 idf.py build flash monitor
 ```
 
-Flash the [server project](../../../examples/C5/assignment-04-ota-server/) onto a second board first. Watch the student board's LED: **yellow** while it connects, then **blue** once Wi-Fi is up. With no credentials in NVS it joins the server's `ESP32` access point. Press the button — the LED turns **white** while the image downloads, then **green** and the board reboots into that image. The monitor should then show `Running firmware v2!`. If the server board is off, or this board is still using a network stored in Assignment 3, the LED goes **red** and returns to blue. See [step 7](#7-the-update-image) for how that image was built and how to replace it.
+Flash the [server project](../../../examples/C5/assignment-04-ota-server/) onto a second board first. Watch the student board's LED: **yellow** while it connects, then **blue** once Wi-Fi is up. With no credentials in NVS it joins the server's `ESP32-WS` access point. Press the button — the LED turns **white** while the image downloads, then **green** and the board reboots into that image. The monitor should then show `Running firmware v2!`. If the server board is off, or this board is still using a network stored in Assignment 3, the LED goes **red** and returns to blue. See [step 7](#7-the-update-image) for how that image was built and how to replace it.
 
 ### 7. Where the new firmware lives
 
@@ -347,7 +347,7 @@ cd examples/C5/assignment-04-ota-server
 idf.py build flash monitor
 ```
 
-The server opens an access point named `ESP32` with password `ESP32` and serves the file at `http://192.168.4.1/firmware.bin`. The student board joins that access point only when NVS has no Wi-Fi credentials. If Assignment 3 already stored a network, erase flash and flash the student project again before this demo, or the board stays on that network and never reaches `192.168.4.1`.
+The server opens an access point named `ESP32-WS` with password `ESP32-WS` and serves the file at `http://192.168.4.1/firmware.bin`. The student board joins that access point only when NVS has no Wi-Fi credentials. If Assignment 3 already stored a network, erase flash and flash the student project again before this demo, or the board stays on that network and never reaches `192.168.4.1`.
 
 **Replacing the image.** Change the version line in the student project, build it, and copy `build/assignment_04_ota.bin` over `firmware.bin` in the server project. Flash the server again. The image has to be built for ESP32-C5 and must fit in the server's `fw` partition (1536 KB).
 

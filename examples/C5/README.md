@@ -2,7 +2,7 @@
 
 Reference ESP-IDF projects aligned with the **published** [ESP32-C5 workshop](../../C5/EN/) chapters (introduction + assignments **1–6**).
 
-From this directory, `./build-all.sh` sets the target to **esp32c5** and builds each project.
+From this directory, `./build-all.sh` sets the target to **esp32c5** and builds each project. On the website, open a project folder to read the files, or download the `.zip` linked beside it.
 
 ## Layout
 
@@ -18,5 +18,5 @@ From this directory, `./build-all.sh` sets the target to **esp32c5** and builds 
 
 Starting with Assignment 4, these projects assume you have a push-button wired to **GPIO0** (with an external pull-down resistor, other leg to **3V3**) and are using the onboard WS2812 LED on **GPIO27** for status — see Assignment 4's "Connecting a Button" section for the wiring diagram. Assignment 5 uses that LED and `idf.py monitor` for the chat. Assignment 6 adds two external LEDs, blue on **GPIO4** and green on **GPIO5**, and uses the same button on **GPIO0**.
 
-The Assignment 4 server is a second board. Flash `assignment-04-ota-server` onto it; it opens the `ESP32` access point and serves the prebuilt `firmware.bin` to the student board.
+The Assignment 4 server is a second board. Flash `assignment-04-ota-server` onto it; it joins the `ESP32-WS` router and serves the prebuilt `firmware.bin` at `http://192.168.0.100/firmware.bin`.
 

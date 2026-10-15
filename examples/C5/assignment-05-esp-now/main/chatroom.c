@@ -142,6 +142,34 @@ static bool parse_rgb(const char *s, int *r, int *g, int *b)
     return true;
 }
 
+/* Local command: print the names and MAC addresses this board has heard.
+ * Not transmitted. Color words and chat text still go out as usual. */
+static void list_contacts(void)
+{
+    contact_t copy[CHATROOM_MAX_CONTACTS];
+    int count = 0;
+
+    xSemaphoreTake(s_book_mutex, portMAX_DELAY);
+    for (int i = 0; i < CHATROOM_MAX_CONTACTS; i++) {
+        if (s_contacts[i].used) {
+            copy[count++] = s_contacts[i];
+        }
+    }
+    xSemaphoreGive(s_book_mutex);
+
+    if (count == 0) {
+        ESP_LOGI(TAG, "No contacts yet. Wait until another board sends something.");
+        return;
+    }
+
+    ESP_LOGI(TAG, "Known contacts (%d):", count);
+    for (int i = 0; i < count; i++) {
+        const uint8_t *mac = copy[i].mac;
+        ESP_LOGI(TAG, "  %s  %02x:%02x:%02x:%02x:%02x:%02x",
+                 copy[i].name, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    }
+}
+
 static bool lookup_contact(const char *name, uint8_t mac[6])
 {
     bool found = false;
@@ -246,6 +274,10 @@ static void handle_line(char *line)
     }
     if (!bytes_are_ascii((const uint8_t *)line, strlen(line))) {
         ESP_LOGW(TAG, "Only ASCII characters are allowed");
+        return;
+    }
+    if (strcmp(line, "list") == 0) {
+        list_contacts();
         return;
     }
 
@@ -407,4 +439,5 @@ void chatroom_start(const char *node_name)
     ESP_LOGI(TAG, "This board is \"%s\".", s_node_name);
     ESP_LOGI(TAG, "Broadcast a message, or: red, green, blue, white, on, off.");
     ESP_LOGI(TAG, "Direct message: <8-character name>:<message or command>.");
+    ESP_LOGI(TAG, "Type list to print the names and MAC addresses this board knows.");
 }

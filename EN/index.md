@@ -28,9 +28,9 @@ with the low-power core that is part of the ESP32-C6 SoC.
 ## Companion reference projects
 
 This workshop has companion ESP-IDF projects following the same assignment numbering. They are
-included in this repository under [examples/C6/](../../examples/C6/) — browse them directly on
-GitHub or clone the repo to build locally. See [examples/C6/README.md](../../examples/C6/README.md)
-for usage instructions.
+published under [examples/C6/](../../examples/C6/): open a project folder to read the files, or
+download the `.zip` linked next to it. See [examples/C6/README.md](../../examples/C6/README.md)
+for how to build them.
 
 ## Agenda
 

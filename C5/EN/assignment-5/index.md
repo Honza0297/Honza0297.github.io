@@ -201,6 +201,7 @@ Flash a second board with a different name, for example `node0001` on yours and 
 - Type `hello` and press Enter. Their monitor prints `User node0001: hello`.
 - Type `red` (or `green`, `blue`, `white`, `on`, `off`). Their LED changes, and the monitor prints `User node0001 set your LED to 20,0,0` (the numbers, not the word). Each level is 0–255. Those words are the `COMMAND_RED` (and similar) lines at the top of `chatroom.c`; a new word is a new row in that table.
 - After their board has sent anything, type `node0002:hello` or `node0002:blue` to reach only that board. Until then the monitor says there is no such contact. ESP-NOW keeps 20 peers, and one slot is the broadcast address, so the room remembers 19 names.
+- Type `list` and press Enter. The monitor prints each name this board has heard, with that board's MAC address. `list` stays on this board; it is not sent. The list is empty until another board sends something.
 
 A line that is not ASCII is refused. A packet longer than 250 bytes is cut to fit before it is sent. A board does not receive its own broadcast.
 
