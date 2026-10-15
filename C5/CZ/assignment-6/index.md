@@ -78,6 +78,7 @@ idf.py set-target esp32c5
 static uint32_t wakeup_count;
 uint32_t start_toggle;
 
+/* Handler přerušení: běží z LP paměti, jen smaže příznak a počítá. */
 void LP_CORE_ISR_ATTR ulp_lp_core_lp_io_intr_handler(void)
 {
     ulp_lp_core_gpio_clear_intr_status();
@@ -92,11 +93,11 @@ int main (void)
 
     int level = 0;
     while (1) {
-        /* Toggle the Red LED GPIO */
+        /* Bliká modrou; zelená zhasnutá. */
         ulp_lp_core_gpio_set_level(GREEN_PIN, 0);
         ulp_lp_core_gpio_set_level(BLUE_PIN, level);
         level = level ? 0 : 1;
-        ulp_lp_core_delay_us(1000000);
+        ulp_lp_core_delay_us(1000000); /* 1 s; LP jádro nemá FreeRTOS ticky */
 
         /* Wakeup the main processor after 4 toggles of the button */
         if (wakeup_count >= 4) {
@@ -163,6 +164,7 @@ ulp_embed_binary(${ulp_app_name} "${ulp_sources}" "${ulp_exp_dep_srcs}")
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+/* Program pro ULP, vložený přes ulp_embed_binary. */
 extern const uint8_t ulp_main_bin_start[] asm("_binary_ulp_main_bin_start");
 extern const uint8_t ulp_main_bin_end[]   asm("_binary_ulp_main_bin_end");
 
@@ -174,17 +176,19 @@ static void init_ulp_program(void);
 
 void app_main(void)
 {
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    vTaskDelay(pdMS_TO_TICKS(1000)); /* chvilka, aby monitor stihl první řádky */
 
+    /* Probuzení z deep sleep (ne čerstvý flash)? */
     esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
     if (cause == ESP_SLEEP_WAKEUP_ULP) {
         printf("ULP woke up the main CPU! \n");
-        ulp_lp_core_stop();
+        ulp_lp_core_stop(); /* zastaví ULP, aby piny zase patřily HP */
     }
 
     printf("In active mode\n");
     printf("Long press the wake button to put the chip to sleep and run the ULP\n");
 
+    /* RTC GPIO: přežijí deep sleep, běžné ne. */
     rtc_gpio_init(WAKEUP_PIN);
     rtc_gpio_set_direction(WAKEUP_PIN, RTC_GPIO_MODE_INPUT_ONLY);
     rtc_gpio_pulldown_dis(WAKEUP_PIN);
@@ -212,6 +216,7 @@ void app_main(void)
         vTaskDelay(pdMS_TO_TICKS(1000));
 
         gpio_level = rtc_gpio_get_level(WAKEUP_PIN);
+        /* Dvě hrany (stisk + puštění) znamenají: jít spát. */
         if (gpio_level != previous_gpio_level) {
             previous_gpio_level = gpio_level;
             cnt++;
@@ -229,19 +234,20 @@ void app_main(void)
     printf("Press the wake button at least 3 or 4 times to wake up the main CPU again\n");
     vTaskDelay(10);
 
-    ESP_ERROR_CHECK( esp_sleep_enable_ulp_wakeup());
+    ESP_ERROR_CHECK( esp_sleep_enable_ulp_wakeup()); /* ULP nás smí budit z deep sleep */
 
-    esp_deep_sleep_start();
+    esp_deep_sleep_start(); /* HP tady usne; ULP bliká dál. */
 }
 
 static void init_ulp_program(void)
 {
+    /* Nakopíruje program ULP do LP SRAM. */
     esp_err_t err = ulp_lp_core_load_binary(ulp_main_bin_start,
                         (ulp_main_bin_end - ulp_main_bin_start));
     ESP_ERROR_CHECK(err);
 
     ulp_lp_core_cfg_t cfg = {
-        .wakeup_source = ULP_LP_CORE_WAKEUP_SOURCE_HP_CPU,
+        .wakeup_source = ULP_LP_CORE_WAKEUP_SOURCE_HP_CPU, /* spustit hned z HP jádra */
     };
 
     err = ulp_lp_core_run(&cfg);

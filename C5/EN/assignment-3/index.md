@@ -104,6 +104,7 @@ static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_
                 ESP_LOGI(TAG, "Provisioning started");
                 break;
             case WIFI_PROV_CRED_RECV:
+                /* event_data carries the SSID and password the phone just sent. */
                 wifi_sta_config_t *wifi_sta_cfg = (wifi_sta_config_t *)event_data;
                 ESP_LOGI(TAG, "Received Wi-Fi credentials\n\tSSID     : %s\n\tPassword : %s",
                          (const char *) wifi_sta_cfg->ssid,
@@ -114,19 +115,21 @@ static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_
                 break;
             case WIFI_PROV_END:
                 ESP_LOGI(TAG, "Provisioning completed. Deinitializing manager.");
-                wifi_prov_mgr_deinit();
+                wifi_prov_mgr_deinit(); /* manager did its job; free it */
                 break;
             default:
                 break;
         }
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
+        /* Radio is on; start connecting. */
         esp_wifi_connect();
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+        /* event_data carries the address DHCP gave us. */
         ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
         ESP_LOGI(TAG, "Connected with IP Address:" IPSTR, IP2STR(&event->ip_info.ip));
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
         ESP_LOGI(TAG, "Disconnected. Connecting to the AP again...");
-        esp_wifi_connect();
+        esp_wifi_connect(); /* dropped; try again */
     }
 }
 ```
@@ -140,6 +143,7 @@ void app_main(void)
 {
     // (B) Initialize NVS (needed for Wi-Fi and Provisioning to save data)
     esp_err_t ret = nvs_flash_init();
+    /* Flash was erased or the layout changed; start NVS fresh. */
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         ESP_ERROR_CHECK(nvs_flash_erase());
         ret = nvs_flash_init();
@@ -147,9 +151,9 @@ void app_main(void)
     ESP_ERROR_CHECK(ret);
 
     // (C) Initialize networking
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-    esp_netif_create_default_wifi_sta();
+    ESP_ERROR_CHECK(esp_netif_init()); /* TCP/IP stack */
+    ESP_ERROR_CHECK(esp_event_loop_create_default()); /* the loop Wi-Fi posts events to */
+    esp_netif_create_default_wifi_sta(); /* default station interface, no IP yet */
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 ```
@@ -162,16 +166,17 @@ NVS has to come first because both Wi-Fi (calibration data) and the provisioning
     // (D) Register event handlers
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_PROV_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
-    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL)); /* only the got-address event */
 
     // (E) Start Wi-Fi Provisioning Manager
     wifi_prov_mgr_config_t config = {
-        .scheme = wifi_prov_scheme_ble,
-        .scheme_event_handler = WIFI_PROV_SCHEME_BLE_EVENT_HANDLER_FREE_BTDM
+        .scheme = wifi_prov_scheme_ble, /* talk to the phone over BLE */
+        .scheme_event_handler = WIFI_PROV_SCHEME_BLE_EVENT_HANDLER_FREE_BTDM /* frees BLE memory when done */
     };
     ESP_ERROR_CHECK(wifi_prov_mgr_init(config));
 
     bool provisioned = false;
+    /* Checks NVS: did we already get credentials before? */
     ESP_ERROR_CHECK(wifi_prov_mgr_is_provisioned(&provisioned));
 
     if (!provisioned) {
@@ -187,7 +192,7 @@ NVS has to come first because both Wi-Fi (calibration data) and the provisioning
         print_qr(service_name);
     } else {
         ESP_LOGI(TAG, "Already provisioned, starting Wi-Fi");
-        wifi_prov_mgr_deinit();
+        wifi_prov_mgr_deinit(); /* never started; just drop the manager */
         ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
         ESP_ERROR_CHECK(esp_wifi_start());
     }
@@ -207,7 +212,7 @@ static void print_qr(const char *service_name)
              service_name, PROV_POP);
     ESP_LOGI(TAG, "Scan this QR code with the ESP BLE Prov app:");
     esp_qrcode_config_t qr_cfg = ESP_QRCODE_CONFIG_DEFAULT();
-    esp_qrcode_generate(&qr_cfg, payload);
+    esp_qrcode_generate(&qr_cfg, payload); /* draws the QR code into the monitor output */
 }
 ```
 
@@ -247,7 +252,7 @@ static void print_qr(const char *service_name)
              service_name, PROV_POP);
     ESP_LOGI(TAG, "Scan this QR code with the ESP BLE Prov app:");
     esp_qrcode_config_t qr_cfg = ESP_QRCODE_CONFIG_DEFAULT();
-    esp_qrcode_generate(&qr_cfg, payload);
+    esp_qrcode_generate(&qr_cfg, payload); /* draws the QR code into the monitor output */
 }
 
 // Event handler for Wi-Fi events
@@ -259,6 +264,7 @@ static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_
                 ESP_LOGI(TAG, "Provisioning started");
                 break;
             case WIFI_PROV_CRED_RECV:
+                /* event_data carries the SSID and password the phone just sent. */
                 wifi_sta_config_t *wifi_sta_cfg = (wifi_sta_config_t *)event_data;
                 ESP_LOGI(TAG, "Received Wi-Fi credentials\n\tSSID     : %s\n\tPassword : %s",
                          (const char *) wifi_sta_cfg->ssid,
@@ -269,19 +275,21 @@ static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_
                 break;
             case WIFI_PROV_END:
                 ESP_LOGI(TAG, "Provisioning completed. Deinitializing manager.");
-                wifi_prov_mgr_deinit();
+                wifi_prov_mgr_deinit(); /* manager did its job; free it */
                 break;
             default:
                 break;
         }
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
+        /* Radio is on; start connecting. */
         esp_wifi_connect();
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+        /* event_data carries the address DHCP gave us. */
         ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
         ESP_LOGI(TAG, "Connected with IP Address:" IPSTR, IP2STR(&event->ip_info.ip));
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
         ESP_LOGI(TAG, "Disconnected. Connecting to the AP again...");
-        esp_wifi_connect();
+        esp_wifi_connect(); /* dropped; try again */
     }
 }
 
@@ -289,6 +297,7 @@ void app_main(void)
 {
     // 1. Initialize NVS (needed for Wi-Fi and Provisioning to save data)
     esp_err_t ret = nvs_flash_init();
+    /* Flash was erased or the layout changed; start NVS fresh. */
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         ESP_ERROR_CHECK(nvs_flash_erase());
         ret = nvs_flash_init();
@@ -296,25 +305,26 @@ void app_main(void)
     ESP_ERROR_CHECK(ret);
 
     // 2. Initialize networking
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-    esp_netif_create_default_wifi_sta();
+    ESP_ERROR_CHECK(esp_netif_init()); /* TCP/IP stack */
+    ESP_ERROR_CHECK(esp_event_loop_create_default()); /* the loop Wi-Fi posts events to */
+    esp_netif_create_default_wifi_sta(); /* default station interface, no IP yet */
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
     // 3. Register event handlers
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_PROV_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
-    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL)); /* only the got-address event */
 
     // 4. Start Wi-Fi Provisioning Manager
     wifi_prov_mgr_config_t config = {
-        .scheme = wifi_prov_scheme_ble,
-        .scheme_event_handler = WIFI_PROV_SCHEME_BLE_EVENT_HANDLER_FREE_BTDM
+        .scheme = wifi_prov_scheme_ble, /* talk to the phone over BLE */
+        .scheme_event_handler = WIFI_PROV_SCHEME_BLE_EVENT_HANDLER_FREE_BTDM /* frees BLE memory when done */
     };
     ESP_ERROR_CHECK(wifi_prov_mgr_init(config));
 
     bool provisioned = false;
+    /* Checks NVS: did we already get credentials before? */
     ESP_ERROR_CHECK(wifi_prov_mgr_is_provisioned(&provisioned));
 
     if (!provisioned) {
@@ -330,7 +340,7 @@ void app_main(void)
         print_qr(service_name);
     } else {
         ESP_LOGI(TAG, "Already provisioned, starting Wi-Fi");
-        wifi_prov_mgr_deinit();
+        wifi_prov_mgr_deinit(); /* never started; just drop the manager */
         ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
         ESP_ERROR_CHECK(esp_wifi_start());
     }

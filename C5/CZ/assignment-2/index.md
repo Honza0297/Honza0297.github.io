@@ -88,27 +88,30 @@ void app_main(void)
 Ovladač `led_strip` potřebuje dvě konfigurační struktury: jedna popisuje, *co* je připojeno (který GPIO, kolik LED, jaké je pořadí barev), a druhá, *jak* ji ovládat (periferie RMT se používá ke generování přesného časování, které LED WS2812 potřebují).
 
 ```c
+/* Tik RMT. Bit WS2812 trvá 1,25 us, takže 10 MHz je zhruba 10x jemnější. */
 #define LED_STRIP_RMT_RES_HZ  (10 * 1000 * 1000)
 static const char *TAG = "workshop";
 
+/* Nastaví RMT (časuje datovou linku) a jednu vestavěnou LED. */
 led_strip_handle_t configure_led(void)
 {
     led_strip_config_t strip_config = {
         .strip_gpio_num = 27,
         .max_leds = 1,
-        .color_component_format = LED_STRIP_COLOR_COMPONENT_FMT_GRB,
+        .color_component_format = LED_STRIP_COLOR_COMPONENT_FMT_GRB, /* WS2812 chce G, pak R, pak B */
         .led_model = LED_MODEL_WS2812,
-        .flags.invert_out = false,
+        .flags.invert_out = false, /* true, jen když něco invertuje datovou linku */
     };
 
     led_strip_rmt_config_t rmt_config = {
         .clk_src = RMT_CLK_SRC_DEFAULT,
         .resolution_hz = LED_STRIP_RMT_RES_HZ,
-        .mem_block_symbols = 0,
-        .flags.with_dma = false,
+        .mem_block_symbols = 0, /* 0 = velikost bufferu vybere ovladač */
+        .flags.with_dma = false, /* jedna LED je pár bajtů; DMA je pro dlouhé pásky */
     };
 
     led_strip_handle_t led_strip;
+    /* Vytvoří ovladač. Odteď je handle LEDkou. */
     ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip));
     ESP_LOGI(TAG, "LED strip initialized successfully");
     return led_strip;
@@ -127,14 +130,14 @@ void app_main(void)
     // (B) Create the LED handle
     led_strip_handle_t led_strip = configure_led();
 
-    // (C) Set color to Red
+    // (C) Set color to Red. set_pixel píše do RAM; refresh buffer pošle do LED.
     ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, 0, 20, 0, 0));
     ESP_ERROR_CHECK(led_strip_refresh(led_strip));
     ESP_LOGI(TAG, "LED set to Red");
 
     // (D) app_main must not return, otherwise the system considers the app finished
     while (1) {
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        vTaskDelay(1000 / portTICK_PERIOD_MS); /* uspí na 1 s místo aktivního čekání */
     }
 }
 ```
@@ -153,27 +156,30 @@ Spojením všeho dohromady získáte celý soubor `main/my_first_project.c`. Pok
 #include "esp_log.h"
 #include "esp_err.h"
 
+/* Tik RMT. Bit WS2812 trvá 1,25 us, takže 10 MHz je zhruba 10x jemnější. */
 #define LED_STRIP_RMT_RES_HZ  (10 * 1000 * 1000)
 static const char *TAG = "workshop";
 
+/* Nastaví RMT (časuje datovou linku) a jednu vestavěnou LED. */
 led_strip_handle_t configure_led(void)
 {
     led_strip_config_t strip_config = {
         .strip_gpio_num = 27,
         .max_leds = 1,
-        .color_component_format = LED_STRIP_COLOR_COMPONENT_FMT_GRB,
+        .color_component_format = LED_STRIP_COLOR_COMPONENT_FMT_GRB, /* WS2812 chce G, pak R, pak B */
         .led_model = LED_MODEL_WS2812,
-        .flags.invert_out = false,
+        .flags.invert_out = false, /* true, jen když něco invertuje datovou linku */
     };
 
     led_strip_rmt_config_t rmt_config = {
         .clk_src = RMT_CLK_SRC_DEFAULT,
         .resolution_hz = LED_STRIP_RMT_RES_HZ,
-        .mem_block_symbols = 0,
-        .flags.with_dma = false,
+        .mem_block_symbols = 0, /* 0 = velikost bufferu vybere ovladač */
+        .flags.with_dma = false, /* jedna LED je pár bajtů; DMA je pro dlouhé pásky */
     };
 
     led_strip_handle_t led_strip;
+    /* Vytvoří ovladač. Odteď je handle LEDkou. */
     ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip));
     ESP_LOGI(TAG, "LED strip initialized successfully");
     return led_strip;
@@ -185,13 +191,13 @@ void app_main(void)
 
     led_strip_handle_t led_strip = configure_led();
 
-    // Set color to Red
+    /* set_pixel píše do RAM; refresh buffer pošle do LED. */
     ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, 0, 20, 0, 0));
     ESP_ERROR_CHECK(led_strip_refresh(led_strip));
     ESP_LOGI(TAG, "LED set to Red");
 
     while(1) {
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        vTaskDelay(1000 / portTICK_PERIOD_MS); /* uspí na 1 s místo aktivního čekání */
     }
 }
 ```

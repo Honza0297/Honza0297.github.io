@@ -28,6 +28,7 @@ static esp_err_t firmware_get_handler(httpd_req_t *req)
 
     size_t offset = 0;
     esp_err_t err = ESP_OK;
+    /* Stream the image in 4 KB chunks; the whole 1 MB never sits in RAM. */
     while (offset < s_fw_len) {
         size_t n = s_fw_len - offset;
         if (n > 4096) {
@@ -46,7 +47,7 @@ static esp_err_t firmware_get_handler(httpd_req_t *req)
     free(buf);
 
     if (err == ESP_OK) {
-        err = httpd_resp_send_chunk(req, NULL, 0);
+        err = httpd_resp_send_chunk(req, NULL, 0); /* empty chunk ends the response */
     }
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Failed to send firmware at offset %u", (unsigned)offset);
@@ -79,7 +80,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
         esp_wifi_connect();
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_CONNECTED) {
-        set_static_ip(arg);
+        set_static_ip(arg); /* arg is our netif; claim .100 before DHCP hands it elsewhere */
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
         ESP_LOGW(TAG, "Disconnected from \"%s\", retrying", WIFI_SSID);
         esp_wifi_connect();
@@ -94,6 +95,7 @@ static void start_server(void)
 {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.stack_size = 8192;
+    /* A 1 MB image needs time on a slow link; don't drop slow clients. */
     config.send_wait_timeout = 60;
     config.recv_wait_timeout = 60;
 
@@ -124,7 +126,7 @@ static void prepare_image(void)
     };
     esp_image_metadata_t meta = { 0 };
     ESP_ERROR_CHECK(esp_image_get_metadata(&pos, &meta));
-    s_fw_len = meta.image_len;
+    s_fw_len = meta.image_len; /* real length; the rest of the partition is 0xFF */
     ESP_LOGI(TAG, "Stored firmware image is %u bytes", (unsigned)s_fw_len);
 }
 
@@ -146,6 +148,7 @@ void app_main(void)
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
+    /* sta_netif arrives as arg, so the CONNECTED event can set the static IP. */
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, sta_netif));
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL));
 

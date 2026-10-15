@@ -14,7 +14,7 @@ V reálném nasazení nebudete mít fyzický přístup k USB portu, abyste nahr�
 
 **Jak OTA na ESP32 funguje v kostce:** ve flashi nejsou jeden, ale dva aplikační sloty. Zařízení vždy běží z jednoho z nich (*aktivního* slotu) a ten nikdy nepřepisuje. Nový firmware se zapíše do druhého, neaktivního slotu, a teprve když je celý stažený a ověřený, zařízení přepne malý záznam „bootuj z tohoto slotu“ a restartuje se do něj. Když se během stahování něco pokazí, starý firmware je pořád neporušený a běží dál. Když je zapnutý rollback (viz bonus na konci), jde bootloader ještě o krok dál: pokud nový firmware po startu nepotvrdí, že funguje, bootloader se vrátí k předchozímu slotu, takže špatná aktualizace zařízení neznefunkční.
 
-> **Pokračujte ve stejném projektu.** Pokračujte v projektu, který jste v Úkolu 3 naprovisionovali — OTA potřebuje zařízení, které se už umí připojit k Wi-Fi. Pokud ten krok uložil přihlašovací údaje do NVS, použijí se; pokud ne, deska se připojí k přístupovému bodu `ESP32-WS`. Druhá deska, na kterou nahrajete serverový projekt, tento přístupový bod i aktualizační soubor poskytuje. `main/my_first_project.c` znovu nahradíme, ale `idf_component.yml` nechte být: už z Úkolu 2 tahá `led_strip` a za chvíli ho zase budeme potřebovat.
+> **Pokračujte ve stejném projektu.** Pokračujte v projektu, který jste v Úkolu 3 naprovisionovali — OTA potřebuje zařízení, které se už umí připojit k Wi-Fi. Pokud ten krok uložil přihlašovací údaje do NVS, znovu se použijí; pokud ne, deska se připojí rovnou k workshopové síti `ESP32-WS`. Druhá deska, na kterou nahrajete serverový projekt, je na téže síti s pevnou adresou a poskytuje aktualizační soubor. `main/my_first_project.c` znovu nahradíme, ale `idf_component.yml` nechte být: už z Úkolu 2 tahá `led_strip` a za chvíli ho zase budeme potřebovat.
 
 ### 1. Tabulky oddílů (partition tables)
 
@@ -111,6 +111,7 @@ Jako předtím to postavíme po částech, místo abychom všechno vložili naje
 #include "esp_https_ota.h"
 #include "esp_http_client.h"
 #include "esp_wifi.h"
+#include "esp_netif.h"
 #include "esp_crt_bundle.h"
 #include "nvs_flash.h"
 #include "driver/gpio.h"
@@ -118,6 +119,8 @@ Jako předtím to postavíme po částech, místo abychom všechno vložili naje
 
 #define BUTTON_GPIO       GPIO_NUM_0
 #define LED_GPIO          27
+/* Jen nouzovka pro workshop. NIKDY nehardcodujte Wi-Fi SSID a heslo v produkci;
+   použijte provisioning (Úkol 3), aby každé zařízení dostalo vlastní přihlašovací údaje. */
 #define FALLBACK_SSID     "ESP32-WS"
 #define FALLBACK_PASSWORD "ESP32-WS"
 
@@ -139,6 +142,7 @@ static TaskHandle_t s_ota_task_handle = NULL;
 
 static void led_set_color(uint8_t r, uint8_t g, uint8_t b)
 {
+    /* Stejný dvoukrok jako v Úkolu 2: nejdřív RAM, pak drát. */
     led_strip_set_pixel(led_strip, 0, r, g, b);
     led_strip_refresh(led_strip);
 }
@@ -146,7 +150,7 @@ static void led_set_color(uint8_t r, uint8_t g, uint8_t b)
 static void configure_led(void)
 {
     led_strip_config_t strip_config = {
-        .strip_gpio_num = LED_GPIO,
+        .strip_gpio_num = LED_GPIO, /* vestavěná LED, stejná jako v Úkolu 2 */
         .max_leds = 1,
         .color_component_format = LED_STRIP_COLOR_COMPONENT_FMT_GRB,
         .led_model = LED_MODEL_WS2812,
@@ -154,23 +158,23 @@ static void configure_led(void)
     };
     led_strip_rmt_config_t rmt_config = {
         .clk_src = RMT_CLK_SRC_DEFAULT,
-        .resolution_hz = 10 * 1000 * 1000,
-        .mem_block_symbols = 0,
-        .flags.with_dma = false,
+        .resolution_hz = 10 * 1000 * 1000, /* 10 MHz: zhruba 10x jemnější než bit WS2812 (1,25 us) */
+        .mem_block_symbols = 0, /* 0 = velikost bufferu vybere ovladač */
+        .flags.with_dma = false, /* jedna LED je pár bajtů; DMA je pro dlouhé pásky */
     };
-    ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip));
-    led_strip_clear(led_strip);
+    ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip)); /* vytvoří ovladač */
+    led_strip_clear(led_strip); /* všechno zhasnout */
 }
 
 static void configure_button(void)
 {
     gpio_config_t io_conf = {
-        .pin_bit_mask = 1ULL << BUTTON_GPIO,
+        .pin_bit_mask = 1ULL << BUTTON_GPIO, /* bitová maska: jen tenhle pin */
         .mode = GPIO_MODE_INPUT,
         .pull_up_en = GPIO_PULLUP_DISABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE, // we use an external pull-down resistor
     };
-    ESP_ERROR_CHECK(gpio_config(&io_conf));
+    ESP_ERROR_CHECK(gpio_config(&io_conf)); /* nastaví pin */
 }
 ```
 
@@ -187,12 +191,13 @@ LED použijeme jako stavovou kontrolku s jednoduchým barevným kódem, který v
 static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
 {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
-        esp_wifi_connect();
+        esp_wifi_connect(); /* rádio běží; začít se připojovat */
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
         ESP_LOGI(TAG, "Disconnected. Connecting to the AP again...");
         led_set_color(20, 20, 0); // yellow: (re)connecting
-        esp_wifi_connect();
+        esp_wifi_connect(); /* spojení padlo; zkusit znovu */
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+        /* event_data nese adresu, kterou přidělilo DHCP. */
         ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
         ESP_LOGI(TAG, "Connected with IP Address:" IPSTR, IP2STR(&event->ip_info.ip));
         ESP_LOGI(TAG, "Ready. Press the button to start the OTA update.");
@@ -212,16 +217,17 @@ static void button_task(void *pvParameter)
 {
     bool was_pressed = false;
     while (1) {
+        /* HIGH, dokud je stisknuto (tlačítko spojí pin s 3V3). */
         bool pressed = gpio_get_level(BUTTON_GPIO) == 1;
         if (pressed && !was_pressed) {
             vTaskDelay(pdMS_TO_TICKS(50)); // simple debounce
             if (gpio_get_level(BUTTON_GPIO) == 1) {
                 ESP_LOGI(TAG, "Button pressed - triggering OTA update");
-                xTaskNotifyGive(s_ota_task_handle);
+                xTaskNotifyGive(s_ota_task_handle); /* vzbudí OTA úlohu; ta spí v ulTaskNotifyTake */
             }
         }
         was_pressed = pressed;
-        vTaskDelay(pdMS_TO_TICKS(20));
+        vTaskDelay(pdMS_TO_TICKS(20)); /* kontrola každých 20 ms */
     }
 }
 ```
@@ -240,8 +246,21 @@ static void ota_task(void *pvParameter)
         ESP_LOGI(TAG, "Starting OTA update");
         led_set_color(20, 20, 20); // white: downloading
 
+        esp_netif_ip_info_t local = { 0 };
+        /* Najde naše vlastní station rozhraní a jeho adresu. */
+        esp_netif_t *netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+        /* Zatím bez adresy (špatná síť?) – stahování ani nezkoušet. */
+        if (netif == NULL || esp_netif_get_ip_info(netif, &local) != ESP_OK || local.ip.addr == 0) {
+            ESP_LOGE(TAG, "This board has no IP. It must be on ESP32-WS before it can reach the server.");
+            led_set_color(20, 0, 0);
+            vTaskDelay(pdMS_TO_TICKS(3000));
+            led_set_color(0, 0, 20);
+            continue;
+        }
+        ESP_LOGI(TAG, "This board's IP is " IPSTR, IP2STR(&local.ip));
+
         esp_http_client_config_t config = {
-            .url = "http://192.168.4.1/firmware.bin",
+            .url = "http://192.168.0.100/firmware.bin",
             // In production, serve this over HTTPS and check the server certificate:
             // .crt_bundle_attach = esp_crt_bundle_attach,
         };
@@ -250,12 +269,13 @@ static void ota_task(void *pvParameter)
         };
 
         ESP_LOGI(TAG, "Attempting to download update from %s", config.url);
+        /* Stáhne do neaktivního slotu a přepne bootovací záznam. */
         esp_err_t ret = esp_https_ota(&ota_config);
         if (ret == ESP_OK) {
             ESP_LOGI(TAG, "OTA succeeded, rebooting...");
             led_set_color(0, 20, 0); // green: success
-            vTaskDelay(pdMS_TO_TICKS(1000));
-            esp_restart();
+            vTaskDelay(pdMS_TO_TICKS(1000)); /* nechat chvilku svítit zelenou a pak restart */
+            esp_restart(); /* nabootuje nový image */
         } else {
             ESP_LOGE(TAG, "Firmware upgrade failed");
             led_set_color(20, 0, 0); // red: failed
@@ -266,7 +286,7 @@ static void ota_task(void *pvParameter)
 }
 ```
 
-`ulTaskNotifyTake(pdTRUE, portMAX_DELAY)` spí, dokud ho `button_task` neprobudí, místo aby stahování začalo hned po startu. URL je serverový projekt [`examples/C5/assignment-04-ota-server`](../../../examples/C5/assignment-04-ota-server/): ta deska je přístupový bod `ESP32-WS` a poskytuje image na `http://192.168.4.1/firmware.bin`. `esp_https_ota()` odmítne čisté HTTP, dokud není nastaveno `CONFIG_ESP_HTTPS_OTA_ALLOW_HTTP`. V produktu by se image mělo podávat přes HTTPS a nastavit `.crt_bundle_attach`.
+`ulTaskNotifyTake(pdTRUE, portMAX_DELAY)` spí, dokud ho `button_task` neprobudí, místo aby stahování začalo hned po startu. Než se začne stahovat, úloha zkontroluje vlastní IP adresu: bez adresy (deska na špatné síti, nebo Wi-Fi ještě nabíhá) blikne červeně a počká na další stisk, místo aby selhala až v `esp_https_ota()`. URL je serverový projekt [`examples/C5/assignment-04-ota-server`](../../../examples/C5/assignment-04-ota-server/): ta deska je na téže síti `ESP32-WS` s pevnou adresou `192.168.0.100` a poskytuje image na `http://192.168.0.100/firmware.bin`. `esp_https_ota()` odmítne čisté HTTP, dokud není nastaveno `CONFIG_ESP_HTTPS_OTA_ALLOW_HTTP`. V produktu by se image mělo podávat přes HTTPS a nastavit `.crt_bundle_attach`.
 
 #### 4.6 Část (F): `app_main`
 
@@ -277,6 +297,7 @@ void app_main(void)
 
     // Initialize NVS
     esp_err_t err = nvs_flash_init();
+    /* Flash se mazala nebo se změnil layout; začít s čistou NVS. */
     if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         ESP_ERROR_CHECK(nvs_flash_erase());
         err = nvs_flash_init();
@@ -287,9 +308,9 @@ void app_main(void)
     configure_button();
     led_set_color(20, 20, 0); // yellow: connecting
 
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-    esp_netif_create_default_wifi_sta();
+    ESP_ERROR_CHECK(esp_netif_init()); /* TCP/IP stack */
+    ESP_ERROR_CHECK(esp_event_loop_create_default()); /* smyčka, do které Wi-Fi posílá události */
+    esp_netif_create_default_wifi_sta(); /* výchozí station rozhraní, zatím bez IP */
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
@@ -300,7 +321,9 @@ void app_main(void)
     // Prefer credentials stored in NVS by the Assignment 3 provisioning step.
     // If that never happened, connect to the fallback network instead.
     wifi_config_t wifi_config = { 0 };
+    /* Co ovladač obnovil z NVS? */
     ESP_ERROR_CHECK(esp_wifi_get_config(WIFI_IF_STA, &wifi_config));
+    /* Prázdné: nikdy se neprovisionovalo (nebo se smazala NVS). */
     if (wifi_config.sta.ssid[0] == '\0') {
         ESP_LOGW(TAG, "No Wi-Fi credentials in NVS, using fallback SSID \"%s\"", FALLBACK_SSID);
         wifi_config_t fallback = {
@@ -317,8 +340,8 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_wifi_start());
 
     // Create the OTA task first so button_task has a valid handle to notify
-    xTaskCreate(&ota_task, "ota_task", 8192, NULL, 5, &s_ota_task_handle);
-    xTaskCreate(&button_task, "button_task", 2048, NULL, 5, NULL);
+    xTaskCreate(&ota_task, "ota_task", 8192, NULL, 5, &s_ota_task_handle); /* velký stack: TLS potřebuje místo */
+    xTaskCreate(&button_task, "button_task", 2048, NULL, 5, NULL); /* jednoduchá smyčka, 2 KB stačí */
 }
 ```
 
@@ -334,7 +357,7 @@ Celý soubor je v [`examples/C5/assignment-04-ota`](../../../examples/C5/assignm
 idf.py build flash monitor
 ```
 
-Nejdřív nahrajte [serverový projekt](../../../examples/C5/assignment-04-ota-server/) na druhou desku. Sledujte LED studentské desky: **žlutá**, dokud se připojuje, potom **modrá**, jakmile Wi-Fi naběhne. Když v NVS nejsou přihlašovací údaje, připojí se k přístupovému bodu serveru `ESP32-WS`. Stiskněte tlačítko — LED zbělá, dokud se image stahuje, potom zezelená a deska se restartuje do toho image. V monitoru by se pak mělo objevit `Running firmware v2!`. Když je serverová deska vypnutá, nebo tahle deska pořád používá síť uloženou v Úkolu 3, LED zčervená a vrátí se na modrou. Jak ten image vznikl a jak ho vyměnit, je v [kroku 7](#7-kde-lezi-novy-firmware).
+Nejdřív nahrajte [serverový projekt](../../../examples/C5/assignment-04-ota-server/) na druhou desku. Sledujte LED studentské desky: **žlutá**, dokud se připojuje, potom **modrá**, jakmile Wi-Fi naběhne. Připojí se s přihlašovacími údaji z Úkolu 3 z NVS — nebo rovnou k workshopové síti `ESP32-WS`, když je NVS prázdná. Stiskněte tlačítko — LED zbělá, dokud se image stahuje, potom zezelená a deska se restartuje do toho image. V monitoru by se pak mělo objevit `Running firmware v2!`. Když je serverová deska vypnutá, nebo tahle deska skončila na jiné síti (např. s přihlašovacími údaji z domova), LED zčervená a vrátí se na modrou. Jak ten image vznikl a jak ho vyměnit, je v [kroku 7](#7-kde-lezi-novy-firmware).
 
 ### 7. Kde leží nový firmware {#7-kde-lezi-novy-firmware}
 
@@ -347,7 +370,7 @@ cd examples/C5/assignment-04-ota-server
 idf.py build flash monitor
 ```
 
-Server otevře přístupový bod se jménem `ESP32-WS` a heslem `ESP32-WS` a soubor poskytuje na `http://192.168.4.1/firmware.bin`. Studentská deska se k tomu přístupovému bodu připojí jen tehdy, když v NVS nemá přihlašovací údaje k Wi-Fi. Pokud Úkol 3 už nějakou síť uložil, před touhle ukázkou smažte flash a studentský projekt nahrajte znovu, jinak deska zůstane na té síti a na `192.168.4.1` se nikdy nedostane.
+Server se připojí k workshopové síti `ESP32-WS` s pevnou adresou `192.168.0.100` a soubor poskytuje na `http://192.168.0.100/firmware.bin`. Studentská deska znovu použije přihlašovací údaje z Úkolu 3 z NVS; jen deska, která nikdy nebyla naprovisionovaná, spadne rovnou na `ESP32-WS` — což je tatáž síť. Pokud má deska přihlašovací údaje k jiné síti (např. naprovisionované doma), před touhle ukázkou zopakujte provisioning z Úkolu 3 nebo smažte flash, jinak se na `192.168.0.100` nikdy nedostane.
 
 **Výměna image.** Změňte řádek s verzí ve studentském projektu, sestavte ho a `build/assignment_04_ota.bin` zkopírujte přes `firmware.bin` v serverovém projektu. Server znovu nahrajte. Image musí být sestavený pro ESP32-C5 a musí se vejít do partition `fw` na serveru (1536 KB).
 

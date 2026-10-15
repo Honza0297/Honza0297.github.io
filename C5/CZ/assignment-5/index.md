@@ -33,12 +33,12 @@ idf.py add-dependency "espressif/led_strip^3.0.3"
 
 Zkopírujte [`chatroom.c`](../../../examples/C5/assignment-05-esp-now/main/chatroom.c) a [`chatroom.h`](../../../examples/C5/assignment-05-esp-now/main/chatroom.h) do složky `main/`.
 
-Do `main/CMakeLists.txt` přidejte `chatroom.c` a komponentu LED:
+Do `main/CMakeLists.txt` přidejte `chatroom.c` a komponenty, které chat používá:
 
 ```cmake
 idf_component_register(SRCS "esp_now_chat.c" "chatroom.c"
                        INCLUDE_DIRS "."
-                       REQUIRES led_strip)
+                       REQUIRES led_strip esp_wifi esp_event esp_netif nvs_flash)
 ```
 
 Nový hlavní soubor (`esp_now_chat.c`) začíná takhle:
@@ -91,6 +91,7 @@ void app_main(void)
 
 /* Exactly 8 ASCII characters, unique in the room. */
 #define THIS_NODE_NAME "node0001" // TODO change to your liking - but keep 8 chars!
+/* Špatná délka spadne při buildu, ne až za běhu. */
 _Static_assert(sizeof(THIS_NODE_NAME) == CHATROOM_NAME_LEN + 1,
                "THIS_NODE_NAME must be exactly 8 characters");
 
@@ -111,6 +112,7 @@ static void on_data_recv(const esp_now_recv_info_t *recv_info, const uint8_t *da
     if (recv_info == NULL || recv_info->src_addr == NULL) {
         return;
     }
+    /* Běží ve Wi-Fi úloze: rychle předat a vrátit se. */
     chatroom_on_recv(recv_info->src_addr, data, data_len);
 }
 ```
@@ -134,6 +136,7 @@ esp_err_t espnow_send(const uint8_t mac[6], const uint8_t *data, size_t len)
 
 esp_err_t espnow_add_peer(const uint8_t mac[6])
 {
+    /* Přidat dvakrát nejde; známé desky přeskočit. */
     if (esp_now_is_peer_exist(mac)) {
         return ESP_OK;
     }
@@ -141,7 +144,7 @@ esp_err_t espnow_add_peer(const uint8_t mac[6])
     esp_now_peer_info_t peer = { 0 };
     memcpy(peer.peer_addr, mac, 6);
     peer.channel = 0;   /* current channel */
-    peer.encrypt = false;
+    peer.encrypt = false; /* v tomhle workshopu bez šifrování */
     return esp_now_add_peer(&peer);
 }
 ```
@@ -157,6 +160,7 @@ void app_main(void)
 {
     // (D) Initialize NVS
     esp_err_t ret = nvs_flash_init();
+    /* Flash se mazala nebo se změnil layout; začít s čistou NVS. */
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         ESP_ERROR_CHECK(nvs_flash_erase());
         ret = nvs_flash_init();
@@ -164,15 +168,16 @@ void app_main(void)
     ESP_ERROR_CHECK(ret);
 
     // (E) Turn the Wi-Fi radio on (station mode, no router)
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    ESP_ERROR_CHECK(esp_netif_init()); /* TCP/IP stack */
+    ESP_ERROR_CHECK(esp_event_loop_create_default()); /* smyčka, do které Wi-Fi posílá události */
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-    ESP_ERROR_CHECK(esp_wifi_start());
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA)); /* režim station, ale k routeru se nikdy nepřipojíme */
+    ESP_ERROR_CHECK(esp_wifi_start()); /* rádio zapnuto; zatím bez připojení */
 
     // (F) Initialize ESP-NOW, register the receive callback, add the broadcast peer
     ESP_ERROR_CHECK(esp_now_init());
+    /* Každý paket skončí v části (B). */
     ESP_ERROR_CHECK(esp_now_register_recv_cb(on_data_recv));
 
     esp_now_peer_info_t broadcast = { 0 };
@@ -181,7 +186,7 @@ void app_main(void)
     broadcast.encrypt = false; /* broadcast traffic cannot be encrypted */
     ESP_ERROR_CHECK(esp_now_add_peer(&broadcast));
 
-    // (G) Start the chat room
+    // (G) Start the chat room: klávesnice dovnitř, řádky chatu ven; odesílání jde přes část (C)
     chatroom_start(THIS_NODE_NAME);
     ESP_LOGI(TAG, "ESP-NOW is up. Type in this monitor.");
 }

@@ -14,7 +14,7 @@ In a real-world deployment, you won't have physical access to a USB port to flas
 
 **How OTA works on the ESP32 in a nutshell:** the flash holds two app slots instead of one. The device always runs from one of them (the *active* slot) and never overwrites it. A new firmware is written into the *other*, inactive slot, and only after it has been downloaded completely (and verified) does the device switch a small "boot from this slot" record and reboot into it. If anything goes wrong during the download, the old firmware is still intact and keeps running. With rollback enabled (see the bonus at the end), the bootloader goes one step further: if the new firmware doesn't confirm that it works after booting, the bootloader falls back to the previous slot, so a bad update can't leave the device bricked.
 
-> **Keep reusing the project.** Continue in the same project you provisioned in Assignment 3 — OTA needs a device that can already connect to your Wi-Fi. If that step stored credentials in NVS, those are used; if not, the board joins an `ESP32-WS` access point. A second board, flashed with the server project, hosts that access point and the update file. We'll replace `main/my_first_project.c` again, but keep `idf_component.yml` as-is: it already pulls in `led_strip` from Assignment 2, and we're about to need it again.
+> **Keep reusing the project.** Continue in the same project you provisioned in Assignment 3 — OTA needs a device that can already connect to your Wi-Fi. If that step stored credentials in NVS, those are reused; if not, the board joins the `ESP32-WS` workshop network directly. A second board, flashed with the server project, sits on that same network with a fixed address and hosts the update file. We'll replace `main/my_first_project.c` again, but keep `idf_component.yml` as-is: it already pulls in `led_strip` from Assignment 2, and we're about to need it again.
 
 ### 1. Partition Tables
 
@@ -111,6 +111,7 @@ As before, let's build this up instead of pasting it all at once.
 #include "esp_https_ota.h"
 #include "esp_http_client.h"
 #include "esp_wifi.h"
+#include "esp_netif.h"
 #include "esp_crt_bundle.h"
 #include "nvs_flash.h"
 #include "driver/gpio.h"
@@ -118,6 +119,8 @@ As before, let's build this up instead of pasting it all at once.
 
 #define BUTTON_GPIO       GPIO_NUM_0
 #define LED_GPIO          27
+/* Workshop fallback only. NEVER hardcode a Wi-Fi SSID and password in production;
+   use provisioning (Assignment 3) so each device gets its own credentials. */
 #define FALLBACK_SSID     "ESP32-WS"
 #define FALLBACK_PASSWORD "ESP32-WS"
 
@@ -139,6 +142,7 @@ static TaskHandle_t s_ota_task_handle = NULL;
 
 static void led_set_color(uint8_t r, uint8_t g, uint8_t b)
 {
+    /* Same two-step push as in Assignment 2: RAM first, then the wire. */
     led_strip_set_pixel(led_strip, 0, r, g, b);
     led_strip_refresh(led_strip);
 }
@@ -146,7 +150,7 @@ static void led_set_color(uint8_t r, uint8_t g, uint8_t b)
 static void configure_led(void)
 {
     led_strip_config_t strip_config = {
-        .strip_gpio_num = LED_GPIO,
+        .strip_gpio_num = LED_GPIO, /* the built-in LED, same as in Assignment 2 */
         .max_leds = 1,
         .color_component_format = LED_STRIP_COLOR_COMPONENT_FMT_GRB,
         .led_model = LED_MODEL_WS2812,
@@ -154,23 +158,23 @@ static void configure_led(void)
     };
     led_strip_rmt_config_t rmt_config = {
         .clk_src = RMT_CLK_SRC_DEFAULT,
-        .resolution_hz = 10 * 1000 * 1000,
-        .mem_block_symbols = 0,
-        .flags.with_dma = false,
+        .resolution_hz = 10 * 1000 * 1000, /* 10 MHz: ~10x finer than the 1.25 us WS2812 bit */
+        .mem_block_symbols = 0, /* 0 = let the driver pick the buffer size */
+        .flags.with_dma = false, /* one LED is a few bytes; DMA is for long strips */
     };
-    ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip));
-    led_strip_clear(led_strip);
+    ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip)); /* create the driver */
+    led_strip_clear(led_strip); /* all LEDs off */
 }
 
 static void configure_button(void)
 {
     gpio_config_t io_conf = {
-        .pin_bit_mask = 1ULL << BUTTON_GPIO,
+        .pin_bit_mask = 1ULL << BUTTON_GPIO, /* bit mask: only this pin */
         .mode = GPIO_MODE_INPUT,
         .pull_up_en = GPIO_PULLUP_DISABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE, // we use an external pull-down resistor
     };
-    ESP_ERROR_CHECK(gpio_config(&io_conf));
+    ESP_ERROR_CHECK(gpio_config(&io_conf)); /* apply the pin settings */
 }
 ```
 
@@ -187,12 +191,13 @@ We'll use the LED as a status light with a simple color code we'll build up thro
 static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
 {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
-        esp_wifi_connect();
+        esp_wifi_connect(); /* radio is on; start connecting */
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
         ESP_LOGI(TAG, "Disconnected. Connecting to the AP again...");
         led_set_color(20, 20, 0); // yellow: (re)connecting
-        esp_wifi_connect();
+        esp_wifi_connect(); /* dropped; try again */
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+        /* event_data carries the address DHCP gave us. */
         ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
         ESP_LOGI(TAG, "Connected with IP Address:" IPSTR, IP2STR(&event->ip_info.ip));
         ESP_LOGI(TAG, "Ready. Press the button to start the OTA update.");
@@ -212,16 +217,17 @@ static void button_task(void *pvParameter)
 {
     bool was_pressed = false;
     while (1) {
+        /* HIGH while held (the button ties the pin to 3V3). */
         bool pressed = gpio_get_level(BUTTON_GPIO) == 1;
         if (pressed && !was_pressed) {
             vTaskDelay(pdMS_TO_TICKS(50)); // simple debounce
             if (gpio_get_level(BUTTON_GPIO) == 1) {
                 ESP_LOGI(TAG, "Button pressed - triggering OTA update");
-                xTaskNotifyGive(s_ota_task_handle);
+                xTaskNotifyGive(s_ota_task_handle); /* wake the OTA task; it sleeps in ulTaskNotifyTake */
             }
         }
         was_pressed = pressed;
-        vTaskDelay(pdMS_TO_TICKS(20));
+        vTaskDelay(pdMS_TO_TICKS(20)); /* poll every 20 ms */
     }
 }
 ```
@@ -240,8 +246,21 @@ static void ota_task(void *pvParameter)
         ESP_LOGI(TAG, "Starting OTA update");
         led_set_color(20, 20, 20); // white: downloading
 
+        esp_netif_ip_info_t local = { 0 };
+        /* Look up our own station interface and its address. */
+        esp_netif_t *netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+        /* No address yet (wrong network?) - don't even try the download. */
+        if (netif == NULL || esp_netif_get_ip_info(netif, &local) != ESP_OK || local.ip.addr == 0) {
+            ESP_LOGE(TAG, "This board has no IP. It must be on ESP32-WS before it can reach the server.");
+            led_set_color(20, 0, 0);
+            vTaskDelay(pdMS_TO_TICKS(3000));
+            led_set_color(0, 0, 20);
+            continue;
+        }
+        ESP_LOGI(TAG, "This board's IP is " IPSTR, IP2STR(&local.ip));
+
         esp_http_client_config_t config = {
-            .url = "http://192.168.4.1/firmware.bin",
+            .url = "http://192.168.0.100/firmware.bin",
             // In production, serve this over HTTPS and check the server certificate:
             // .crt_bundle_attach = esp_crt_bundle_attach,
         };
@@ -250,12 +269,13 @@ static void ota_task(void *pvParameter)
         };
 
         ESP_LOGI(TAG, "Attempting to download update from %s", config.url);
+        /* Downloads into the inactive slot and flips the boot record. */
         esp_err_t ret = esp_https_ota(&ota_config);
         if (ret == ESP_OK) {
             ESP_LOGI(TAG, "OTA succeeded, rebooting...");
             led_set_color(0, 20, 0); // green: success
-            vTaskDelay(pdMS_TO_TICKS(1000));
-            esp_restart();
+            vTaskDelay(pdMS_TO_TICKS(1000)); /* let the green LED show before rebooting */
+            esp_restart(); /* boot the new image */
         } else {
             ESP_LOGE(TAG, "Firmware upgrade failed");
             led_set_color(20, 0, 0); // red: failed
@@ -266,7 +286,7 @@ static void ota_task(void *pvParameter)
 }
 ```
 
-`ulTaskNotifyTake(pdTRUE, portMAX_DELAY)` sleeps until `button_task` notifies it, instead of starting the download on boot. The URL is the server project at [`examples/C5/assignment-04-ota-server`](../../../examples/C5/assignment-04-ota-server/): that board is the `ESP32-WS` access point, and it serves the image at `http://192.168.4.1/firmware.bin`. `esp_https_ota()` rejects plain HTTP unless `CONFIG_ESP_HTTPS_OTA_ALLOW_HTTP` is set. A product should serve the image over HTTPS and set `.crt_bundle_attach` instead.
+`ulTaskNotifyTake(pdTRUE, portMAX_DELAY)` sleeps until `button_task` notifies it, instead of starting the download on boot. Before downloading, the task checks its own IP address: with no address (board on the wrong network, or Wi-Fi still coming up) it flashes red and waits for the next press instead of failing in `esp_https_ota()`. The URL is the server project at [`examples/C5/assignment-04-ota-server`](../../../examples/C5/assignment-04-ota-server/): that board joins the same `ESP32-WS` network with the fixed address `192.168.0.100` and serves the image at `http://192.168.0.100/firmware.bin`. `esp_https_ota()` rejects plain HTTP unless `CONFIG_ESP_HTTPS_OTA_ALLOW_HTTP` is set. A product should serve the image over HTTPS and set `.crt_bundle_attach` instead.
 
 #### 4.6 Part (F): `app_main`
 
@@ -277,6 +297,7 @@ void app_main(void)
 
     // Initialize NVS
     esp_err_t err = nvs_flash_init();
+    /* Flash was erased or the layout changed; start NVS fresh. */
     if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         ESP_ERROR_CHECK(nvs_flash_erase());
         err = nvs_flash_init();
@@ -287,9 +308,9 @@ void app_main(void)
     configure_button();
     led_set_color(20, 20, 0); // yellow: connecting
 
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-    esp_netif_create_default_wifi_sta();
+    ESP_ERROR_CHECK(esp_netif_init()); /* TCP/IP stack */
+    ESP_ERROR_CHECK(esp_event_loop_create_default()); /* the loop Wi-Fi posts events to */
+    esp_netif_create_default_wifi_sta(); /* default station interface, no IP yet */
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
@@ -300,7 +321,9 @@ void app_main(void)
     // Prefer credentials stored in NVS by the Assignment 3 provisioning step.
     // If that never happened, connect to the fallback network instead.
     wifi_config_t wifi_config = { 0 };
+    /* What did the driver restore from NVS? */
     ESP_ERROR_CHECK(esp_wifi_get_config(WIFI_IF_STA, &wifi_config));
+    /* Empty: never provisioned (or NVS was erased). */
     if (wifi_config.sta.ssid[0] == '\0') {
         ESP_LOGW(TAG, "No Wi-Fi credentials in NVS, using fallback SSID \"%s\"", FALLBACK_SSID);
         wifi_config_t fallback = {
@@ -317,8 +340,8 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_wifi_start());
 
     // Create the OTA task first so button_task has a valid handle to notify
-    xTaskCreate(&ota_task, "ota_task", 8192, NULL, 5, &s_ota_task_handle);
-    xTaskCreate(&button_task, "button_task", 2048, NULL, 5, NULL);
+    xTaskCreate(&ota_task, "ota_task", 8192, NULL, 5, &s_ota_task_handle); /* big stack: TLS needs room */
+    xTaskCreate(&button_task, "button_task", 2048, NULL, 5, NULL); /* tiny loop, 2 KB is plenty */
 }
 ```
 
@@ -334,7 +357,7 @@ The full file lives at [`examples/C5/assignment-04-ota`](../../../examples/C5/as
 idf.py build flash monitor
 ```
 
-Flash the [server project](../../../examples/C5/assignment-04-ota-server/) onto a second board first. Watch the student board's LED: **yellow** while it connects, then **blue** once Wi-Fi is up. With no credentials in NVS it joins the server's `ESP32-WS` access point. Press the button — the LED turns **white** while the image downloads, then **green** and the board reboots into that image. The monitor should then show `Running firmware v2!`. If the server board is off, or this board is still using a network stored in Assignment 3, the LED goes **red** and returns to blue. See [step 7](#7-the-update-image) for how that image was built and how to replace it.
+Flash the [server project](../../../examples/C5/assignment-04-ota-server/) onto a second board first. Watch the student board's LED: **yellow** while it connects, then **blue** once Wi-Fi is up. It connects with the Assignment 3 credentials from NVS — or straight to the `ESP32-WS` workshop network when NVS is empty. Press the button — the LED turns **white** while the image downloads, then **green** and the board reboots into that image. The monitor should then show `Running firmware v2!`. If the server board is off, or this board ended up on a different network (e.g. credentials provisioned at home), the LED goes **red** and returns to blue. See [step 7](#7-the-update-image) for how that image was built and how to replace it.
 
 ### 7. Where the new firmware lives
 
@@ -347,7 +370,7 @@ cd examples/C5/assignment-04-ota-server
 idf.py build flash monitor
 ```
 
-The server opens an access point named `ESP32-WS` with password `ESP32-WS` and serves the file at `http://192.168.4.1/firmware.bin`. The student board joins that access point only when NVS has no Wi-Fi credentials. If Assignment 3 already stored a network, erase flash and flash the student project again before this demo, or the board stays on that network and never reaches `192.168.4.1`.
+The server joins the `ESP32-WS` workshop network with the fixed address `192.168.0.100` and serves the file at `http://192.168.0.100/firmware.bin`. The student board reuses the Assignment 3 credentials from NVS; only a board that was never provisioned falls back to `ESP32-WS` directly — which is the same network. If the board holds credentials for a different network (e.g. provisioned at home), re-run the Assignment 3 provisioning or erase flash before this demo, or it never reaches `192.168.0.100`.
 
 **Replacing the image.** Change the version line in the student project, build it, and copy `build/assignment_04_ota.bin` over `firmware.bin` in the server project. Flash the server again. The image has to be built for ESP32-C5 and must fit in the server's `fw` partition (1536 KB).
 
