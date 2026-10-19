@@ -1,0 +1,12 @@
+# Use the custom OTA partition table (factory + ota_0 + ota_1) from partitions.csv
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+CONFIG_PARTITION_TABLE_FILENAME="partitions.csv"
+
+# Two 1500K app slots (ota_0 + ota_1) plus nvs/otadata/phy_init no longer fit in the
+# default 2MB flash size assumption. The actual flash size varies between boards
+# (often more than the 4MB we set here); 4MB is the minimum this layout needs.
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+
+# The companion board (assignment-04-ota-server) serves the image over plain HTTP.
+CONFIG_ESP_HTTPS_OTA_ALLOW_HTTP=y

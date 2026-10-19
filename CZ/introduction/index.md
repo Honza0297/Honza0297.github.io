@@ -27,7 +27,7 @@ Architektura frameworku ESP-IDF je rozdělená do 3 vrstev:
   - Váš projekt
 
 {{< gallery >}}
-  <img src="../assets/esp-idf-highlevel.webp" />
+  <img src="assets/esp-idf-highlevel.webp" />
 {{< /gallery >}}
 
 ### Frameworks
@@ -53,7 +53,7 @@ ESP-IDF se stále vyvíjí. Pro aktuální informace o podporovaných verzích n
 ESP32-C6 je *ultra-low-power* čip s architekturou RISC-V. Obsahuje jedno "plnohodnotné" a jedno ULP (*ultra-low-power*) jádro a podporuje všechny běžné bezdrátové technologie:  2.4 GHz Wi-Fi 6 (802.11ax), Bluetooth® 5 (LE), Zigbee a Thread (802.15.4). K dispozici je volitelná 4MB flash paměť přímo v pouzdře čipu, 22 nebo 30 GPIO pinů a bohatá nabídka periferií:
 
 {{< gallery >}}
-  <img src="../assets/esp32-c6-diagram.webp" class="grid-w22" />
+  <img src="assets/esp32-c6-diagram.webp" class="grid-w22" />
 {{< /gallery >}}
 
 - 30 (QFN40) nebo 22 (QFN32) pinů
@@ -113,14 +113,14 @@ Níže jsou uvedené základní vlastnosti vývojého kitu:
 #### Popis desky
 
 {{< gallery >}}
-  <img src="../assets/esp32-c6-devkitc-1-v1.2-annotated-photo.webp" class="grid-w22" />
-  <img src="../assets/esp32-c6-devkitc-1-v1.2-block-diagram.webp" class="grid-w22" />
+  <img src="assets/esp32-c6-devkitc-1-v1.2-annotated-photo.webp" class="grid-w22" />
+  <img src="assets/esp32-c6-devkitc-1-v1.2-block-diagram.webp" class="grid-w22" />
 {{< /gallery >}}
 
 #### Layout desky
 
 {{< gallery >}}
-  <img src="../assets/esp32-c6-devkitc-1-pin-layout.webp" class="grid-w22" />
+  <img src="assets/esp32-c6-devkitc-1-pin-layout.webp" class="grid-w22" />
 {{< /gallery >}}
 
 #### J1 pinové pole

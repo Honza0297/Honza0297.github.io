@@ -17,15 +17,22 @@ MSG
   exit 1
 fi
 
-status=0
-for d in "$SCRIPT_DIR"/assignment-*; do
-  [ -d "$d" ] || continue
-  echo "==> Building $(basename "$d") for ${TARGET}"
+build_dir() {
+  local dir="$1"
+  echo "==> Building $(basename "$dir") for ${TARGET}"
   (
-    cd "$d"
+    cd "$dir"
     idf.py set-target "${TARGET}" >/dev/null
     idf.py build
-  ) || status=1
+  )
+}
+
+status=0
+
+# Published C6 workshop track (assignments 1–6)
+for d in "$SCRIPT_DIR"/assignment-*; do
+  [ -d "$d" ] || continue
+  build_dir "$d" || status=1
 done
 
 exit "$status"

@@ -6,11 +6,6 @@ layout: default
 
 ## Lecture: ESP-IDF introduction
 
-> **Info:** Compared to the ESP32-C6 version of this workshop, the ESP32-C6 track intentionally
-> skips the dedicated protocols/TLS chapter. If you want to explore that topic in depth, use the
-> ESP-IDF examples, [esp-protocols](https://github.com/espressif/esp-protocols), or the ESP32-C6
-> workshop.
-
 The ESP-IDF (Espressif IoT Development Framework) is the official operating system and development
 framework for the ESP32 series of microcontrollers by Espressif Systems. It provides a
 comprehensive environment for building IoT applications with robust networking, security, and
@@ -191,17 +186,17 @@ Here is the development board feature list:
 |---|---|---|---|
 | 1 | 3V3 | P | 3.3 V power supply |
 | 2 | RST | I | High: enables the chip; Low: disables the chip. |
-| 3 | 2 | I/O/T | MTMS, GPIO2, **LP_GPIO2**, **LP_UART_RTSN**, **LP_I2C_SDA**, ADC1_CH1, FSPIQ |
-| 4 | 3 | I/O/T | MTDI, GPIO3, **LP_GPIO3**, **LP_UART_CTSN**, **LP_I2C_SCL**, ADC1_CH2 |
-| 5 | 0 | I/O/T | GPIO0, XTAL_32K_P, **LP_GPIO0**, **LP_UART_DTRN** |
-| 6 | 1 | I/O/T | GPIO1, XTAL_32K_N, **LP_GPIO1**, **LP_UART_DSRN**, ADC1_CH0 |
-| 7 | 6 | I/O/T | GPIO6, **LP_GPIO6**, ADC1_CH5, FSPICLK |
-| 8 | 7 | I/O/T | GPIO7, FSPID, SDIO_DATA1 |
-| 9 | 8 | I/O/T | GPIO8, PAD_COMP0, SDIO_DATA0 |
-| 10 | 9 | I/O/T | GPIO9, PAD_COMP1, SDIO_CLK |
-| 11 | 10 | I/O/T | GPIO10, FSPICS0, SDIO_CMD |
-| 12 | 26 | I/O/T | GPIO26 |
-| 13 | 25 | I/O/T | GPIO25 |
+| 3 | 4 | I/O/T | MTMS, GPIO4, **LP_GPIO4**, **LP_UART_RXD**, ADC1_CH4, FSPIHD |
+| 4 | 5 | I/O/T | MTDI, GPIO5, **LP_GPIO5**, **LP_UART_TXD**, ADC1_CH5, FSPIWP |
+| 5 | 6 | I/O/T | MTCK, GPIO6, **LP_GPIO6**, **LP_I2C_SDA**, ADC1_CH6, FSPICLK |
+| 6 | 7 | I/O/T | MTDO, GPIO7, **LP_GPIO7**, **LP_I2C_SCL**, FSPID |
+| 7 | 0 | I/O/T | GPIO0, XTAL_32K_P, **LP_GPIO0**, **LP_UART_DTRN**, ADC1_CH0 |
+| 8 | 1 | I/O/T | GPIO1, XTAL_32K_N, **LP_GPIO1**, **LP_UART_DSRN**, ADC1_CH1 |
+| 9 | 8 | I/O/T | GPIO8 (strapping pin, drives the RGB LED) |
+| 10 | 10 | I/O/T | GPIO10 |
+| 11 | 11 | I/O/T | GPIO11 |
+| 12 | 2 | I/O/T | GPIO2, **LP_GPIO2**, **LP_UART_RTSN**, ADC1_CH2, FSPIQ |
+| 13 | 3 | I/O/T | GPIO3, **LP_GPIO3**, **LP_UART_CTSN**, ADC1_CH3 |
 | 14 | 5V | P | 5 V power supply |
 | 15 | G | G | Ground |
 | 16 | NC | – | No connection |
@@ -211,19 +206,19 @@ Here is the development board feature list:
 | No. | Name | Type | Function |
 |---|---|---|---|
 | 1 | G | G | Ground |
-| 2 | TX | I/O/T | U0TXD, GPIO11 |
-| 3 | RX | I/O/T | U0RXD, GPIO12 |
-| 4 | 24 | I/O/T | GPIO24 |
-| 5 | 23 | I/O/T | GPIO23 |
-| 6 | NC/15 | I/O/T | No connection/GPIO15 |
-| 7 | 27 | I/O/T | GPIO27 |
-| 8 | 4 | I/O/T | MTCK, GPIO4, **LP_GPIO4**, **LP_UART_RXD**, ADC1_CH3, FSPIHD |
-| 9 | 5 | I/O/T | MTDO, GPIO5, **LP_GPIO5**, **LP_UART_TXD**, ADC1_CH4, FSPIWP |
-| 10 | NC | – | No connection |
-| 11 | 28 | I/O/T | GPIO28 |
+| 2 | TX | I/O/T | U0TXD, GPIO16, FSPICS0 |
+| 3 | RX | I/O/T | U0RXD, GPIO17, FSPICS1 |
+| 4 | 15 | I/O/T | GPIO15 (strapping pin) |
+| 5 | 23 | I/O/T | GPIO23, SDIO_DATA3 |
+| 6 | 22 | I/O/T | GPIO22, SDIO_DATA2 |
+| 7 | 21 | I/O/T | GPIO21, SDIO_DATA1, FSPICS5 |
+| 8 | 20 | I/O/T | GPIO20, SDIO_DATA0, FSPICS4 |
+| 9 | 19 | I/O/T | GPIO19, SDIO_CLK, FSPICS3 |
+| 10 | 18 | I/O/T | GPIO18, SDIO_CMD, FSPICS2 |
+| 11 | 9 | I/O/T | GPIO9 (strapping pin) |
 | 12 | G | G | Ground |
-| 13 | 14 | I/O/T | GPIO14, USB_D+, SDIO_DATA2 |
-| 14 | 13 | I/O/T | GPIO13, USB_D-, SDIO_DATA3 |
+| 13 | 13 | I/O/T | GPIO13, USB_D+ |
+| 14 | 12 | I/O/T | GPIO12, USB_D- |
 | 15 | G | G | Ground |
 | 16 | NC | – | No connection |
 
@@ -231,4 +226,4 @@ Here is the development board feature list:
 
 After this introduction, it's time to get started and install the development environment.
 
-[Assignment 1: Install the Espressif-IDE](../assignment-1/)
+[Assignment 1: Install ESP-IDF](../assignment-1/)

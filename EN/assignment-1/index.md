@@ -8,8 +8,7 @@ layout: default
 
 ---
 
-You will need [Visual Studio Code](https://code.visualstudio.com/) and the installed ESP-IDF
-framework for this workshop. The first task will therefore be to install all the necessary tools.
+You will need [Visual Studio Code](https://code.visualstudio.com/) and the installed ESP-IDF framework for this workshop. The first task will therefore be to install all the necessary tools.
 
 To install ESP-IDF, we will use the [EIM](https://docs.espressif.com/projects/idf-im-ui/en/latest/) (Espressif Installation Manager).
 
@@ -49,9 +48,34 @@ below:
 
 In this workshop, we will interact with ESP-IDF directly through the command line (CLI) rather than relying on GUI buttons. This gives you a better understanding of what happens under the hood and allows you to automate tasks in the future.
 
-If you installed the ESP-IDF extension in VS Code, you can open an ESP-IDF Terminal by pressing `Ctrl + Shift + P` (or `Cmd + Shift + P`), typing **ESP-IDF: Open ESP-IDF Terminal**, and pressing Enter.
+Before you can use ESP-IDF tools such as `idf.py`, the ESP-IDF environment must be *activated* in your terminal. Pick whichever of the following methods suits you best.
 
-Alternatively, you can open a standard terminal and run the `export.sh` (or `export.bat`) script located in your ESP-IDF installation directory to set up the environment variables.
+#### Option 1: EIM dashboard (all systems)
+
+1. Open the EIM application (`eim`) from the start menu / applications launcher, depending on your OS.
+2. Click `Manage Installations` and then `Open Dashboard`.
+3. Select the ESP-IDF version you want to use (v5.5.x) and click `Open IDF Terminal`.
+4. A terminal with the activated ESP-IDF environment opens. Verify it by running `idf.py --version`.
+
+#### Option 2: Desktop shortcut (Windows)
+
+EIM creates a desktop shortcut for each installed version, e.g. `IDF_v5.5.4_Powershell`. Double-click it to open a PowerShell session with ESP-IDF already activated.
+
+#### Option 3: Activation script (Linux and macOS)
+
+At the end of the installation, EIM CLI prints a command like the one below. Run it in any terminal to activate ESP-IDF in that terminal session (**fill in your specific version instead of ``<version>``**):
+
+```
+source "$HOME/.espressif/tools/activate_idf_v<version>.sh"
+```
+
+The exact path and version are printed by EIM at the end of the installation. You need to run this command in every new terminal.
+
+#### Option 4: ESP-IDF extension in VS Code
+
+If you installed the ESP-IDF extension, press `Ctrl + Shift + P` (or `Cmd + Shift + P`), type **ESP-IDF: Open ESP-IDF Terminal**, and press Enter.
+
+In every case, you can check that the environment works by running `idf.py --version` in the terminal. If the command is not found, the environment is not activated in that terminal.
 
 You should now have a working ESP-IDF environment. Let's start with our first project!
 

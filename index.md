@@ -30,11 +30,11 @@ Wi-Fi konektivitu, NVS ukládání dat, Wi-Fi provisioning a programování low-
 
 ## ESP32-C6 Workshop
 
-A comprehensive workshop adding a dedicated Protocols/TLS chapter and covering seven assignments
-in total, including secure communication and ultra-low-power programming.
+A hands-on workshop covering ESP-IDF installation, project creation, component-based development,
+Wi-Fi 6 connectivity, Wi-Fi provisioning, OTA updates, ESP-NOW, and low-power (LP) core programming.
 
-Komplexní workshop s kapitolou o protokolech/TLS a celkem sedmi úkoly, včetně bezpečné
-komunikace a ultra-nízkoenergetického programování.
+Praktický workshop pokrývající instalaci ESP-IDF, tvorbu projektů, vývoj s komponentami,
+Wi-Fi 6 konektivitu, Wi-Fi provisioning, OTA aktualizace, ESP-NOW a programování low-power (LP) jádra.
 
 | Language / Jazyk | Link |
 |---|---|

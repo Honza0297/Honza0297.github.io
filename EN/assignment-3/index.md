@@ -8,35 +8,53 @@ layout: default
 
 ---
 
-Wi-Fi is one of the most essential features for an IoT device. The **ESP32-C6** is special because it is Espressif's first SoC to support **dual-band Wi-Fi 6** (both 2.4 GHz and 5 GHz). The 5 GHz band is generally less crowded, leading to higher throughput and reduced interference.
+Wi-Fi is one of the most essential features for an IoT device. The **ESP32-C6** is special because it is Espressif's first SoC to support **Wi-Fi 6** (802.11ax) on the 2.4 GHz band. Wi-Fi 6 brings features such as Target Wake Time (TWT), which lets a battery-powered device agree with the router on when it will wake up, and better behavior in crowded networks.
 
 In a real-world product, you cannot hardcode the Wi-Fi credentials (SSID and password) in your source code because every user has a different home network. Instead, you use **Wi-Fi Provisioning**. Provisioning allows a user to send their Wi-Fi credentials to the device using a mobile app over a secondary channel, typically Bluetooth Low Energy (BLE).
 
-In this assignment, we will use the **ESP BLE Prov** mobile application to provision our board. The credentials will be saved in NVS (Non-Volatile Storage) so the board automatically reconnects after a reboot.
+In this assignment, we will use the **ESP BLE Prov** mobile application to provision our board. Each board prints a **QR code** in the terminal; scanning it tells the app which device to connect to (every board gets a unique name) and the secret needed to talk to it, so there is nothing to type or pick from a list of dozens of devices. The credentials will be saved in NVS (Non-Volatile Storage) so the board automatically reconnects after a reboot.
+
+> **Reuse the Assignment 2 project.** Open the same `my_first_project` folder you created in Assignment 2 — don't create a new one. We're going to replace the *contents* of `main/my_first_project.c` entirely with the Wi-Fi/provisioning logic below. We won't need the LED code from Assignment 2 in this particular assignment (no harm in deleting it from that file, the `led_strip` dependency can simply stay unused in `idf_component.yml`) — we'll bring the LED back in Assignment 5.
 
 ### 1. Enabling required components
 
 We will need the `wifi_provisioning` component. Because it is part of ESP-IDF, we just need to ensure our code includes the right headers and initializes NVS properly.
 
+To show the QR code in the terminal, we also add the `espressif/qrcode` component from the component registry (the same way we added `led_strip` in Assignment 2):
+
+```bash
+idf.py add-dependency "espressif/qrcode^0.1.0"
+```
+
 ### 2. Configuration via menuconfig
 
-Some features must be configured before building. Run:
+The BLE transport we're about to use (`wifi_prov_scheme_ble`) is only compiled into `wifi_provisioning` when Bluetooth itself is enabled - and it isn't, by default. Run:
 
 ```bash
 idf.py menuconfig
 ```
 
 Navigate to:
-- **Component config ---> Wi-Fi**
-  - Ensure the software Wi-Fi configuration is enabled.
-- **Component config ---> Wi-Fi Provisioning**
-  - Notice the options available, but default settings work for us.
-  
+- **Component config ---> Bluetooth**
+  - **Bluetooth**: enable it.
+  - **Host**: select `NimBLE` — the ESP32-C6 only has a BLE radio, and NimBLE is the lightweight BLE-only host (no need for the heavier Bluedroid stack here).
+- **Partition Table**
+  - **Partition Table**: select `Single factory app (large), no OTA` — the NimBLE + provisioning code no longer fits in the default 1 MB app partition.
+
 Press `Q` to quit and `Y` to save.
+
+> Prefer not to click through menuconfig? Drop this into a `sdkconfig.defaults` file in your project root instead, then re-run `idf.py set-target esp32c6` so it picks it up:
+> ```text
+> CONFIG_BT_ENABLED=y
+> CONFIG_BT_NIMBLE_ENABLED=y
+> CONFIG_PARTITION_TABLE_SINGLE_APP_LARGE=y
+> ```
 
 ### 3. Writing the Code
 
-Open your `main.c` and replace the contents with the following logic. This code initializes NVS, initializes the network interface, starts BLE provisioning, and then connects to Wi-Fi.
+Let's build `main/my_first_project.c` piece by piece instead of dropping the whole thing on you at once.
+
+#### 3.1 Skeleton
 
 ```c
 #include <stdio.h>
@@ -47,11 +65,254 @@ Open your `main.c` and replace the contents with the following logic. This code 
 #include "esp_log.h"
 #include "esp_wifi.h"
 #include "esp_event.h"
+#include "esp_mac.h"
+#include "esp_timer.h"
 #include "nvs_flash.h"
+#include "qrcode.h"
 #include "wifi_provisioning/manager.h"
 #include "wifi_provisioning/scheme_ble.h"
 
 static const char *TAG = "provisioning";
+
+// Proof-of-possession: the app gets it from the QR code, so the user never types it
+#define PROV_POP "abcd1234"
+
+// True while the provisioning manager runs. It drives esp_wifi_connect() itself, so we must stay out of its way.
+static volatile bool s_prov_active = false;
+
+// Reconnect back-off: wait 1 s, 2 s, 4 s ... up to 30 s between attempts, so an unreachable router is not hammered.
+#define RECONNECT_MAX_DELAY_MS 30000
+static int s_retry_count = 0;
+static esp_timer_handle_t s_reconnect_timer;
+
+static void reconnect_cb(void *arg)
+{
+    esp_wifi_connect();
+}
+
+// (A) One handler for every Wi-Fi / provisioning event we care about
+static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
+{
+    // ...
+}
+
+void app_main(void)
+{
+    // (B) NVS must work before Wi-Fi or provisioning can store anything
+    // (C) Bring up the networking stack
+    // (D) Hook our event_handler into the events we need
+    // (E) Start (or skip) provisioning, depending on whether we did it before
+}
+```
+
+#### 3.2 Part (A): the event handler
+
+Provisioning and Wi-Fi both report what's happening through the ESP-IDF event system, rather than through return values — this lets us react to things like "credentials received" or "disconnected" whenever they happen, not just right after a function call.
+
+```c
+static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
+{
+    if (event_base == WIFI_PROV_EVENT) {
+        switch (event_id) {
+            case WIFI_PROV_START:
+                ESP_LOGI(TAG, "Provisioning started");
+                break;
+            case WIFI_PROV_CRED_RECV: {
+                /* event_data carries the SSID and password the phone just sent. */
+                wifi_sta_config_t *wifi_sta_cfg = (wifi_sta_config_t *)event_data;
+                /* DEMO ONLY: never log passwords in production. It is printed here so you can see what the phone sent. */
+                ESP_LOGI(TAG, "Received Wi-Fi credentials\n\tSSID     : %s\n\tPassword : %s (do not log passwords in plaintext ;))",
+                         (const char *) wifi_sta_cfg->ssid,
+                         (const char *) wifi_sta_cfg->password);
+                break;
+            }
+            case WIFI_PROV_CRED_FAIL:
+                /* Wrong password or AP not found. Forget the bad credentials, otherwise the board
+                   would reboot into "already provisioned" and never offer provisioning again. */
+                ESP_LOGE(TAG, "Provisioning failed. Check the password and try again.");
+                wifi_prov_mgr_reset_sm_state_on_failure();
+                break;
+            case WIFI_PROV_CRED_SUCCESS:
+                ESP_LOGI(TAG, "Provisioning successful");
+                break;
+            case WIFI_PROV_END:
+                ESP_LOGI(TAG, "Provisioning completed. Deinitializing manager.");
+                s_prov_active = false;
+                wifi_prov_mgr_deinit(); /* manager did its job; free it */
+                break;
+            default:
+                break;
+        }
+    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
+        /* Radio is on; start connecting (during provisioning the manager does it). */
+        if (!s_prov_active) {
+            esp_wifi_connect();
+        }
+    } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+        /* event_data carries the address DHCP gave us. */
+        ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
+        ESP_LOGI(TAG, "Connected with IP Address:" IPSTR, IP2STR(&event->ip_info.ip));
+        s_retry_count = 0; /* connected; the next outage starts with a short delay again */
+    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
+        if (!s_prov_active) {
+            /* dropped; try again, waiting a bit longer after every failure */
+            uint32_t delay_ms = 1000U << (s_retry_count < 5 ? s_retry_count : 5);
+            if (delay_ms > RECONNECT_MAX_DELAY_MS) {
+                delay_ms = RECONNECT_MAX_DELAY_MS;
+            }
+            s_retry_count++;
+            ESP_LOGI(TAG, "Disconnected. Connecting to the AP again in %lu ms...", (unsigned long)delay_ms);
+            esp_timer_start_once(s_reconnect_timer, (uint64_t)delay_ms * 1000);
+        }
+    }
+}
+```
+
+The cases we handle are: provisioning started, credentials received (so we can log what we got), provisioning failed, provisioning finished (so we can shut the provisioning manager down — it's no longer needed), and plain Wi-Fi connect/disconnect/reconnect bookkeeping.
+
+Three details matter here:
+
+- **We log the password only for demonstration.** Never print passwords in plaintext in a real product.
+- **Reconnects back off.** When the router is unreachable, the board waits 1 s, 2 s, 4 s ... up to 30 s between attempts (using a one-shot `esp_timer`, so the event loop is never blocked) instead of retrying in a tight loop. A successful connection resets the delay.
+- **`WIFI_PROV_CRED_FAIL` must be handled.** If the user mistypes the password, the credentials are already stored in NVS. Without `wifi_prov_mgr_reset_sm_state_on_failure()` the board would reboot into "already provisioned", retry the wrong network forever and never offer provisioning again. We also skip our own `esp_wifi_connect()` calls while `s_prov_active` is set, because the provisioning manager connects by itself and the two would collide.
+
+#### 3.3 Part (B)-(C): NVS and networking
+
+```c
+void app_main(void)
+{
+    // (B) Initialize NVS (needed for Wi-Fi and Provisioning to save data)
+    esp_err_t ret = nvs_flash_init();
+    /* Flash was erased or the layout changed; start NVS fresh. */
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(ret);
+
+    // (C) Initialize networking
+    ESP_ERROR_CHECK(esp_netif_init()); /* TCP/IP stack */
+    ESP_ERROR_CHECK(esp_event_loop_create_default()); /* the loop Wi-Fi posts events to */
+    esp_netif_create_default_wifi_sta(); /* default station interface, no IP yet */
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+```
+
+NVS has to come first because both Wi-Fi (calibration data) and the provisioning manager (saved credentials) rely on it being ready.
+
+#### 3.4 Part (D)-(E): wiring up events and starting provisioning
+
+```c
+    // (D) Register event handlers
+    const esp_timer_create_args_t reconnect_args = { .callback = &reconnect_cb, .name = "wifi_reconnect" };
+    ESP_ERROR_CHECK(esp_timer_create(&reconnect_args, &s_reconnect_timer)); /* used by the reconnect back-off */
+    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_PROV_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL)); /* only the got-address event */
+
+    // (E) Start Wi-Fi Provisioning Manager
+    wifi_prov_mgr_config_t config = {
+        .scheme = wifi_prov_scheme_ble, /* talk to the phone over BLE */
+        .scheme_event_handler = WIFI_PROV_SCHEME_BLE_EVENT_HANDLER_FREE_BTDM /* frees BLE memory when done */
+    };
+    ESP_ERROR_CHECK(wifi_prov_mgr_init(config));
+
+    bool provisioned = false;
+    /* Checks NVS: did we already get credentials before? */
+    ESP_ERROR_CHECK(wifi_prov_mgr_is_provisioned(&provisioned));
+
+    if (!provisioned) {
+        ESP_LOGI(TAG, "Starting provisioning");
+        // Unique name per board (last 3 bytes of the MAC), so many boards can be provisioned in one room
+        uint8_t mac[6];
+        ESP_ERROR_CHECK(esp_read_mac(mac, ESP_MAC_WIFI_STA));
+        char service_name[16];
+        snprintf(service_name, sizeof(service_name), "PROV_%02X%02X%02X", mac[3], mac[4], mac[5]);
+
+        s_prov_active = true;
+        // Security 1: encrypted session, authenticated by the proof-of-possession from the QR code
+        ESP_ERROR_CHECK(wifi_prov_mgr_start_provisioning(WIFI_PROV_SECURITY_1, PROV_POP, service_name, NULL));
+        print_qr(service_name);
+    } else {
+        ESP_LOGI(TAG, "Already provisioned, starting Wi-Fi");
+        wifi_prov_mgr_deinit(); /* never started; just drop the manager */
+        ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+        ESP_ERROR_CHECK(esp_wifi_start());
+    }
+}
+```
+
+We use **security 1**: the session between the phone and the board is encrypted, and the phone must prove it knows the *proof-of-possession* (`PROV_POP`). The ESP BLE Prov app expects exactly this when it works from a QR code, which is why security 0 produced a "security does not match" error.
+
+> **Workshop shortcut: one PoP for every board.** All boards here share the same proof-of-possession, `abcd1234`, which is written right in this chapter. That is fine for a room full of learners, but not for a product: anyone in Bluetooth range who knows the PoP could provision a fresh device with their own Wi-Fi credentials. A real product gives every device its own PoP, either derived from something unique to the board (for example part of its MAC address) or, better, a random value generated at first boot and shown only on the QR code or a label on the device. The code stays the same either way: only the string passed to `wifi_prov_mgr_start_provisioning()` and put into the QR code changes.
+
+The QR code is just a small JSON text with the device name, the PoP and the transport (`ble`). Generating and drawing it is not interesting for us, so here is the helper to paste into `main/my_first_project.c` above `app_main`:
+
+```c
+static void print_qr(const char *service_name)
+{
+    char payload[150];
+    snprintf(payload, sizeof(payload),
+             "{\"ver\":\"v1\",\"name\":\"%s\",\"pop\":\"%s\",\"transport\":\"ble\"}",
+             service_name, PROV_POP);
+    ESP_LOGI(TAG, "Scan this QR code with the ESP BLE Prov app:");
+    esp_qrcode_config_t qr_cfg = ESP_QRCODE_CONFIG_DEFAULT();
+    esp_qrcode_generate(&qr_cfg, payload); /* draws the QR code into the monitor output */
+}
+```
+
+The `provisioned` flag is what makes this safe to flash repeatedly: the manager checks NVS for stored credentials and, if it finds them, skips provisioning entirely and just connects straight to Wi-Fi.
+
+#### 3.5 Complete code
+
+The full file (and the matching project you can diff against) is available at [`examples/C6/assignment-03-wifi-provisioning`](../../examples/C6/assignment-03-wifi-provisioning/):
+
+```c
+#include <stdio.h>
+#include <string.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/event_groups.h"
+#include "esp_log.h"
+#include "esp_wifi.h"
+#include "esp_event.h"
+#include "esp_mac.h"
+#include "esp_timer.h"
+#include "nvs_flash.h"
+#include "qrcode.h"
+#include "wifi_provisioning/manager.h"
+#include "wifi_provisioning/scheme_ble.h"
+
+static const char *TAG = "provisioning";
+
+// Proof-of-possession: the app gets it from the QR code, so the user never types it
+#define PROV_POP "abcd1234"
+
+// True while the provisioning manager runs. It drives esp_wifi_connect() itself, so we must stay out of its way.
+static volatile bool s_prov_active = false;
+
+// Reconnect back-off: wait 1 s, 2 s, 4 s ... up to 30 s between attempts, so an unreachable router is not hammered.
+#define RECONNECT_MAX_DELAY_MS 30000
+static int s_retry_count = 0;
+static esp_timer_handle_t s_reconnect_timer;
+
+static void reconnect_cb(void *arg)
+{
+    esp_wifi_connect();
+}
+
+// Print the QR code the ESP BLE Prov app scans (device name, PoP and transport).
+// How the QR code is rendered is not important for this workshop.
+static void print_qr(const char *service_name)
+{
+    char payload[150];
+    snprintf(payload, sizeof(payload),
+             "{\"ver\":\"v1\",\"name\":\"%s\",\"pop\":\"%s\",\"transport\":\"ble\"}",
+             service_name, PROV_POP);
+    ESP_LOGI(TAG, "Scan this QR code with the ESP BLE Prov app:");
+    esp_qrcode_config_t qr_cfg = ESP_QRCODE_CONFIG_DEFAULT();
+    esp_qrcode_generate(&qr_cfg, payload); /* draws the QR code into the monitor output */
+}
 
 // Event handler for Wi-Fi events
 static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
@@ -61,30 +322,53 @@ static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_
             case WIFI_PROV_START:
                 ESP_LOGI(TAG, "Provisioning started");
                 break;
-            case WIFI_PROV_CRED_RECV:
+            case WIFI_PROV_CRED_RECV: {
+                /* event_data carries the SSID and password the phone just sent. */
                 wifi_sta_config_t *wifi_sta_cfg = (wifi_sta_config_t *)event_data;
-                ESP_LOGI(TAG, "Received Wi-Fi credentials\n\tSSID     : %s\n\tPassword : %s",
+                /* DEMO ONLY: never log passwords in production. It is printed here so you can see what the phone sent. */
+                ESP_LOGI(TAG, "Received Wi-Fi credentials\n\tSSID     : %s\n\tPassword : %s (do not log passwords in plaintext ;))",
                          (const char *) wifi_sta_cfg->ssid,
                          (const char *) wifi_sta_cfg->password);
+                break;
+            }
+            case WIFI_PROV_CRED_FAIL:
+                /* Wrong password or AP not found. Forget the bad credentials, otherwise the board
+                   would reboot into "already provisioned" and never offer provisioning again. */
+                ESP_LOGE(TAG, "Provisioning failed. Check the password and try again.");
+                wifi_prov_mgr_reset_sm_state_on_failure();
                 break;
             case WIFI_PROV_CRED_SUCCESS:
                 ESP_LOGI(TAG, "Provisioning successful");
                 break;
             case WIFI_PROV_END:
                 ESP_LOGI(TAG, "Provisioning completed. Deinitializing manager.");
-                wifi_prov_mgr_deinit();
+                s_prov_active = false;
+                wifi_prov_mgr_deinit(); /* manager did its job; free it */
                 break;
             default:
                 break;
         }
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
-        esp_wifi_connect();
+        /* Radio is on; start connecting (during provisioning the manager does it). */
+        if (!s_prov_active) {
+            esp_wifi_connect();
+        }
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+        /* event_data carries the address DHCP gave us. */
         ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
         ESP_LOGI(TAG, "Connected with IP Address:" IPSTR, IP2STR(&event->ip_info.ip));
+        s_retry_count = 0; /* connected; the next outage starts with a short delay again */
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
-        ESP_LOGI(TAG, "Disconnected. Connecting to the AP again...");
-        esp_wifi_connect();
+        if (!s_prov_active) {
+            /* dropped; try again, waiting a bit longer after every failure */
+            uint32_t delay_ms = 1000U << (s_retry_count < 5 ? s_retry_count : 5);
+            if (delay_ms > RECONNECT_MAX_DELAY_MS) {
+                delay_ms = RECONNECT_MAX_DELAY_MS;
+            }
+            s_retry_count++;
+            ESP_LOGI(TAG, "Disconnected. Connecting to the AP again in %lu ms...", (unsigned long)delay_ms);
+            esp_timer_start_once(s_reconnect_timer, (uint64_t)delay_ms * 1000);
+        }
     }
 }
 
@@ -92,6 +376,7 @@ void app_main(void)
 {
     // 1. Initialize NVS (needed for Wi-Fi and Provisioning to save data)
     esp_err_t ret = nvs_flash_init();
+    /* Flash was erased or the layout changed; start NVS fresh. */
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         ESP_ERROR_CHECK(nvs_flash_erase());
         ret = nvs_flash_init();
@@ -99,39 +384,45 @@ void app_main(void)
     ESP_ERROR_CHECK(ret);
 
     // 2. Initialize networking
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-    esp_netif_create_default_wifi_sta();
+    ESP_ERROR_CHECK(esp_netif_init()); /* TCP/IP stack */
+    ESP_ERROR_CHECK(esp_event_loop_create_default()); /* the loop Wi-Fi posts events to */
+    esp_netif_create_default_wifi_sta(); /* default station interface, no IP yet */
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
     // 3. Register event handlers
+    const esp_timer_create_args_t reconnect_args = { .callback = &reconnect_cb, .name = "wifi_reconnect" };
+    ESP_ERROR_CHECK(esp_timer_create(&reconnect_args, &s_reconnect_timer)); /* used by the reconnect back-off */
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_PROV_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
-    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL)); /* only the got-address event */
 
     // 4. Start Wi-Fi Provisioning Manager
     wifi_prov_mgr_config_t config = {
-        .scheme = wifi_prov_scheme_ble,
-        .scheme_event_handler = WIFI_PROV_SCHEME_BLE_EVENT_HANDLER_FREE_BTDM
+        .scheme = wifi_prov_scheme_ble, /* talk to the phone over BLE */
+        .scheme_event_handler = WIFI_PROV_SCHEME_BLE_EVENT_HANDLER_FREE_BTDM /* frees BLE memory when done */
     };
     ESP_ERROR_CHECK(wifi_prov_mgr_init(config));
 
     bool provisioned = false;
+    /* Checks NVS: did we already get credentials before? */
     ESP_ERROR_CHECK(wifi_prov_mgr_is_provisioned(&provisioned));
 
     if (!provisioned) {
         ESP_LOGI(TAG, "Starting provisioning");
-        // Name of the device you will see in the app
-        char service_name[] = "PROV_C6_WORKSHOP";
-        
-        // Disable security for simplicity in workshop, but in real products always use WIFI_PROV_SECURITY_1 or 2
-        wifi_prov_security_t security = WIFI_PROV_SECURITY_0;
-        
-        ESP_ERROR_CHECK(wifi_prov_mgr_start_provisioning(security, NULL, service_name, NULL));
+        // Unique name per board (last 3 bytes of the MAC), so many boards can be provisioned in one room
+        uint8_t mac[6];
+        ESP_ERROR_CHECK(esp_read_mac(mac, ESP_MAC_WIFI_STA));
+        char service_name[16];
+        snprintf(service_name, sizeof(service_name), "PROV_%02X%02X%02X", mac[3], mac[4], mac[5]);
+
+        s_prov_active = true;
+        // Security 1: encrypted session, authenticated by the proof-of-possession from the QR code
+        ESP_ERROR_CHECK(wifi_prov_mgr_start_provisioning(WIFI_PROV_SECURITY_1, PROV_POP, service_name, NULL));
+        print_qr(service_name);
     } else {
         ESP_LOGI(TAG, "Already provisioned, starting Wi-Fi");
-        wifi_prov_mgr_deinit();
+        wifi_prov_mgr_deinit(); /* never started; just drop the manager */
         ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
         ESP_ERROR_CHECK(esp_wifi_start());
     }
@@ -148,12 +439,28 @@ idf.py build flash monitor
 
 If this is your first time running the code on this board, it will start provisioning mode and advertise over BLE.
 
-1. Open the **ESP BLE Prov** app on your phone.
-2. Select **Provision Device**.
-3. Choose **No Proof of Possession (Security 0)** (since we set `WIFI_PROV_SECURITY_0`).
-4. Find `PROV_C6_WORKSHOP` in the list of devices and connect.
-5. Select a Wi-Fi network from the list and enter the password. The ESP32-C6 supports both 2.4 GHz and 5 GHz networks!
-6. Click Provision.
+1. Look at the terminal (monitor) output. The board prints a QR code and its name (`PROV_xxxxxx`, unique for each board). Make sure the terminal window is large enough and uses a monospace font, otherwise the QR code gets distorted. Dark-theme terminals may need to be zoomed in a bit for the phone to read the code.
+2. Open the **ESP BLE Prov** app on your phone. You'll see its home screen with a **Provision New Device** button.
+
+   ![ESP BLE Prov app home screen](assets/provisioning-app-1.webp){: width="240" }
+
+3. Tap **Provision New Device** and point the camera at the QR code in your terminal. The app connects to your board over BLE by itself - no device list and no PIN to type.
+
+   ![QR code scanner screen](assets/provisioning-app-2.webp){: width="240" }
+
+4. Select your Wi-Fi network from the list — the ESP32-C6 works on the 2.4 GHz band only, so 5 GHz networks will not show up in the list.
+
+   ![Selecting a Wi-Fi network in the app](assets/provisioning-app-3.webp){: width="240" }
+
+5. Enter the Wi-Fi password and tap **Provision**.
+
+   ![Entering the Wi-Fi password](assets/provisioning-app-4.webp){: width="240" }
+
+6. The app will show you the provisioning steps completing, finishing with a confirmation screen.
+
+   ![Provisioning finished successfully](assets/provisioning-app-5.webp){: width="240" }
+
+> If the QR code cannot be scanned, the app's **I don't have a QR code** option lets you pick `PROV_xxxxxx` from the BLE device list; it will then ask for the proof-of-possession, which is `abcd1234`.
 
 Look at your terminal! You should see the board receiving the credentials and connecting to your Wi-Fi network. If you restart the board (press the RESET button), it will automatically reconnect without needing the app again.
 

@@ -23,13 +23,13 @@ with the low-power core that is part of the ESP32-C6 SoC.
 
 > This workshop will certainly bring a lot of interesting information even to those who use other
 > chips from the ESP32 family. However, keep in mind that not all chips support everything that
-> ESP32-C6 supports (like dual-band Wi-Fi 6 or the ULP RISC-V core)!
+> ESP32-C6 supports (like Wi-Fi 6 or the ULP RISC-V core)!
 
 ## Companion reference projects
 
 This workshop has companion ESP-IDF projects following the same assignment numbering. They are
-published under [examples/C6/](../../examples/C6/): open a project folder to read the files, or
-download the `.zip` linked next to it. See [examples/C6/README.md](../../examples/C6/README.md)
+published under [examples/C6/](../examples/C6/): open a project folder to read the files, or
+download the `.zip` linked next to it. See [examples/C6/README.md](../examples/C6/README.md)
 for how to build them.
 
 ## Agenda
@@ -44,7 +44,7 @@ If you have met the [prerequisites](#prerequisites), we can start with the indiv
 - [Assignment 2: Basics: Hello World & LED](assignment-2/): Verifying hardware connectivity and
   introducing the ESP-IDF build lifecycle via the terminal.
 - [Assignment 3: Wi-Fi & Provisioning](assignment-3/): Understanding the Wi-Fi peripheral,
-  dual-band capabilities, and connecting using BLE provisioning.
+  Wi-Fi 6, and connecting using BLE provisioning.
 - [Assignment 4: OTA Updates](assignment-4/): Remote code updates using partition tables and HTTPS.
 - [Assignment 5: ESP-NOW Chat Room](assignment-5/): Connectionless peer-to-peer communication.
 - [Assignment 6: LP-core](assignment-6/): Demonstration of working with the low-power core for
@@ -59,14 +59,14 @@ Required hardware:
 - Computer running Linux, Windows or macOS operating system
 - ESP32-C6-DevKitC or ESP32-C6-DevKitM
 - USB cable (supporting power + data) compatible with the devkit above
-- Visual Studio Code
 
 Required software:
 
-- [Visual Studio Code](https://code.visualstudio.com/download)
+- [Visual Studio Code](https://code.visualstudio.com/download) or other IDE capable of editing C/C++. This workshop will suppose the usage of Visual Studio Code.
 - **ESP BLE Prov** app:
   - Android: [ESP BLE Prov](https://play.google.com/store/apps/details?id=com.espressif.provble&pcampaignid=web_share)
   - iOS: [ESP BLE Prov](https://apps.apple.com/us/app/esp-ble-provisioning/id1473590141)
+- ESP-IDF, which you'll learn how to install in the [Assignment 1: Install ESP-IDF](assignment-1/)
 
 ## Time Requirements
 
@@ -74,8 +74,7 @@ Required software:
 
 ## Feedback
 
-If you have any feedback about the workshop, feel free to start a new
-[discussion on GitHub](https://github.com/espressif/developer-portal/discussions).
+If you have any feedback about the workshop, feel free to e-mail me directly to jan.beran@espressif.com.
 
 ## Conclusion
 
@@ -85,4 +84,4 @@ to the projects you will create with our chips in the future!
 
 ---
 
-[← Back to Workshop Portal](../../)
+[← Back to Workshop Portal](../)
