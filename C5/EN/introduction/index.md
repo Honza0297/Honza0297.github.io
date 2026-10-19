@@ -58,39 +58,43 @@ maintenance period.
 
 ## Introduction to the ESP32-C5
 
-The ESP32-C5 is a Ultra-low-power SoC with RISC-V single-core microprocessor, 2.4 GHz Wi-Fi 6
-(802.11ax), Bluetooth® 5 (LE), Zigbee and Thread (802.15.4). It has an optional 4 MB flash in the
-chip's package, 30 or 22 GPIOs, rich set of peripherals including:
+The ESP32-C5 is an ultra-low-power SoC with a RISC-V single-core high-performance (HP) processor
+(up to 240 MHz) and a low-power (LP) RISC-V processor (up to 48 MHz). It supports 2.4 GHz and 5 GHz
+dual-band Wi-Fi 6 (802.11ax), Bluetooth® LE 5, Zigbee 3.0 and Thread 1.4 (802.15.4). It has
+29 GPIOs and a rich set of peripherals including:
 
 ![ESP32-C5 block diagram](assets/esp32-c5-diagram.webp)
 
-- 30 GPIOs (QFN40), or 22 GPIOs (QFN32)
-- 5 strapping GPIOs
-- 6 GPIOs needed for in-package flash
+- 29 programmable GPIOs (QFN48 package)
+- 7 strapping GPIOs (GPIO2, GPIO3, GPIO7, GPIO25, GPIO26, GPIO27, GPIO28)
 - **Analog interfaces:**
-  - 12-bit SAR ADC, up to 7 channels
+  - 12-bit SAR ADC, up to 6 channels
   - Temperature sensor
+  - Brownout detector
+  - Analog voltage comparator
 - **Digital interfaces:**
   - Two UARTs
   - Low-power (LP) UART
-  - Two SPI ports for communication with flash
+  - Two SPI ports for communication with flash/PSRAM
   - General purpose SPI port
   - I2C
   - Low-power (LP) I2C
   - I2S
   - Pulse count controller
   - USB Serial/JTAG controller
-  - Two TWAI® controllers, compatible with ISO 11898-1 (CAN Specification 2.0)
-  - SDIO 2.0 slave controller
+  - Two CAN FD controllers, compatible with ISO 11898-1:2015
+  - SDIO slave controller (not supported by chip revisions v0.0 and v0.1)
   - LED PWM controller, up to 6 channels
-  - Motor Control PWM (MCPWM)
-  - Remote control peripheral (TX/RX)
+  - Motor Control PWM (MCPWM), up to 6 channels
+  - Remote control peripheral (RMT, TX/RX)
   - Parallel IO interface (PARLIO)
-  - General DMA controller, with 3 transmit channels and 3 receive channels
+  - General DMA controller (GDMA), with 3 transmit channels and 3 receive channels
+  - BitScrambler
   - Event task matrix (ETM)
 - **Timers:**
   - 52-bit system timer
   - Two 54-bit general-purpose timers
+  - 48-bit RTC timer
   - Three digital watchdog timers
   - Analog watchdog timer
 
@@ -105,8 +109,9 @@ Wi-Fi 6, as seen in devices like the ESP32-C5, include:
 
 - **20 MHz-only Non-AP Mode**: This mode operates in a non-access point capacity, utilizing a 20
   MHz channel width.
-- **MCS0 ~ MCS9**: Support for modulation and coding schemes ranging from MCS0 to MCS9, which
-  dictate data rates and signal robustness.
+- **MCS0 ~ MCS9 (2.4 GHz) and MCS0 ~ MCS7 (5 GHz)**: Support for modulation and coding schemes
+  that dictate data rates and signal robustness. The ESP32-C5 is dual-band, so Wi-Fi 6 works on
+  both the 2.4 GHz and the 5 GHz band.
 - **Uplink and Downlink OFDMA**: Orthogonal Frequency Division Multiple Access enables efficient
   simultaneous connections, particularly beneficial in high-density environments.
 - **Downlink MU-MIMO**: Multi-user, multiple input, multiple output technology increases network
@@ -147,7 +152,7 @@ Wi-Fi 6, as seen in devices like the ESP32-C5, include:
 ## Introduction to the ESP32-C5-DevKit-C
 
 The ESP32-C5-DevKitC-1 is a beginner-friendly development board featuring the ESP32-C5-WROOM-1(U)
-module, which includes an 8 MB SPI flash. This board offers comprehensive Wi-Fi, Bluetooth LE,
+module, which includes an 8 MB SPI flash (and 8 MB PSRAM in the default variant). This board offers comprehensive Wi-Fi, Bluetooth LE,
 Zigbee, and Thread capabilities.
 
 To facilitate easy interfacing, most of the I/O pins are accessible through pin headers on both
@@ -186,17 +191,17 @@ Here is the development board feature list:
 |---|---|---|---|
 | 1 | 3V3 | P | 3.3 V power supply |
 | 2 | RST | I | High: enables the chip; Low: disables the chip. |
-| 3 | 2 | I/O/T | MTMS, GPIO2, **LP_GPIO2**, **LP_UART_RTSN**, **LP_I2C_SDA**, ADC1_CH1, FSPIQ |
-| 4 | 3 | I/O/T | MTDI, GPIO3, **LP_GPIO3**, **LP_UART_CTSN**, **LP_I2C_SCL**, ADC1_CH2 |
+| 3 | 2 | I/O/T | MTMS (strapping pin), GPIO2, **LP_GPIO2**, **LP_UART_RTSN**, **LP_I2C_SDA**, ADC1_CH1, FSPIQ |
+| 4 | 3 | I/O/T | MTDI (strapping pin), GPIO3, **LP_GPIO3**, **LP_UART_CTSN**, **LP_I2C_SCL**, ADC1_CH2 |
 | 5 | 0 | I/O/T | GPIO0, XTAL_32K_P, **LP_GPIO0**, **LP_UART_DTRN** |
 | 6 | 1 | I/O/T | GPIO1, XTAL_32K_N, **LP_GPIO1**, **LP_UART_DSRN**, ADC1_CH0 |
 | 7 | 6 | I/O/T | GPIO6, **LP_GPIO6**, ADC1_CH5, FSPICLK |
-| 8 | 7 | I/O/T | GPIO7, FSPID, SDIO_DATA1 |
+| 8 | 7 | I/O/T | GPIO7 (strapping pin), FSPID, SDIO_DATA1 |
 | 9 | 8 | I/O/T | GPIO8, PAD_COMP0, SDIO_DATA0 |
 | 10 | 9 | I/O/T | GPIO9, PAD_COMP1, SDIO_CLK |
 | 11 | 10 | I/O/T | GPIO10, FSPICS0, SDIO_CMD |
-| 12 | 26 | I/O/T | GPIO26 |
-| 13 | 25 | I/O/T | GPIO25 |
+| 12 | 26 | I/O/T | GPIO26 (strapping pin) |
+| 13 | 25 | I/O/T | GPIO25 (strapping pin) |
 | 14 | 5V | P | 5 V power supply |
 | 15 | G | G | Ground |
 | 16 | NC | – | No connection |
@@ -215,7 +220,7 @@ Here is the development board feature list:
 | 8 | 4 | I/O/T | MTCK, GPIO4, **LP_GPIO4**, **LP_UART_RXD**, ADC1_CH3, FSPIHD |
 | 9 | 5 | I/O/T | MTDO, GPIO5, **LP_GPIO5**, **LP_UART_TXD**, ADC1_CH4, FSPIWP |
 | 10 | NC | – | No connection |
-| 11 | 28 | I/O/T | GPIO28 |
+| 11 | 28 | I/O/T | GPIO28 (strapping pin) |
 | 12 | G | G | Ground |
 | 13 | 14 | I/O/T | GPIO14, USB_D+, SDIO_DATA2 |
 | 14 | 13 | I/O/T | GPIO13, USB_D-, SDIO_DATA3 |

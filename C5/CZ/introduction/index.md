@@ -48,39 +48,43 @@ Aktuální seznam podporovaných verzí a dobu jejich údržby najdete na GitHub
 
 ## Představení ESP32-C5
 
-ESP32-C5 je *ultra-low-power* SoC s jednojádrovým procesorem RISC-V, 2.4 GHz Wi-Fi 6
-(802.11ax), Bluetooth® 5 (LE), Zigbee a Thread (802.15.4). K dispozici je volitelná 4MB flash paměť
-přímo v pouzdře čipu, 30 nebo 22 GPIO pinů a bohatá nabídka periferií:
+ESP32-C5 je *ultra-low-power* SoC s jednojádrovým vysokovýkonným (HP) procesorem RISC-V (až 240 MHz)
+a nízkoenergetickým (LP) procesorem RISC-V (až 48 MHz). Podporuje dual-band Wi-Fi 6 (802.11ax) na
+2.4 GHz i 5 GHz, Bluetooth® LE 5, Zigbee 3.0 a Thread 1.4 (802.15.4). K dispozici je 29 GPIO pinů
+a bohatá nabídka periferií:
 
 ![Blokový diagram ESP32-C5](assets/esp32-c5-diagram.webp)
 
-- 30 GPIO (QFN40), nebo 22 GPIO (QFN32)
-- 5 strapping pinů
-- 6 GPIO pinů je potřebných pro in-package flash
+- 29 programovatelných GPIO (pouzdro QFN48)
+- 7 strapping pinů (GPIO2, GPIO3, GPIO7, GPIO25, GPIO26, GPIO27, GPIO28)
 - **Analogová rozhraní:**
-  - 12-bit SAR ADC, až 7 kanálů
+  - 12-bit SAR ADC, až 6 kanálů
   - Senzor teploty
+  - Brownout detektor
+  - Analogový napěťový komparátor
 - **Digitální rozhraní:**
   - 2x UART
   - Low-power (LP) UART
-  - 2x SPI pro komunikaci s flash pamětí
+  - 2x SPI pro komunikaci s flash/PSRAM
   - SPI pro obecné použití
   - I2C
   - Low-power (LP) I2C
   - I2S
   - Pulse count kontroler
   - USB Serial/JTAG kontroler
-  - 2x TWAI® kontrolery, kompatibilní s ISO 11898-1 (CAN Specification 2.0)
-  - SDIO 2.0 slave kontroler
+  - 2x CAN FD kontrolery, kompatibilní s ISO 11898-1:2015
+  - SDIO slave kontroler (nepodporovaný v revizích čipu v0.0 a v0.1)
   - LED PWM kontroler, až 6 kanálů
-  - Motor Control PWM (MCPWM)
-  - Remote control periferie (TX/RX)
+  - Motor Control PWM (MCPWM), až 6 kanálů
+  - Remote control periferie (RMT, TX/RX)
   - Paralelní IO rozhraní (PARLIO)
-  - Obecný DMA kontroler se 3 transmit a 3 receive kanály
+  - Obecný DMA kontroler (GDMA) se 3 transmit a 3 receive kanály
+  - BitScrambler
   - Event task matrix (ETM)
 - **Timery:**
   - 52-bit systémový timer
   - 2x 54-bit timer pro obecné použití
+  - 48-bit RTC timer
   - 3x digitální watchdog
   - Analogový watchdog
 
@@ -95,8 +99,9 @@ u zařízení, jako je ESP32-C5, patří:
 
 - **Režim Non-AP pouze s 20 MHz**: Tento režim funguje v roli klienta (ne přístupového bodu) a využívá
   kanál o šířce 20 MHz.
-- **MCS0 ~ MCS9**: Podpora modulačních a kódovacích schémat od MCS0 do MCS9, která určují
-  přenosové rychlosti a odolnost signálu.
+- **MCS0 ~ MCS9 (2.4 GHz) a MCS0 ~ MCS7 (5 GHz)**: Podpora modulačních a kódovacích schémat, která určují
+  přenosové rychlosti a odolnost signálu. ESP32-C5 je dual-band, takže Wi-Fi 6 funguje v pásmu
+  2.4 GHz i 5 GHz.
 - **Uplink a Downlink OFDMA**: Ortogonální vícenásobný přístup s frekvenčním dělením umožňuje efektivní
   souběžné připojení více zařízení, což je výhodné zejména v prostředích s vysokou hustotou zařízení.
 - **Downlink MU-MIMO**: Technologie s více uživateli a více anténami zvyšuje kapacitu sítě tím, že
@@ -137,7 +142,7 @@ u zařízení, jako je ESP32-C5, patří:
 ## Představení kitu ESP32-C5-DevKit-C
 
 ESP32-C5-DevKitC-1 je vývojová deska určená (nejen) začátečníkům, v jejímž srdci je modul
-ESP32-C5-WROOM-1(U) s 8 MB SPI flash paměti. Deska nabízí kompletní podporu Wi-Fi, Bluetooth LE,
+ESP32-C5-WROOM-1(U) s 8 MB SPI flash paměti (a v základní variantě i s 8 MB PSRAM). Deska nabízí kompletní podporu Wi-Fi, Bluetooth LE,
 Zigbee a Thread.
 
 Většina I/O pinů je přístupná z pinových vývodů po obou stranách desky. Periferie lze připojit
@@ -175,17 +180,17 @@ Níže jsou uvedené základní vlastnosti vývojového kitu:
 |---|---|---|---|
 | 1 | 3V3 | P | 3.3 V power supply |
 | 2 | RST | I | High: enables the chip; Low: disables the chip. |
-| 3 | 2 | I/O/T | MTMS, GPIO2, **LP_GPIO2**, **LP_UART_RTSN**, **LP_I2C_SDA**, ADC1_CH1, FSPIQ |
-| 4 | 3 | I/O/T | MTDI, GPIO3, **LP_GPIO3**, **LP_UART_CTSN**, **LP_I2C_SCL**, ADC1_CH2 |
+| 3 | 2 | I/O/T | MTMS (strapping pin), GPIO2, **LP_GPIO2**, **LP_UART_RTSN**, **LP_I2C_SDA**, ADC1_CH1, FSPIQ |
+| 4 | 3 | I/O/T | MTDI (strapping pin), GPIO3, **LP_GPIO3**, **LP_UART_CTSN**, **LP_I2C_SCL**, ADC1_CH2 |
 | 5 | 0 | I/O/T | GPIO0, XTAL_32K_P, **LP_GPIO0**, **LP_UART_DTRN** |
 | 6 | 1 | I/O/T | GPIO1, XTAL_32K_N, **LP_GPIO1**, **LP_UART_DSRN**, ADC1_CH0 |
 | 7 | 6 | I/O/T | GPIO6, **LP_GPIO6**, ADC1_CH5, FSPICLK |
-| 8 | 7 | I/O/T | GPIO7, FSPID, SDIO_DATA1 |
+| 8 | 7 | I/O/T | GPIO7 (strapping pin), FSPID, SDIO_DATA1 |
 | 9 | 8 | I/O/T | GPIO8, PAD_COMP0, SDIO_DATA0 |
 | 10 | 9 | I/O/T | GPIO9, PAD_COMP1, SDIO_CLK |
 | 11 | 10 | I/O/T | GPIO10, FSPICS0, SDIO_CMD |
-| 12 | 26 | I/O/T | GPIO26 |
-| 13 | 25 | I/O/T | GPIO25 |
+| 12 | 26 | I/O/T | GPIO26 (strapping pin) |
+| 13 | 25 | I/O/T | GPIO25 (strapping pin) |
 | 14 | 5V | P | 5 V power supply |
 | 15 | G | G | Ground |
 | 16 | NC | – | No connection |
@@ -204,7 +209,7 @@ Níže jsou uvedené základní vlastnosti vývojového kitu:
 | 8 | 4 | I/O/T | MTCK, GPIO4, **LP_GPIO4**, **LP_UART_RXD**, ADC1_CH3, FSPIHD |
 | 9 | 5 | I/O/T | MTDO, GPIO5, **LP_GPIO5**, **LP_UART_TXD**, ADC1_CH4, FSPIWP |
 | 10 | NC | – | No connection |
-| 11 | 28 | I/O/T | GPIO28 |
+| 11 | 28 | I/O/T | GPIO28 (strapping pin) |
 | 12 | G | G | Ground |
 | 13 | 14 | I/O/T | GPIO14, USB_D+, SDIO_DATA2 |
 | 14 | 13 | I/O/T | GPIO13, USB_D-, SDIO_DATA3 |
