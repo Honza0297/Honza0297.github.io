@@ -14,8 +14,8 @@ extern const uint8_t ulp_main_bin_end[]   asm("_binary_ulp_main_bin_end");
 static void init_ulp_program(void);
 
 #define WAKEUP_PIN  GPIO_NUM_0
-#define BLUE_PIN    GPIO_NUM_4
-#define GREEN_PIN   GPIO_NUM_5
+#define BLUE_PIN    GPIO_NUM_6
+#define GREEN_PIN   GPIO_NUM_7
 
 void app_main(void)
 {

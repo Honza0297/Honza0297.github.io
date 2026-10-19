@@ -59,8 +59,8 @@ idf.py set-target esp32c6
 #include "ulp_lp_core_interrupts.h"
 
 #define WAKEUP_PIN LP_IO_NUM_0
-#define BLUE_PIN    LP_IO_NUM_4
-#define GREEN_PIN  LP_IO_NUM_5
+#define BLUE_PIN    LP_IO_NUM_6
+#define GREEN_PIN  LP_IO_NUM_7
 
 static uint32_t wakeup_count;
 uint32_t start_toggle;
@@ -152,8 +152,8 @@ extern const uint8_t ulp_main_bin_end[]   asm("_binary_ulp_main_bin_end");
 static void init_ulp_program(void);
 
 #define WAKEUP_PIN  GPIO_NUM_0
-#define BLUE_PIN    GPIO_NUM_4
-#define GREEN_PIN   GPIO_NUM_5
+#define BLUE_PIN    GPIO_NUM_6
+#define GREEN_PIN   GPIO_NUM_7
 
 void app_main(void)
 {
@@ -258,9 +258,11 @@ CONFIG_LOG_DEFAULT_LEVEL=2
 
 This example needs two extra LEDs and one button, on these pins:
 
-- Blue LED -> **GPIO4**
-- Green LED -> **GPIO5**
+- Blue LED -> **GPIO6**
+- Green LED -> **GPIO7**
 - Button (pull-down, active high) -> **GPIO0**. One side of the button goes to **3.3 V**, the other to **GPIO0**. Also put a resistor between **GPIO0** and **GND**.
+
+All three pins are LP IOs, so the LP core can drive them while the HP core sleeps. We deliberately avoid the C6 strapping pins (GPIO4, GPIO5, GPIO8, GPIO9, GPIO15), whose level at reset influences boot behavior.
 
 ![Button wiring](assets/button.webp)
 
@@ -268,7 +270,7 @@ This example needs two extra LEDs and one button, on these pins:
 
 ![Complete wiring diagram](assets/schematics.webp)
 
-*Complete diagram showing how to connect both LEDs (GPIO4, GPIO5) and the button (GPIO0) to the ESP32-C6-DevKitC-1.*
+*Complete diagram showing how to connect both LEDs (GPIO6, GPIO7) and the button (GPIO0) to the ESP32-C6-DevKitC-1.*
 
 6. **Build, flash, and monitor**
 

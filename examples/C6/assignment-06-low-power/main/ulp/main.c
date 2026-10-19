@@ -6,8 +6,8 @@
 #include "ulp_lp_core_interrupts.h"
 
 #define WAKEUP_PIN LP_IO_NUM_0
-#define BLUE_PIN    LP_IO_NUM_4
-#define GREEN_PIN  LP_IO_NUM_5
+#define BLUE_PIN    LP_IO_NUM_6
+#define GREEN_PIN  LP_IO_NUM_7
 
 static uint32_t wakeup_count;
 uint32_t start_toggle;

@@ -156,7 +156,7 @@ Níže jsou uvedené základní vlastnosti vývojového kitu:
 - Boot Button
 - Reset Button
 - USB Type-C to UART port
-- RGB LED připojená na pin GPIO8
+- RGB LED připojená na pin GPIO27
 - J5 jumper pro měření proudu.
 
 #### Popis desky
@@ -200,7 +200,7 @@ Níže jsou uvedené základní vlastnosti vývojového kitu:
 | 4 | 24 | I/O/T | GPIO24 |
 | 5 | 23 | I/O/T | GPIO23 |
 | 6 | NC/15 | I/O/T | No connection/GPIO15 |
-| 7 | 27 | I/O/T | GPIO27 |
+| 7 | 27 | I/O/T | GPIO27 (strapping pin, drives the RGB LED) |
 | 8 | 4 | I/O/T | MTCK, GPIO4, **LP_GPIO4**, **LP_UART_RXD**, ADC1_CH3, FSPIHD |
 | 9 | 5 | I/O/T | MTDO, GPIO5, **LP_GPIO5**, **LP_UART_TXD**, ADC1_CH4, FSPIWP |
 | 10 | NC | – | No connection |

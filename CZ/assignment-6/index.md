@@ -72,8 +72,8 @@ idf.py set-target esp32c6
 #include "ulp_lp_core_interrupts.h"
 
 #define WAKEUP_PIN LP_IO_NUM_0
-#define BLUE_PIN    LP_IO_NUM_4
-#define GREEN_PIN  LP_IO_NUM_5
+#define BLUE_PIN    LP_IO_NUM_6
+#define GREEN_PIN  LP_IO_NUM_7
 
 static uint32_t wakeup_count;
 uint32_t start_toggle;
@@ -171,8 +171,8 @@ extern const uint8_t ulp_main_bin_end[]   asm("_binary_ulp_main_bin_end");
 static void init_ulp_program(void);
 
 #define WAKEUP_PIN  GPIO_NUM_0
-#define BLUE_PIN    GPIO_NUM_4
-#define GREEN_PIN   GPIO_NUM_5
+#define BLUE_PIN    GPIO_NUM_6
+#define GREEN_PIN   GPIO_NUM_7
 
 void app_main(void)
 {
@@ -279,10 +279,12 @@ CONFIG_LOG_DEFAULT_LEVEL=2
 
 Na tenhle příklad budete navíc potřebovat 2 LED a jedno tlačítko připojené na následující piny:
 
-- Modrá LED -> **GPIO4**
-- Zelená LED -> **GPIO5**
+- Modrá LED -> **GPIO6**
+- Zelená LED -> **GPIO7**
 - Čudlík (pull-down, active high) -> **GPIO0**. Jinak řečeno, jednu "stranu" tlačítka připojíme
   na **3.3V** a druhou na **GPIO0**. Navíc ještě mezi **GPIO0** a **GND** připojíme rezistor.
+
+Všechny tři piny jsou LP IO, takže je může LP jádro ovládat, i když HP jádro spí. Záměrně se vyhýbáme strapping pinům čipu C6 (GPIO4, GPIO5, GPIO8, GPIO9, GPIO15), jejichž úroveň při resetu ovlivňuje chování při startu.
 
 ![Schéma tlačítka](assets/button.webp)
 
@@ -290,7 +292,7 @@ Na tenhle příklad budete navíc potřebovat 2 LED a jedno tlačítko připojen
 
 ![Kompletní schéma zapojení](assets/schematics.webp)
 
-*Kompletní schéma ukazující, jak připojit obě LED (GPIO4, GPIO5) a tlačítko (GPIO0) k
+*Kompletní schéma ukazující, jak připojit obě LED (GPIO6, GPIO7) a tlačítko (GPIO0) k
 ESP32-C6-DevKitC-1.*
 
 6. **Build, flash, a monitor výstupu z desky**
