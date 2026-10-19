@@ -12,7 +12,7 @@ layout: default
 
 V reálném nasazení nebudete mít fyzický přístup k USB portu, abyste nahráli nový firmware. Aktualizace Over-The-Air (OTA) umožňují stáhnout a nainstalovat nový firmware přes síť, například Wi-Fi.
 
-**Jak OTA na ESP32 funguje v kostce:** ve flashi nejsou jeden, ale dva aplikační sloty. Zařízení vždy běží z jednoho z nich (*aktivního* slotu) a ten nikdy nepřepisuje. Nový firmware se zapíše do druhého, neaktivního slotu, a teprve když je celý stažený a ověřený, zařízení přepne malý záznam „bootuj z tohoto slotu“ a restartuje se do něj. Když se během stahování něco pokazí, starý firmware je pořád neporušený a běží dál. Když je zapnutý rollback (viz bonus na konci), jde bootloader ještě o krok dál: pokud nový firmware po startu nepotvrdí, že funguje, bootloader se vrátí k předchozímu slotu, takže špatná aktualizace zařízení neznefunkční.
+**Jak OTA na ESP32 funguje v kostce:** ve flashi nejsou jeden, ale dva aplikační sloty. Zařízení vždy běží z jednoho z nich (*aktivního* slotu) a ten nikdy nepřepisuje. Nový firmware se zapíše do druhého, neaktivního slotu, a teprve když je celý stažený a ověřený, zařízení přepne malý záznam „bootuj z tohoto slotu“ a restartuje se do něj. Když se během stahování něco pokazí, starý firmware je pořád neporušený a běží dál. Když je zapnutý rollback (je to možné, ale v tomhle workshopu ho nebereme), jde bootloader ještě o krok dál: pokud nový firmware po startu nepotvrdí, že funguje, bootloader se vrátí k předchozímu slotu, takže špatná aktualizace zařízení neznefunkční.
 
 > **Pokračujte ve stejném projektu.** Pokračujte v projektu, který jste v Úkolu 3 naprovisionovali — OTA potřebuje zařízení, které se už umí připojit k Wi-Fi. Pokud ten krok uložil přihlašovací údaje do NVS, znovu se použijí; pokud ne, deska se připojí rovnou k workshopové síti `ESP32-WS`. Druhá deska, na kterou nahrajete serverový projekt, je na téže síti s pevnou adresou a poskytuje aktualizační soubor. `main/my_first_project.c` znovu nahradíme, ale `idf_component.yml` nechte být: už z Úkolu 2 tahá `led_strip` a za chvíli ho zase budeme potřebovat.
 
@@ -59,7 +59,7 @@ Přejděte do:
   - **Partition Table**: vyberte `Custom partition table CSV`
   - **Custom partition CSV file**: napište `partitions.csv`
 - **Serial Flasher Config**
-  - **Flash size**: vyberte `4 MB` — dva sloty po 1500K plus `nvs`/`otadata`/`phy_init` se už nevejdou do výchozího předpokladu 2 MB.
+  - **Flash size**: vyberte `4 MB` — dva sloty po 1500K plus `nvs`/`otadata`/`phy_init` se už nevejdou do výchozího předpokladu 2 MB. Vaše deska může mít flashe víc (velikost se mezi deskami liší); 4 MB je prostě minimum, které tohle rozložení potřebuje.
 - **Component config**
   - **ESP HTTPS OTA**
     - **Allow HTTP for OTA**: zapněte. Server v tomhle úkolu mluví čistým HTTP a `esp_https_ota()` odmítne URL s `http://`, dokud tahle volba není zapnutá. Nechte ji vypnutou, pokud později nasměrujete `.url` na skutečný HTTPS server.
@@ -108,6 +108,7 @@ Jako předtím to postavíme po částech, místo abychom všechno vložili naje
 #include "esp_system.h"
 #include "esp_event.h"
 #include "esp_log.h"
+#include "esp_ota_ops.h"
 #include "esp_https_ota.h"
 #include "esp_http_client.h"
 #include "esp_wifi.h"
@@ -237,6 +238,35 @@ Místo GPIO přerušení (na začátek se v něm dá snadno splést) tahle úloh
 #### 4.5 Část (E): OTA úloha
 
 ```c
+/* Totéž co esp_https_ota(), ale po krocích, abychom mohli logovat průběh a přesnou chybu. */
+static esp_err_t run_ota(const esp_https_ota_config_t *ota_config)
+{
+    esp_https_ota_handle_t handle = NULL;
+    esp_err_t err = esp_https_ota_begin(ota_config, &handle); /* připojit se, zkontrolovat hlavičku image */
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Could not start the download: %s", esp_err_to_name(err));
+        return err;
+    }
+
+    int next_report = 0;
+    while ((err = esp_https_ota_perform(handle)) == ESP_ERR_HTTPS_OTA_IN_PROGRESS) {
+        int read = esp_https_ota_get_image_len_read(handle);
+        if (read >= next_report) { /* server velikost předem neposílá, proto hlásíme kilobajty, ne procenta */
+            ESP_LOGI(TAG, "Downloaded %d KB", read / 1024);
+            next_report = read + 128 * 1024;
+        }
+    }
+    if (err == ESP_OK && !esp_https_ota_is_complete_data_received(handle)) {
+        err = ESP_ERR_INVALID_SIZE; /* spojení skončilo předčasně */
+    }
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Download failed: %s", esp_err_to_name(err));
+        esp_https_ota_abort(handle);
+        return err;
+    }
+    return esp_https_ota_finish(handle); /* ověřit image a přepnout bootovací záznam */
+}
+
 static void ota_task(void *pvParameter)
 {
     while (1) {
@@ -261,6 +291,7 @@ static void ota_task(void *pvParameter)
 
         esp_http_client_config_t config = {
             .url = "http://192.168.0.100/firmware.bin",
+            .timeout_ms = 10000, /* když server mlčí, vzdát to, místo aby se úloha zasekla */
             // In production, serve this over HTTPS and check the server certificate:
             // .crt_bundle_attach = esp_crt_bundle_attach,
         };
@@ -269,15 +300,15 @@ static void ota_task(void *pvParameter)
         };
 
         ESP_LOGI(TAG, "Attempting to download update from %s", config.url);
-        /* Stáhne do neaktivního slotu a přepne bootovací záznam. */
-        esp_err_t ret = esp_https_ota(&ota_config);
+        /* Stáhne do neaktivního slotu, loguje průběh a přepne bootovací záznam. */
+        esp_err_t ret = run_ota(&ota_config);
         if (ret == ESP_OK) {
             ESP_LOGI(TAG, "OTA succeeded, rebooting...");
             led_set_color(0, 20, 0); // green: success
             vTaskDelay(pdMS_TO_TICKS(1000)); /* nechat chvilku svítit zelenou a pak restart */
             esp_restart(); /* nabootuje nový image */
         } else {
-            ESP_LOGE(TAG, "Firmware upgrade failed");
+            ESP_LOGE(TAG, "Firmware upgrade failed: %s", esp_err_to_name(ret));
             led_set_color(20, 0, 0); // red: failed
             vTaskDelay(pdMS_TO_TICKS(3000));
             led_set_color(0, 0, 20); // back to blue: ready, feel free to try again
@@ -287,6 +318,8 @@ static void ota_task(void *pvParameter)
 ```
 
 `ulTaskNotifyTake(pdTRUE, portMAX_DELAY)` spí, dokud ho `button_task` neprobudí, místo aby stahování začalo hned po startu. Než se začne stahovat, úloha zkontroluje vlastní IP adresu: bez adresy (deska na špatné síti, nebo Wi-Fi ještě nabíhá) blikne červeně a počká na další stisk, místo aby selhala až v `esp_https_ota()`. URL je serverový projekt [`examples/C5/assignment-04-ota-server`](../../../examples/C5/assignment-04-ota-server/): ta deska je na téže síti `ESP32-WS` s pevnou adresou `192.168.0.100` a poskytuje image na `http://192.168.0.100/firmware.bin`. `esp_https_ota()` odmítne čisté HTTP, dokud není nastaveno `CONFIG_ESP_HTTPS_OTA_ALLOW_HTTP`. V produktu by se image mělo podávat přes HTTPS a nastavit `.crt_bundle_attach`.
+
+`run_ota()` dělá totéž co jednořádkové `esp_https_ota()`, ale po samostatných krocích (`begin`, opakované `perform`, `finish`). Díky tomu dostaneme dvě věci, které jednořádkové volání skrývá: řádek s průběhem každých 128 KB (server posílá soubor po částech a velikost předem neoznamuje, proto počítáme kilobajty, ne procenta) a přesný název chyby, když se něco pokazí, například `ESP_ERR_HTTP_CONNECT` nebo `ESP_ERR_HTTP_CONNECTION_CLOSED`. `.timeout_ms` způsobí, že mlčící server selže po 10 s, místo aby úlohu blokoval.
 
 #### 4.6 Část (F): `app_main`
 
@@ -320,6 +353,8 @@ void app_main(void)
 
     // Prefer credentials stored in NVS by the Assignment 3 provisioning step.
     // If that never happened, connect to the fallback network instead.
+    /* Režim stanice se musí nastavit před esp_wifi_set_config(), jinak skončí chybou ESP_ERR_WIFI_MODE. */
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     wifi_config_t wifi_config = { 0 };
     /* Co ovladač obnovil z NVS? */
     ESP_ERROR_CHECK(esp_wifi_get_config(WIFI_IF_STA, &wifi_config));
@@ -336,7 +371,6 @@ void app_main(void)
         ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &fallback));
     }
 
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_start());
 
     // Create the OTA task first so button_task has a valid handle to notify
@@ -345,7 +379,7 @@ void app_main(void)
 }
 ```
 
-`esp_wifi_get_config()` přečte konfiguraci stanice, kterou Wi-Fi ovladač obnovil z NVS. Uložené SSID nechá být. Prázdné SSID znamená, že deska nikdy nebyla naprovisionovaná (nebo že se NVS smazalo), takže `esp_wifi_set_config()` nastaví `FALLBACK_SSID` a `FALLBACK_PASSWORD` — obojí `"ESP32-WS"` — a ovladač to uloží do NVS stejně jako naprovisionovanou konfiguraci.
+`esp_wifi_set_mode()` musí přijít první: `esp_wifi_set_config()` selže s `ESP_ERR_WIFI_MODE`, dokud rozhraní není v režimu stanice. `esp_wifi_get_config()` přečte konfiguraci stanice, kterou Wi-Fi ovladač obnovil z NVS. Uložené SSID nechá být. Prázdné SSID znamená, že deska nikdy nebyla naprovisionovaná (nebo že se NVS smazalo), takže `esp_wifi_set_config()` nastaví `FALLBACK_SSID` a `FALLBACK_PASSWORD` — obojí `"ESP32-WS"` — a ovladač to uloží do NVS stejně jako naprovisionovanou konfiguraci.
 
 #### 4.7 Celý kód
 
@@ -357,9 +391,20 @@ Celý soubor je v [`examples/C5/assignment-04-ota`](../../../examples/C5/assignm
 idf.py build flash monitor
 ```
 
-Nejdřív nahrajte [serverový projekt](../../../examples/C5/assignment-04-ota-server/) na druhou desku. Sledujte LED studentské desky: **žlutá**, dokud se připojuje, potom **modrá**, jakmile Wi-Fi naběhne. Připojí se s přihlašovacími údaji z Úkolu 3 z NVS — nebo rovnou k workshopové síti `ESP32-WS`, když je NVS prázdná. Stiskněte tlačítko — LED zbělá, dokud se image stahuje, potom zezelená a deska se restartuje do toho image. V monitoru by se pak mělo objevit `Running firmware v2!`. Když je serverová deska vypnutá, nebo tahle deska skončila na jiné síti (např. s přihlašovacími údaji z domova), LED zčervená a vrátí se na modrou. Jak ten image vznikl a jak ho vyměnit, je v [kroku 7](#7-kde-lezi-novy-firmware).
+Nejdřív nahrajte [serverový projekt](../../../examples/C5/assignment-04-ota-server/) na druhou desku. Sledujte LED studentské desky: **žlutá**, dokud se připojuje, potom **modrá**, jakmile Wi-Fi naběhne. Připojí se s přihlašovacími údaji z Úkolu 3 z NVS — nebo rovnou k workshopové síti `ESP32-WS`, když je NVS prázdná. Stiskněte tlačítko — LED zbělá, dokud se image stahuje, potom zezelená a deska se restartuje do toho image. V monitoru by se pak mělo objevit `Running firmware v2!`. Když je serverová deska vypnutá, nebo tahle deska skončila na jiné síti (např. s přihlašovacími údaji z domova), LED zčervená a vrátí se na modrou. Jak ten image vznikl a jak ho vyměnit, je v [kroku 6](#6-kde-lezi-novy-firmware).
 
-### 7. Kde leží nový firmware {#7-kde-lezi-novy-firmware}
+**Řešení potíží: LED zčervenala.** Podívejte se do monitoru na řádek vypsaný těsně předtím:
+
+| Monitor říká | Pravděpodobná příčina | Co dělat |
+| --- | --- | --- |
+| `This board has no IP...` | Deska není připojená k `ESP32-WS`, nebo Wi-Fi ještě naskakuje (LED je pořád žlutá) | Počkejte na modrou LED. Pokud zůstane žlutá, deska má nejspíš uložené údaje jiné sítě (např. z Úkolu 3 doma): spusťte `idf.py erase-flash` a nahrajte znovu |
+| `Could not start the download: ESP_ERR_HTTP_CONNECT` (nebo timeout) | Serverová deska je vypnutá, ještě není v síti, nebo není na `192.168.0.100` | Podívejte se do monitoru serveru na řádek `Firmware URL`; ujistěte se, že existuje jen jedna přístupová síť `ESP32-WS` |
+| `Could not start the download: ESP_ERR_INVALID_ARG` a „No option for server verification is enabled“ | Je vypnuté `CONFIG_ESP_HTTPS_OTA_ALLOW_HTTP` | Zapněte ho (viz krok 2). Pokud už `sdkconfig` existuje, změňte to v menuconfigu; úprava samotného `sdkconfig.defaults` na existující `sdkconfig` nepůsobí |
+| `Download failed: ESP_ERR_INVALID_SIZE` (nebo jiná chyba po několika řádcích průběhu) | Spojení spadlo uprostřed stahování (slabý signál, restart serveru) | Stiskněte tlačítko znovu |
+| `Download failed: ESP_ERR_INVALID_VERSION` nebo `ESP_ERR_OTA_VALIDATE_FAILED` | Soubor není platný image aplikace pro ESP32-C5 | Přeložte image pro `esp32c5` a vyměňte `firmware.bin` (krok 6) |
+| Selže hned na začátku se zprávou o oddílu nebo velikosti image | Image se nevejde do OTA slotu 1500K | Zmenšete aplikaci nebo zvětšete sloty v `partitions.csv` |
+
+### 6. Kde leží nový firmware {#6-kde-lezi-novy-firmware}
 
 > Pokud tenhle workshop děláte s lektorem, řekne vám, kde firmware najít, a tuhle kapitolu můžete brát jen jako informaci. Pokud ho děláte sami, pokračujte.
 

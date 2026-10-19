@@ -81,23 +81,36 @@ void app_main(void)
 #include <string.h>
 #include "esp_event.h"
 #include "esp_log.h"
+#include "esp_mac.h"
 #include "esp_netif.h"
 #include "esp_now.h"
 #include "esp_wifi.h"
 #include "nvs_flash.h"
 #include "chatroom.h"
 
-/* Exactly 8 ASCII characters, unique in the room. */
-#define THIS_NODE_NAME "node0001" // TODO change to your liking - but keep 8 chars!
-/* Wrong length fails the build, not at runtime. */
-_Static_assert(sizeof(THIS_NODE_NAME) == CHATROOM_NAME_LEN + 1,
-               "THIS_NODE_NAME must be exactly 8 characters");
+/* Every board names itself: a 4-letter animal picked from its MAC address, then the last two MAC
+ * bytes in hex, for example "bear83e8". That is exactly 8 lowercase ASCII characters, and the
+ * hex part makes it unique in the room in practice. */
+static const char *const s_animals[] = {
+    "bear", "wolf", "lynx", "seal", "crab", "frog", "duck", "goat",
+    "hawk", "mole", "newt", "swan", "toad", "moth", "deer", "orca",
+};
+
+static void make_node_name(char name[CHATROOM_NAME_LEN + 1])
+{
+    uint8_t mac[6];
+    ESP_ERROR_CHECK(esp_read_mac(mac, ESP_MAC_WIFI_STA));
+    const char *animal = s_animals[(mac[3] ^ mac[4] ^ mac[5]) % (sizeof(s_animals) / sizeof(s_animals[0]))];
+    snprintf(name, CHATROOM_NAME_LEN + 1, "%s%02x%02x", animal, mac[4], mac[5]);
+}
 
 static const char *TAG = "espnow";
 
 static const uint8_t s_broadcast_mac[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 ```
 Broadcast MAC address is `FF:FF:FF:FF:FF:FF` in ESP-NOW protocol. Every other ESP-NOW device listens to messages sent for this address.
+
+The chat room needs a name for every board: exactly 8 ASCII characters, unique in the room. Nobody has to pick one, because `make_node_name()` builds it from the board's own MAC address: a 4-letter animal plus the last two MAC bytes in hex, like `bear83e8` or `wolf1f42`. Two boards in one room can end up with the same animal, but the hex part makes a clash very unlikely. Your board prints its name when it starts, and `list` shows the names of the others.
 
 #### 1.3 Part (B): the receive callback
 
@@ -184,7 +197,9 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_now_add_peer(&broadcast));
 
     // (G) Start the chat room: keyboard in, chat lines out; sends go through part (C)
-    chatroom_start(THIS_NODE_NAME);
+    char node_name[CHATROOM_NAME_LEN + 1];
+    make_node_name(node_name);
+    chatroom_start(node_name);
     ESP_LOGI(TAG, "ESP-NOW is up. Type in this monitor.");
 }
 ```
@@ -201,11 +216,11 @@ idf.py build flash monitor
 
 `idf.py monitor` is a serial terminal in both directions. Lines the board prints show up here, and keys you press are sent to the board (except `Ctrl-]`, which quits, and `Ctrl-T`, which opens the monitor menu). The board echoes what you type. A message from someone else can print in the middle of that line; the board still receives only your keystrokes, and Enter sends the line you typed.
 
-Flash a second board with a different name, for example `node0001` on yours and `node0002` on theirs.
+Flash a second board (or your neighbour's). Each board names itself from its MAC address, so there is nothing to edit. In the examples below, yours is `bear83e8` and theirs is `wolf1f42`; look at the line `This board is "..."` in your own monitor for the real names.
 
-- Type `hello` and press Enter. Their monitor prints `User node0001: hello`.
-- Type `red` (or `green`, `blue`, `white`, `on`, `off`). Their LED changes, and the monitor prints `User node0001 set your LED to 20,0,0` (the numbers, not the word). Each level is 0–255. Those words are the `COMMAND_RED` (and similar) lines at the top of `chatroom.c`; a new word is a new row in that table.
-- After their board has sent anything, type `node0002:hello` or `node0002:blue` to reach only that board. Until then the monitor says there is no such contact. ESP-NOW keeps 20 peers, and one slot is the broadcast address, so the room remembers 19 names.
+- Type `hello` and press Enter. Their monitor prints `User bear83e8: hello`.
+- Type `red` (or `green`, `blue`, `white`, `on`, `off`). Their LED changes, and the monitor prints `User bear83e8 set your LED to 20,0,0` (the numbers, not the word). Each level is 0–255. Those words are the `COMMAND_RED` (and similar) lines at the top of `chatroom.c`; a new word is a new row in that table.
+- After their board has sent anything, type `wolf1f42:hello` or `wolf1f42:blue` to reach only that board. Until then the monitor says there is no such contact. ESP-NOW keeps 20 peers, and one slot is the broadcast address, so the room remembers 19 names.
 - Type `list` and press Enter. The monitor prints each name this board has heard, with that board's MAC address. `list` stays on this board; it is not sent. The list is empty until another board sends something.
 
 A line that is not ASCII is refused. A packet longer than 250 bytes is cut to fit before it is sent. A board does not receive its own broadcast.

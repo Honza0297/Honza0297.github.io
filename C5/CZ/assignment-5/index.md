@@ -83,24 +83,37 @@ void app_main(void)
 #include <string.h>
 #include "esp_event.h"
 #include "esp_log.h"
+#include "esp_mac.h"
 #include "esp_netif.h"
 #include "esp_now.h"
 #include "esp_wifi.h"
 #include "nvs_flash.h"
 #include "chatroom.h"
 
-/* Exactly 8 ASCII characters, unique in the room. */
-#define THIS_NODE_NAME "node0001" // TODO change to your liking - but keep 8 chars!
-/* Špatná délka spadne při buildu, ne až za běhu. */
-_Static_assert(sizeof(THIS_NODE_NAME) == CHATROOM_NAME_LEN + 1,
-               "THIS_NODE_NAME must be exactly 8 characters");
+/* Každá deska si jméno vytvoří sama: 4písmenné zvíře vybrané podle MAC adresy a poslední dva bajty
+ * MAC v hex, například "bear83e8". To je přesně 8 malých ASCII znaků a díky hex části je jméno
+ * v místnosti v praxi jedinečné. */
+static const char *const s_animals[] = {
+    "bear", "wolf", "lynx", "seal", "crab", "frog", "duck", "goat",
+    "hawk", "mole", "newt", "swan", "toad", "moth", "deer", "orca",
+};
+
+static void make_node_name(char name[CHATROOM_NAME_LEN + 1])
+{
+    uint8_t mac[6];
+    ESP_ERROR_CHECK(esp_read_mac(mac, ESP_MAC_WIFI_STA));
+    const char *animal = s_animals[(mac[3] ^ mac[4] ^ mac[5]) % (sizeof(s_animals) / sizeof(s_animals[0]))];
+    snprintf(name, CHATROOM_NAME_LEN + 1, "%s%02x%02x", animal, mac[4], mac[5]);
+}
 
 static const char *TAG = "espnow";
 
 static const uint8_t s_broadcast_mac[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 ```
 
-Broadcast MAC adresa je v protokolu ESP-NOW `FF:FF:FF:FF:FF:FF`. Každé další zařízení s ESP-NOW poslouchá zprávy poslané na tuhle adresu. `THIS_NODE_NAME` změňte na **přesně 8 znaků ASCII**, jiné než mají ostatní v místnosti (`node0001`, `node0002`, …).
+Broadcast MAC adresa je v protokolu ESP-NOW `FF:FF:FF:FF:FF:FF`. Každé další zařízení s ESP-NOW poslouchá zprávy poslané na tuhle adresu.
+
+Chat room potřebuje pro každou desku jméno: přesně 8 znaků ASCII, v místnosti jedinečné. Nikdo ho nemusí vymýšlet, protože ho `make_node_name()` sestaví z MAC adresy desky: 4písmenné zvíře plus poslední dva bajty MAC v hex, třeba `bear83e8` nebo `wolf1f42`. Dvě desky v jedné místnosti mohou skončit se stejným zvířetem, ale hex část srážku činí velmi nepravděpodobnou. Vaše deska své jméno vypíše při startu a `list` ukáže jména ostatních.
 
 #### 1.3 Část (B): callback pro příjem
 
@@ -187,7 +200,9 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_now_add_peer(&broadcast));
 
     // (G) Start the chat room: klávesnice dovnitř, řádky chatu ven; odesílání jde přes část (C)
-    chatroom_start(THIS_NODE_NAME);
+    char node_name[CHATROOM_NAME_LEN + 1];
+    make_node_name(node_name);
+    chatroom_start(node_name);
     ESP_LOGI(TAG, "ESP-NOW is up. Type in this monitor.");
 }
 ```
@@ -204,11 +219,11 @@ idf.py build flash monitor
 
 `idf.py monitor` je sériový terminál oběma směry. Řádky, které deska vypíše, se ukážou tady, a klávesy, které stisknete, se pošlou na desku (kromě `Ctrl-]`, kterým monitor skončí, a `Ctrl-T`, kterým se otevře jeho menu). Deska znaky, které píšete, opisuje zpátky. Zpráva od někoho jiného se může vypsat doprostřed rozepsaného řádku; deska přesto dostane jen vaše stisky a Enter odešle řádek, který jste napsali.
 
-Nahrajte druhou desku s jiným jménem, třeba `node0001` na vaší a `node0002` na jejich.
+Nahrajte druhou desku (nebo desku souseda). Každá deska si jméno vytvoří z MAC adresy, takže nic needitujete. V příkladech níže je vaše deska `bear83e8` a jejich `wolf1f42`; skutečná jména najdete na řádku `This board is "..."` ve vlastním monitoru.
 
-- Napište `hello` a stiskněte Enter. Jejich monitor vypíše `User node0001: hello`.
-- Napište `red` (nebo `green`, `blue`, `white`, `on`, `off`). Jejich LED se změní a monitor vypíše `User node0001 set your LED to 20,0,0` (čísla, ne slovo). Každá složka je 0–255. Tahle slova jsou řádky `COMMAND_RED` a podobné na začátku `chatroom.c`; nové slovo je nový řádek v té tabulce.
-- Až jejich deska něco odešle, napište `node0002:hello` nebo `node0002:blue` a dosáhnete jen na ni. Do té doby monitor hlásí, že takový kontakt není. ESP-NOW si pamatuje 20 peerů a jeden slot zabírá broadcast adresa, takže místnost udrží 19 jmen.
+- Napište `hello` a stiskněte Enter. Jejich monitor vypíše `User bear83e8: hello`.
+- Napište `red` (nebo `green`, `blue`, `white`, `on`, `off`). Jejich LED se změní a monitor vypíše `User bear83e8 set your LED to 20,0,0` (čísla, ne slovo). Každá složka je 0–255. Tahle slova jsou řádky `COMMAND_RED` a podobné na začátku `chatroom.c`; nové slovo je nový řádek v té tabulce.
+- Až jejich deska něco odešle, napište `wolf1f42:hello` nebo `wolf1f42:blue` a dosáhnete jen na ni. Do té doby monitor hlásí, že takový kontakt není. ESP-NOW si pamatuje 20 peerů a jeden slot zabírá broadcast adresa, takže místnost udrží 19 jmen.
 - Napište `list` a stiskněte Enter. Monitor vypíše každé jméno, které tahle deska slyšela, spolu s MAC adresou té desky. `list` zůstane na téhle desce; nikam se neodešle. Seznam je prázdný, dokud jiná deska něco neodešle.
 
 Řádek, který není ASCII, se odmítne. Paket delší než 250 bajtů se před odesláním ořízne. Deska svůj vlastní broadcast nepřijme.

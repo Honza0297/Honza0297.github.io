@@ -66,6 +66,7 @@ Soubor `main/my_first_project.c` opět postavíme po částech, místo abychom n
 #include "esp_wifi.h"
 #include "esp_event.h"
 #include "esp_mac.h"
+#include "esp_timer.h"
 #include "nvs_flash.h"
 #include "qrcode.h"
 #include "wifi_provisioning/manager.h"
@@ -75,6 +76,19 @@ static const char *TAG = "provisioning";
 
 // Proof-of-possession: the app gets it from the QR code, so the user never types it
 #define PROV_POP "abcd1234"
+
+// True, dokud běží provisioning manager. Připojuje se sám přes esp_wifi_connect(), takže mu nesmíme překážet.
+static volatile bool s_prov_active = false;
+
+// Prodlevy při opětovném připojení: 1 s, 2 s, 4 s ... až 30 s mezi pokusy, abychom nedosažitelný router neutloukli.
+#define RECONNECT_MAX_DELAY_MS 30000
+static int s_retry_count = 0;
+static esp_timer_handle_t s_reconnect_timer;
+
+static void reconnect_cb(void *arg)
+{
+    esp_wifi_connect();
+}
 
 // (A) One handler for every Wi-Fi / provisioning event we care about
 static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
@@ -103,38 +117,64 @@ static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_
             case WIFI_PROV_START:
                 ESP_LOGI(TAG, "Provisioning started");
                 break;
-            case WIFI_PROV_CRED_RECV:
+            case WIFI_PROV_CRED_RECV: {
                 /* event_data nese SSID a heslo, které telefon právě poslal. */
                 wifi_sta_config_t *wifi_sta_cfg = (wifi_sta_config_t *)event_data;
-                ESP_LOGI(TAG, "Received Wi-Fi credentials\n\tSSID     : %s\n\tPassword : %s",
+                /* POUZE UKÁZKA: v produkci nikdy neloguj hesla. Tady se vypisuje, abyste viděli, co telefon poslal. */
+                ESP_LOGI(TAG, "Received Wi-Fi credentials\n\tSSID     : %s\n\tPassword : %s (do not log passwords in plaintext ;))",
                          (const char *) wifi_sta_cfg->ssid,
                          (const char *) wifi_sta_cfg->password);
+                break;
+            }
+            case WIFI_PROV_CRED_FAIL:
+                /* Špatné heslo nebo AP nenalezeno. Zapomeň špatné údaje, jinak by se deska po restartu
+                   tvářila jako „už provisioned“ a provisioning už nikdy nenabídla. */
+                ESP_LOGE(TAG, "Provisioning failed. Check the password and try again.");
+                wifi_prov_mgr_reset_sm_state_on_failure();
                 break;
             case WIFI_PROV_CRED_SUCCESS:
                 ESP_LOGI(TAG, "Provisioning successful");
                 break;
             case WIFI_PROV_END:
                 ESP_LOGI(TAG, "Provisioning completed. Deinitializing manager.");
+                s_prov_active = false;
                 wifi_prov_mgr_deinit(); /* manager dosloužil; uvolnit ho */
                 break;
             default:
                 break;
         }
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
-        /* Rádio běží; začít se připojovat. */
-        esp_wifi_connect();
+        /* Rádio běží; začít se připojovat (během provisioningu to dělá manager). */
+        if (!s_prov_active) {
+            esp_wifi_connect();
+        }
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         /* event_data nese adresu, kterou přidělilo DHCP. */
         ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
         ESP_LOGI(TAG, "Connected with IP Address:" IPSTR, IP2STR(&event->ip_info.ip));
+        s_retry_count = 0; /* připojeno; další výpadek začne zase krátkou prodlevou */
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
-        ESP_LOGI(TAG, "Disconnected. Connecting to the AP again...");
-        esp_wifi_connect(); /* spojení padlo; zkusit znovu */
+        if (!s_prov_active) {
+            /* spojení padlo; zkusit znovu, po každém neúspěchu s delší prodlevou */
+            uint32_t delay_ms = 1000U << (s_retry_count < 5 ? s_retry_count : 5);
+            if (delay_ms > RECONNECT_MAX_DELAY_MS) {
+                delay_ms = RECONNECT_MAX_DELAY_MS;
+            }
+            s_retry_count++;
+            ESP_LOGI(TAG, "Disconnected. Connecting to the AP again in %lu ms...", (unsigned long)delay_ms);
+            esp_timer_start_once(s_reconnect_timer, (uint64_t)delay_ms * 1000);
+        }
     }
 }
 ```
 
-Obsluhujeme čtyři situace: provisioning začal, přišly přihlašovací údaje (abychom mohli vypsat, co jsme dostali), provisioning úspěšně skončil (takže můžeme provisioning manager vypnout, už ho nepotřebujeme) a běžné připojení, odpojení a opětovné připojení k Wi-Fi.
+Obsluhujeme tyto situace: provisioning začal, přišly přihlašovací údaje (abychom mohli vypsat, co jsme dostali), provisioning selhal, provisioning skončil (takže můžeme provisioning manager vypnout, už ho nepotřebujeme) a běžné připojení, odpojení a opětovné připojení k Wi-Fi.
+
+Tři věci stojí za pozornost:
+
+- **Heslo logujeme jen kvůli ukázce.** V reálném produktu nikdy nevypisujte hesla v čitelné podobě.
+- **Opětovná připojení mají prodlevy.** Když je router nedostupný, deska čeká mezi pokusy 1 s, 2 s, 4 s ... až 30 s (pomocí jednorázového `esp_timer`, takže se nikdy neblokuje smyčka událostí) místo toho, aby se pokoušela dokola bez přestávky. Úspěšné připojení prodlevu vynuluje.
+- **`WIFI_PROV_CRED_FAIL` je nutné obsloužit.** Když uživatel překlepne heslo, přihlašovací údaje jsou už uložené v NVS. Bez `wifi_prov_mgr_reset_sm_state_on_failure()` by se deska po restartu tvářila jako „už provisioned“, donekonečna by zkoušela špatnou síť a provisioning už by nikdy nenabídla. Dokud je nastavený příznak `s_prov_active`, také nevoláme vlastní `esp_wifi_connect()`, protože provisioning manager se připojuje sám a obě volání by se srážela.
 
 #### 3.3 Části (B)-(C): NVS a síť
 
@@ -164,6 +204,8 @@ NVS musí být inicializované jako první, protože se na něj spoléhá jak Wi
 
 ```c
     // (D) Register event handlers
+    const esp_timer_create_args_t reconnect_args = { .callback = &reconnect_cb, .name = "wifi_reconnect" };
+    ESP_ERROR_CHECK(esp_timer_create(&reconnect_args, &s_reconnect_timer)); /* používá se pro prodlevy při opětovném připojení */
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_PROV_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL)); /* jen událost o získání adresy */
@@ -187,6 +229,7 @@ NVS musí být inicializované jako první, protože se na něj spoléhá jak Wi
         char service_name[16];
         snprintf(service_name, sizeof(service_name), "PROV_%02X%02X%02X", mac[3], mac[4], mac[5]);
 
+        s_prov_active = true;
         // Security 1: encrypted session, authenticated by the proof-of-possession from the QR code
         ESP_ERROR_CHECK(wifi_prov_mgr_start_provisioning(WIFI_PROV_SECURITY_1, PROV_POP, service_name, NULL));
         print_qr(service_name);
@@ -200,6 +243,8 @@ NVS musí být inicializované jako první, protože se na něj spoléhá jak Wi
 ```
 
 Používáme **security 1**: spojení mezi telefonem a deskou je šifrované a telefon musí prokázat, že zná *proof-of-possession* (`PROV_POP`). Přesně to očekává aplikace ESP BLE Prov, když pracuje s QR kódem, proto security 0 končilo chybou „security does not match“.
+
+> **Zkratka pro workshop: jedno PoP pro všechny desky.** Všechny desky tady sdílejí stejný proof-of-possession, `abcd1234`, který je napsaný přímo v tomto textu. Pro místnost plnou účastníků workshopu je to v pořádku, pro produkt ne: kdokoli v dosahu Bluetooth, kdo PoP zná, by mohl novému zařízení nastavit vlastní přihlašovací údaje k Wi-Fi. Skutečný produkt dává každému zařízení vlastní PoP, buď odvozené z něčeho jedinečného pro desku (například část MAC adresy), nebo lépe náhodnou hodnotu vygenerovanou při prvním startu a zobrazenou jen v QR kódu nebo na štítku zařízení. Kód zůstává stejný: mění se jen řetězec předaný funkci `wifi_prov_mgr_start_provisioning()` a vložený do QR kódu.
 
 QR kód je jen krátký JSON text se jménem zařízení, PoP a transportem (`ble`). Jeho generování a vykreslení pro nás není zajímavé, takže tady je pomocná funkce, kterou vložte do `main/my_first_project.c` nad `app_main`:
 
@@ -232,6 +277,7 @@ Celý soubor (a odpovídající projekt, se kterým můžete svůj porovnat) naj
 #include "esp_wifi.h"
 #include "esp_event.h"
 #include "esp_mac.h"
+#include "esp_timer.h"
 #include "nvs_flash.h"
 #include "qrcode.h"
 #include "wifi_provisioning/manager.h"
@@ -241,6 +287,19 @@ static const char *TAG = "provisioning";
 
 // Proof-of-possession: the app gets it from the QR code, so the user never types it
 #define PROV_POP "abcd1234"
+
+// True, dokud běží provisioning manager. Připojuje se sám přes esp_wifi_connect(), takže mu nesmíme překážet.
+static volatile bool s_prov_active = false;
+
+// Prodlevy při opětovném připojení: 1 s, 2 s, 4 s ... až 30 s mezi pokusy, abychom nedosažitelný router neutloukli.
+#define RECONNECT_MAX_DELAY_MS 30000
+static int s_retry_count = 0;
+static esp_timer_handle_t s_reconnect_timer;
+
+static void reconnect_cb(void *arg)
+{
+    esp_wifi_connect();
+}
 
 // Print the QR code the ESP BLE Prov app scans (device name, PoP and transport).
 // How the QR code is rendered is not important for this workshop.
@@ -263,33 +322,53 @@ static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_
             case WIFI_PROV_START:
                 ESP_LOGI(TAG, "Provisioning started");
                 break;
-            case WIFI_PROV_CRED_RECV:
+            case WIFI_PROV_CRED_RECV: {
                 /* event_data nese SSID a heslo, které telefon právě poslal. */
                 wifi_sta_config_t *wifi_sta_cfg = (wifi_sta_config_t *)event_data;
-                ESP_LOGI(TAG, "Received Wi-Fi credentials\n\tSSID     : %s\n\tPassword : %s",
+                /* POUZE UKÁZKA: v produkci nikdy neloguj hesla. Tady se vypisuje, abyste viděli, co telefon poslal. */
+                ESP_LOGI(TAG, "Received Wi-Fi credentials\n\tSSID     : %s\n\tPassword : %s (do not log passwords in plaintext ;))",
                          (const char *) wifi_sta_cfg->ssid,
                          (const char *) wifi_sta_cfg->password);
+                break;
+            }
+            case WIFI_PROV_CRED_FAIL:
+                /* Špatné heslo nebo AP nenalezeno. Zapomeň špatné údaje, jinak by se deska po restartu
+                   tvářila jako „už provisioned“ a provisioning už nikdy nenabídla. */
+                ESP_LOGE(TAG, "Provisioning failed. Check the password and try again.");
+                wifi_prov_mgr_reset_sm_state_on_failure();
                 break;
             case WIFI_PROV_CRED_SUCCESS:
                 ESP_LOGI(TAG, "Provisioning successful");
                 break;
             case WIFI_PROV_END:
                 ESP_LOGI(TAG, "Provisioning completed. Deinitializing manager.");
+                s_prov_active = false;
                 wifi_prov_mgr_deinit(); /* manager dosloužil; uvolnit ho */
                 break;
             default:
                 break;
         }
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
-        /* Rádio běží; začít se připojovat. */
-        esp_wifi_connect();
+        /* Rádio běží; začít se připojovat (během provisioningu to dělá manager). */
+        if (!s_prov_active) {
+            esp_wifi_connect();
+        }
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         /* event_data nese adresu, kterou přidělilo DHCP. */
         ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
         ESP_LOGI(TAG, "Connected with IP Address:" IPSTR, IP2STR(&event->ip_info.ip));
+        s_retry_count = 0; /* připojeno; další výpadek začne zase krátkou prodlevou */
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
-        ESP_LOGI(TAG, "Disconnected. Connecting to the AP again...");
-        esp_wifi_connect(); /* spojení padlo; zkusit znovu */
+        if (!s_prov_active) {
+            /* spojení padlo; zkusit znovu, po každém neúspěchu s delší prodlevou */
+            uint32_t delay_ms = 1000U << (s_retry_count < 5 ? s_retry_count : 5);
+            if (delay_ms > RECONNECT_MAX_DELAY_MS) {
+                delay_ms = RECONNECT_MAX_DELAY_MS;
+            }
+            s_retry_count++;
+            ESP_LOGI(TAG, "Disconnected. Connecting to the AP again in %lu ms...", (unsigned long)delay_ms);
+            esp_timer_start_once(s_reconnect_timer, (uint64_t)delay_ms * 1000);
+        }
     }
 }
 
@@ -312,6 +391,8 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
     // 3. Register event handlers
+    const esp_timer_create_args_t reconnect_args = { .callback = &reconnect_cb, .name = "wifi_reconnect" };
+    ESP_ERROR_CHECK(esp_timer_create(&reconnect_args, &s_reconnect_timer)); /* používá se pro prodlevy při opětovném připojení */
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_PROV_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL)); /* jen událost o získání adresy */
@@ -335,6 +416,7 @@ void app_main(void)
         char service_name[16];
         snprintf(service_name, sizeof(service_name), "PROV_%02X%02X%02X", mac[3], mac[4], mac[5]);
 
+        s_prov_active = true;
         // Security 1: encrypted session, authenticated by the proof-of-possession from the QR code
         ESP_ERROR_CHECK(wifi_prov_mgr_start_provisioning(WIFI_PROV_SECURITY_1, PROV_POP, service_name, NULL));
         print_qr(service_name);

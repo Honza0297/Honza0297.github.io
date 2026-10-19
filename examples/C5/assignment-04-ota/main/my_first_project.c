@@ -99,6 +99,35 @@ static void button_task(void *pvParameter)
     }
 }
 
+/* Same as esp_https_ota(), but split in steps so we can log progress and the exact error. */
+static esp_err_t run_ota(const esp_https_ota_config_t *ota_config)
+{
+    esp_https_ota_handle_t handle = NULL;
+    esp_err_t err = esp_https_ota_begin(ota_config, &handle); /* connect, check the image header */
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Could not start the download: %s", esp_err_to_name(err));
+        return err;
+    }
+
+    int next_report = 0;
+    while ((err = esp_https_ota_perform(handle)) == ESP_ERR_HTTPS_OTA_IN_PROGRESS) {
+        int read = esp_https_ota_get_image_len_read(handle);
+        if (read >= next_report) { /* the server sends no size up front, so report kilobytes, not percent */
+            ESP_LOGI(TAG, "Downloaded %d KB", read / 1024);
+            next_report = read + 128 * 1024;
+        }
+    }
+    if (err == ESP_OK && !esp_https_ota_is_complete_data_received(handle)) {
+        err = ESP_ERR_INVALID_SIZE; /* connection ended early */
+    }
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Download failed: %s", esp_err_to_name(err));
+        esp_https_ota_abort(handle);
+        return err;
+    }
+    return esp_https_ota_finish(handle); /* verify the image and switch the boot record */
+}
+
 static void ota_task(void *pvParameter)
 {
     while (1) {
@@ -122,6 +151,7 @@ static void ota_task(void *pvParameter)
 
         esp_http_client_config_t config = {
             .url = "http://192.168.0.100/firmware.bin",
+            .timeout_ms = 10000, /* give up on a silent server instead of hanging */
             // In production, serve this over HTTPS and check the server certificate:
             // .crt_bundle_attach = esp_crt_bundle_attach,
         };
@@ -130,15 +160,15 @@ static void ota_task(void *pvParameter)
         };
 
         ESP_LOGI(TAG, "Attempting to download update from %s", config.url);
-        /* Downloads into the inactive slot and flips the boot record. */
-        esp_err_t ret = esp_https_ota(&ota_config);
+        /* Downloads into the inactive slot, logging progress, and flips the boot record. */
+        esp_err_t ret = run_ota(&ota_config);
         if (ret == ESP_OK) {
             ESP_LOGI(TAG, "OTA succeeded, rebooting...");
             led_set_color(0, 20, 0); // green: success
             vTaskDelay(pdMS_TO_TICKS(1000)); /* let the green LED show before rebooting */
             esp_restart(); /* boot the new image */
         } else {
-            ESP_LOGE(TAG, "Firmware upgrade failed");
+            ESP_LOGE(TAG, "Firmware upgrade failed: %s", esp_err_to_name(ret));
             led_set_color(20, 0, 0); // red: failed
             vTaskDelay(pdMS_TO_TICKS(3000));
             led_set_color(0, 0, 20); // back to blue: ready, feel free to try again
@@ -175,6 +205,8 @@ void app_main(void)
 
     // Prefer credentials stored in NVS by the Assignment 3 provisioning step.
     // If that never happened, connect to the fallback network instead.
+    /* Station mode must be set before esp_wifi_set_config(), or it fails with ESP_ERR_WIFI_MODE. */
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     wifi_config_t wifi_config = { 0 };
     /* What did the driver restore from NVS? */
     ESP_ERROR_CHECK(esp_wifi_get_config(WIFI_IF_STA, &wifi_config));
@@ -191,7 +223,6 @@ void app_main(void)
         ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &fallback));
     }
 
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_start());
 
     // Create the OTA task first so button_task has a valid handle to notify

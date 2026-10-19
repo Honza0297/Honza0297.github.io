@@ -2,17 +2,28 @@
 #include <string.h>
 #include "esp_event.h"
 #include "esp_log.h"
+#include "esp_mac.h"
 #include "esp_netif.h"
 #include "esp_now.h"
 #include "esp_wifi.h"
 #include "nvs_flash.h"
 #include "chatroom.h"
 
-/* Exactly 8 ASCII characters, unique in the room. */
-/* Wrong length fails the build, not at runtime. */
-#define THIS_NODE_NAME "node0001"
-_Static_assert(sizeof(THIS_NODE_NAME) == CHATROOM_NAME_LEN + 1,
-               "THIS_NODE_NAME must be exactly 8 characters");
+/* Every board names itself: a 4-letter animal picked from its MAC address, then the last two MAC
+ * bytes in hex, for example "bear83e8". That is exactly 8 lowercase ASCII characters, and the
+ * hex part makes it unique in the room in practice. */
+static const char *const s_animals[] = {
+    "bear", "wolf", "lynx", "seal", "crab", "frog", "duck", "goat",
+    "hawk", "mole", "newt", "swan", "toad", "moth", "deer", "orca",
+};
+
+static void make_node_name(char name[CHATROOM_NAME_LEN + 1])
+{
+    uint8_t mac[6];
+    ESP_ERROR_CHECK(esp_read_mac(mac, ESP_MAC_WIFI_STA));
+    const char *animal = s_animals[(mac[3] ^ mac[4] ^ mac[5]) % (sizeof(s_animals) / sizeof(s_animals[0]))];
+    snprintf(name, CHATROOM_NAME_LEN + 1, "%s%02x%02x", animal, mac[4], mac[5]);
+}
 
 static const char *TAG = "espnow";
 
@@ -79,6 +90,8 @@ void app_main(void)
     broadcast.encrypt = false; /* broadcast traffic cannot be encrypted */
     ESP_ERROR_CHECK(esp_now_add_peer(&broadcast));
 
-    chatroom_start(THIS_NODE_NAME);
+    char node_name[CHATROOM_NAME_LEN + 1];
+    make_node_name(node_name);
+    chatroom_start(node_name);
     ESP_LOGI(TAG, "ESP-NOW is up. Type in this monitor.");
 }

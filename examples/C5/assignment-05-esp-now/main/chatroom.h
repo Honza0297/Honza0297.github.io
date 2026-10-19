@@ -4,7 +4,8 @@
 #include <stdint.h>
 #include "esp_err.h"
 
-/* Exactly 8 ASCII characters, so a name is a fixed-width field. */
+/* Exactly 8 ASCII characters, so a name is a fixed-width field.
+ * esp_now_chat.c builds each board's name from its MAC address. */
 #define CHATROOM_NAME_LEN 8
 
 /* Start the keyboard task and the task that applies received packets.
