@@ -1,3 +1,7 @@
 build/
 _site/
 .jekyll-cache/
+managed_components/
+sdkconfig
+sdkconfig.old
+dependencies.lock
