@@ -29,6 +29,7 @@ idf.py create-project esp_now_chat
 cd esp_now_chat
 idf.py set-target esp32c5
 idf.py add-dependency "espressif/led_strip^3.0.3"
+idf.py reconfigure
 ```
 
 Copy [`chatroom.c`](../../../examples/C5/assignment-05-esp-now/main/chatroom.c) and [`chatroom.h`](../../../examples/C5/assignment-05-esp-now/main/chatroom.h) into your `main/` folder. 

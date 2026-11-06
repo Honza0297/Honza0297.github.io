@@ -24,6 +24,7 @@ To show the QR code in the terminal, we also add the `espressif/qrcode` componen
 
 ```bash
 idf.py add-dependency "espressif/qrcode^0.1.0"
+idf.py reconfigure
 ```
 
 ### 2. Configuration via menuconfig

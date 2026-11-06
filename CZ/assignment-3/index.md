@@ -24,6 +24,7 @@ Abychom mohli QR kód zobrazit v terminálu, přidáme ještě komponentu `espre
 
 ```bash
 idf.py add-dependency "espressif/qrcode^0.1.0"
+idf.py reconfigure
 ```
 
 ### 2. Konfigurace pomocí menuconfig

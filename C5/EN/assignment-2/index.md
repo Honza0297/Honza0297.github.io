@@ -44,9 +44,15 @@ Run the following command in your project directory:
 idf.py add-dependency "espressif/led_strip^3.0.3"
 ```
 
-This creates a `main/idf_component.yml` file. When we build the project, ESP-IDF will automatically download the required component.
+This creates a `main/idf_component.yml` file. This manifest is new and the build system doesn't know about it yet, so we need to reconfigure the project manually:
 
-> **Tip:** The command above does the same thing as browsing the component on the web and clicking "Install" — you can look up any component beforehand on the [ESP Component Registry](https://components.espressif.com/) to check its README, examples, and dependencies.
+```bash
+idf.py reconfigure
+```
+
+ESP-IDF now downloads the required component into `managed_components/`.
+
+> **Tip:** The `idf.py add-dependency` command does the same thing as browsing the component on the web and clicking "Install" — you can look up any component beforehand on the [ESP Component Registry](https://components.espressif.com/) to check its README, examples, and dependencies.
 >
 > ![Searching for the led_strip component on the ESP Component Registry](assets/ledstrip-1.webp)
 >

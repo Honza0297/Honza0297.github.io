@@ -44,9 +44,15 @@ V adresáři projektu spusťte následující příkaz:
 idf.py add-dependency "espressif/led_strip^3.0.3"
 ```
 
-Tím se vytvoří soubor `main/idf_component.yml`. Při buildu projektu ESP-IDF potřebnou komponentu automaticky stáhne.
+Tím se vytvoří soubor `main/idf_component.yml`. Tento manifest je nový a build systém o něm zatím neví, proto musíme projekt ručně překonfigurovat:
 
-> **Tip:** Výše uvedený příkaz dělá totéž, jako když komponentu najdete na webu a kliknete na „Install“. Libovolnou komponentu si můžete předem prohlédnout na [ESP Component Registry](https://components.espressif.com/) a zkontrolovat její README, příklady a závislosti.
+```bash
+idf.py reconfigure
+```
+
+ESP-IDF teď potřebnou komponentu stáhne do složky `managed_components/`.
+
+> **Tip:** Příkaz `idf.py add-dependency` dělá totéž, jako když komponentu najdete na webu a kliknete na „Install“. Libovolnou komponentu si můžete předem prohlédnout na [ESP Component Registry](https://components.espressif.com/) a zkontrolovat její README, příklady a závislosti.
 >
 > ![Vyhledání komponenty led_strip v ESP Component Registry](assets/ledstrip-1.webp)
 >
